@@ -1511,15 +1511,51 @@
                 var improveRows = postRows.filter(function(r) { return r.type === 'improvement'; });
                 var dmChecked = dmRows.filter(function(r) { return r.dmDone === true; }).length;
                 var dmDoneRate = dmRows.length > 0 ? Math.round(dmChecked / dmRows.length * 100) : 0;
-                // LOSS重复率直接从db.loss计算
+                // ★ LOSS重复发生率——自动统计+同比环比 ★
                 var _lossesThisMonth = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(month); });
-                var _descMap = {};
-                _lossesThisMonth.forEach(function(l) { var key = String(l.desc||'').trim().slice(0,24); if(key) _descMap[key] = (_descMap[key]||0)+1; });
-                var _repeated = Object.values(_descMap).filter(function(v) { return v > 1; }).reduce(function(a,b){return a+b;},0);
+                function _calcRepeatStats(lossArr) {
+                    var map = {}, events = 0, buckets = 0;
+                    lossArr.forEach(function(l) {
+                        if(l && l.desc) {
+                            var key = String(l.desc||'').trim().slice(0,24);
+                            if(key) { map[key] = (map[key]||0) + 1; }
+                        }
+                    });
+                    for(var k in map) { if(map[k] > 1) { buckets++; events += map[k]; } }
+                    return { total: lossArr.length, events: events, buckets: buckets, map: map,
+                        rate: lossArr.length > 0 ? Math.round(events / lossArr.length * 100) : 0 };
+                }
+                var curStats = _calcRepeatStats(_lossesThisMonth);
+                var _prevMonth = month.split('-')[0] + '-' + String(parseInt(month.split('-')[1]) - 1).padStart(2,'0');
+                // 处理跨年边界
+                if (parseInt(month.split('-')[1]) === 1) _prevMonth = (parseInt(month.split('-')[0]) - 1) + '-12';
+                var prevLosses = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(_prevMonth); });
+                var prevStats = _calcRepeatStats(prevLosses);
+                
+                // 环比变化值
+                var changeRate = prevStats.total > 0 ? curStats.rate - prevStats.rate : curStats.rate;
+                var changeEvents = curStats.events - prevStats.events;
+                var trendIcon = changeRate > 0 ? '<i class="fa-solid fa-arrow-up" style="color:var(--danger);"></i>' : (changeRate < 0 ? '<i class="fa-solid fa-arrow-down" style="color:var(--success);"></i>' : '<i class="fa-solid fa-minus" style="color:var(--text-muted);"></i>');
+                var trendColor = changeRate > 0 ? 'var(--danger)' : (changeRate < 0 ? 'var(--success)' : 'var(--text-muted)');
+                
+                // 重复TOP5
+                var sortedDesc = Object.keys(curStats.map).sort(function(a,b) { return curStats.map[b] - curStats.map[a]; });
+                var top5Html = sortedDesc.slice(0,5).map(function(k) {
+                    return '<span style="font-size:11px;color:var(--text-main);border-bottom:1px dashed var(--border-light);padding:2px 0;display:flex;justify-content:space-between;">' +
+                        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;font-weight:600;">' + escapeHtml(k) + '</span>' +
+                        '<span style="font-weight:900;color:' + (curStats.map[k] >= 3 ? 'var(--danger)' : 'var(--warning)') + ';margin-left:8px;">×' + curStats.map[k] + '次</span>' +
+                    '</span>';
+                }).join('') || '<span style="font-size:11px;color:var(--text-muted);">暂无重复LOSS</span>';
+                
+                function escapeHtml(str) {
+                    var div = document.createElement('div');
+                    div.appendChild(document.createTextNode(str));
+                    return div.innerHTML;
+                }
                 
                 document.getElementById('sys-detail-count').innerText = dmRows.length;
                 document.getElementById('sys-detail-rate').innerText = dmDoneRate + '%';
-                document.getElementById('sys-detail-risk').innerText = _repeated;
+                document.getElementById('sys-detail-risk').innerText = curStats.events;
                 
                 // ── 隐藏原表格，使用自定义分割布局 ──
                 var _postTable = document.querySelector('.sys-detail-table');
@@ -1538,6 +1574,8 @@
                     _postWrap.appendChild(_postLayout);
                 }
                 _postLayout.style.display = 'flex';
+                _postLayout.style.flexDirection = 'column';
+                _postLayout.style.gap = '10px';
                 
                 // DM打卡表格行
                 var dmTableHtml = dmRows.map(function(r) {
@@ -1560,36 +1598,61 @@
                 }).join('');
                 
                 _postLayout.innerHTML = '' +
-                    // ── 左：DM 每日打卡 ──
-                    '<div style="flex:1;overflow-y:auto;margin-right:8px;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
-                        '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
-                            '<i class="fa-solid fa-clipboard-check"></i> DM每日打卡（全月自动生成）' +
+                    // ★ LOSS重复发生率卡片（自动统计+同比环比）
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:12px 16px;align-items:center;">' +
+                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:100px;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复发生率</span>' +
+                            '<span style="font-size:24px;font-weight:900;color:' + (curStats.rate > 30 ? 'var(--danger)' : curStats.rate > 15 ? 'var(--warning)' : 'var(--success)') + ';">' + curStats.rate + '%</span>' +
+                            '<span style="font-size:11px;font-weight:700;color:' + trendColor + ';">' + trendIcon + ' 环比' + (changeRate >= 0 ? '+' : '') + changeRate + '%</span>' +
                         '</div>' +
-                        '<table class="grid" style="min-width:auto;">' +
-                            '<thead><tr>' +
-                                '<th style="width:100px;">日期</th>' +
-                                '<th style="width:60px;">打卡✓</th>' +
-                                '<th style="width:40px;">删</th>' +
-                            '</tr></thead>' +
-                            '<tbody>' + (dmTableHtml || '<tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">暂无数据</td></tr>') + '</tbody>' +
-                        '</table>' +
+                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">异常件数</span>' +
+                            '<span style="font-size:20px;font-weight:900;">' + curStats.total + '</span>' +
+                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + (changeEvents >= 0 ? '+' : '') + changeEvents + ' vs 上月</span>' +
+                        '</div>' +
+                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复占比</span>' +
+                            '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '/' + curStats.total + '</span>' +
+                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + curStats.buckets + '类重复</span>' +
+                        '</div>' +
+                        '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS：</span>' +
+                            top5Html +
+                        '</div>' +
                     '</div>' +
-                    // ── 右：改善项目 ──
-                    '<div style="flex:2;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
-                        '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
-                            '<i class="fa-solid fa-lightbulb" style="color:#fbbf24;"></i> 改善项目记录' +
-                            '<button class="btn btn-primary" onclick="addSysRecord()" style="margin-left:auto;padding:4px 12px;font-size:11px;"><i class="fa-solid fa-plus"></i> 新增</button>' +
+                    // ── 双列布局 ──
+                    '<div style="display:flex;flex:1;overflow:hidden;gap:8px;">' +
+                        // ── 左：DM 每日打卡 ──
+                        '<div style="flex:1;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
+                            '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
+                                '<i class="fa-solid fa-clipboard-check"></i> DM每日打卡（全月自动生成）' +
+                            '</div>' +
+                            '<table class="grid" style="min-width:auto;">' +
+                                '<thead><tr>' +
+                                    '<th style="width:100px;">日期</th>' +
+                                    '<th style="width:60px;">打卡✓</th>' +
+                                    '<th style="width:40px;">删</th>' +
+                                '</tr></thead>' +
+                                '<tbody>' + (dmTableHtml || '<tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">暂无数据</td></tr>') + '</tbody>' +
+                            '</table>' +
                         '</div>' +
-                        '<table class="grid" style="min-width:auto;">' +
-                            '<thead><tr>' +
-                                '<th style="width:115px;">日期</th>' +
-                                '<th style="min-width:150px;">项目名称</th>' +
-                                '<th style="min-width:100px;">目标</th>' +
-                                '<th style="width:80px;">进展</th>' +
-                                '<th style="width:40px;">删</th>' +
-                            '</tr></thead>' +
-                            '<tbody>' + (improveTableHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">点击「新增」按钮添加改善项目</td></tr>') + '</tbody>' +
-                        '</table>' +
+                        // ── 右：改善项目 ──
+                        '<div style="flex:2;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
+                            '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
+                                '<i class="fa-solid fa-lightbulb" style="color:#fbbf24;"></i> 改善项目记录' +
+                                '<button class="btn btn-primary" onclick="addSysRecord()" style="margin-left:auto;padding:4px 12px;font-size:11px;"><i class="fa-solid fa-plus"></i> 新增</button>' +
+                            '</div>' +
+                            '<table class="grid" style="min-width:auto;">' +
+                                '<thead><tr>' +
+                                    '<th style="width:115px;">日期</th>' +
+                                    '<th style="min-width:150px;">项目名称</th>' +
+                                    '<th style="min-width:100px;">目标</th>' +
+                                    '<th style="width:80px;">进展</th>' +
+                                    '<th style="width:40px;">删</th>' +
+                                '</tr></thead>' +
+                                '<tbody>' + (improveTableHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">点击「新增」按钮添加改善项目</td></tr>') + '</tbody>' +
+                            '</table>' +
+                        '</div>' +
                     '</div>';
                 return;
             }
