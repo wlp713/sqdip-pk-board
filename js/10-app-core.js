@@ -1294,12 +1294,6 @@
             var _twRate = _thisWeekLoss.length>0?Math.round(_twRep/_thisWeekLoss.length*100):0;
             var _lwRate = _lastWeekLoss.length>0?Math.round(_lwRep/_lastWeekLoss.length*100):0;
             var _wkChange = _lwRate>0?(_twRate-_lwRate):0;
-            // ★ 同比（去年同月）
-            var _lastYearMonth = (parseInt(currMonth.substring(0,4))-1) + currMonth.substring(4);
-            var _lastYearLosses = (db.loss||[]).filter(function(l){return String(l.date||'').startsWith(_lastYearMonth);});
-            var _lyMap = {}, _lyRep = 0; _lastYearLosses.forEach(function(l){ if(l.desc){var k=String(l.desc).trim().slice(0,40); _lyMap[k]=(_lyMap[k]||0)+1;} }); for(var _lyk in _lyMap){if(_lyMap[_lyk]>1)_lyRep+=_lyMap[_lyk];}
-            var _lyRate = _lastYearLosses.length>0?Math.round(_lyRep/_lastYearLosses.length*100):0;
-            var _yoYChange = _lyRate>0?repeatRate-_lyRate:0;
             // DM开展率 — db.dm 是对象 { '2026-05-03': { PRO1: {am,pm}, ... }, ... }
             let dmObj = db.dm || {};
             let dmDates = Object.keys(dmObj).filter(k => k.startsWith(currMonth));
@@ -1527,48 +1521,88 @@
                 var improveRows = postRows.filter(function(r) { return r.type === 'improvement'; });
                 var dmChecked = dmRows.filter(function(r) { return r.dmDone === true; }).length;
                 var dmDoneRate = dmRows.length > 0 ? Math.round(dmChecked / dmRows.length * 100) : 0;
-                // ★ LOSS重复发生率——自动统计+同比环比 ★
+                                // ★ LOSS重复发生率——自动统计+可选的环比对比 ★
                 var _lossesThisMonth = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(month); });
-                function _calcRepeatStats(lossArr) {
-                    var map = {}, events = 0, buckets = 0;
+                function _safeStr(s) { return String(s||'').trim().toLowerCase(); }
+                function _charBigramSimilarity(a, b) {
+                    a = _safeStr(a); b = _safeStr(b);
+                    if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+                    // 将前缀相同部分对齐后计算bigram重叠率
+                    var bgA = {}; for(var i=0;i<a.length-1;i++) { var bg=a.substring(i,i+2); bgA[bg]=(bgA[bg]||0)+1; }
+                    var inter=0; for(var i=0;i<b.length-1;i++) { var bg=b.substring(i,i+2); if(bgA[bg]>0){bgA[bg]--; inter++;} }
+                    var union = Math.max(a.length, b.length) - 1;
+                    return union > 0 ? inter / union : 0;
+                }
+                function _calcRepeatStatsSim(lossArr, threshold) {
+                    threshold = threshold || 0.75;
+                    var clusters = []; // 每个cluster: { key, items: [] }
                     lossArr.forEach(function(l) {
-                        if(l && l.desc) {
-                            var key = String(l.desc||'').trim().slice(0,24);
-                            if(key) { map[key] = (map[key]||0) + 1; }
+                        if(!l || !l.desc) return;
+                        var desc = String(l.desc).trim();
+                        var matched = false;
+                        for(var ci = 0; ci < clusters.length; ci++) {
+                            var clusterKey = clusters[ci].key;
+                            if(_charBigramSimilarity(desc, clusterKey) >= threshold) {
+                                clusters[ci].items.push(l);
+                                matched = true;
+                                break;
+                            }
+                        }
+                        if(!matched) {
+                            clusters.push({ key: desc, items: [l] });
                         }
                     });
-                    for(var k in map) { if(map[k] > 1) { buckets++; events += map[k]; } }
+                    var events = 0, buckets = 0;
+                    clusters.forEach(function(c) { if(c.items.length > 1) { buckets++; events += c.items.length; } });
+                    var map = {};
+                    clusters.forEach(function(c) { map[c.key] = c.items.length; });
                     return { total: lossArr.length, events: events, buckets: buckets, map: map,
                         rate: lossArr.length > 0 ? Math.round(events / lossArr.length * 100) : 0 };
                 }
-                var curStats = _calcRepeatStats(_lossesThisMonth);
-                // ★ 周度重复率（本周 vs 上周）
-                var _todayParts = month.split('-');
-                var _todayNum = parseInt(window.safeDOM.val('globalDate').substring(8,10)) || 15;
-                var _thisWkLoss = _lossesThisMonth.filter(function(l){ var d=parseInt(String(l.date||'').substring(8,10))||0; return d > _todayNum-7 && d <= _todayNum; });
-                var _lastWkLoss = _lossesThisMonth.filter(function(l){ var d=parseInt(String(l.date||'').substring(8,10))||0; return d > _todayNum-14 && d <= _todayNum-7; });
-                var _twMap2={},_twRep2=0; _thisWkLoss.forEach(function(l){if(l.desc){var k=String(l.desc).trim().slice(0,24);_twMap2[k]=(_twMap2[k]||0)+1;}}); for(var _tk2 in _twMap2){if(_twMap2[_tk2]>1)_twRep2+=_twMap2[_tk2];}
-                var _lwMap2={},_lwRep2=0; _lastWkLoss.forEach(function(l){if(l.desc){var k=String(l.desc).trim().slice(0,24);_lwMap2[k]=(_lwMap2[k]||0)+1;}}); for(var _lk2 in _lwMap2){if(_lwMap2[_lk2]>1)_lwRep2+=_lwMap2[_lk2];}
-                var _twRate = _thisWkLoss.length>0?Math.round(_twRep2/_thisWkLoss.length*100):0;
-                var _lwRate = _lastWkLoss.length>0?Math.round(_lwRep2/_lastWkLoss.length*100):0;
-                // ★ 同比（去年同月）
-                var _lastYearMonth = (parseInt(month.substring(0,4))-1) + month.substring(4);
-                var _lastYearLosses = (db.loss||[]).filter(function(l){return String(l.date||'').startsWith(_lastYearMonth);});
-                var _lyStats = _calcRepeatStats(_lastYearLosses);
-                var _yoYChange = _lyStats.total > 0 ? curStats.rate - _lyStats.rate : curStats.rate;
-                var _prevMonth = month.split('-')[0] + '-' + String(parseInt(month.split('-')[1]) - 1).padStart(2,'0');
-                // 处理跨年边界
-                if (parseInt(month.split('-')[1]) === 1) _prevMonth = (parseInt(month.split('-')[0]) - 1) + '-12';
-                var prevLosses = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(_prevMonth); });
-                var prevStats = _calcRepeatStats(prevLosses);
+                var SIM_THRESHOLD = 0.75; // 75%相似度阈值为重复事件
+                var curStats = _calcRepeatStatsSim(_lossesThisMonth, SIM_THRESHOLD);
+                
+                // 环比对比：从下拉框获取用户选择的对比周期
+                var _comparePeriod = (document.getElementById('sys-compare-period')||{}).value || 'lastMonth';
+                var _lossesCompare = [];
+                var _compareLabel = '';
+                if(_comparePeriod === 'lastMonth') {
+                    var _prevMonth = month.split('-')[0] + '-' + String(parseInt(month.split('-')[1]) - 1).padStart(2,'0');
+                    if (parseInt(month.split('-')[1]) === 1) _prevMonth = (parseInt(month.split('-')[0]) - 1) + '-12';
+                    _lossesCompare = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(_prevMonth); });
+                    _compareLabel = 'vs 上月';
+                } else if(_comparePeriod === 'lastWeek') {
+                    var _todayNum = parseInt(window.safeDOM.val('globalDate').substring(8,10)) || 15;
+                    var _lastWeekStart = _todayNum - 14;
+                    var _lastWeekEnd = _todayNum - 7;
+                    _lossesCompare = (db.loss || []).filter(function(l) {
+                        if(!l.date) return false;
+                        if(!String(l.date).startsWith(month)) return false;
+                        var d = parseInt(String(l.date).substring(8,10)) || 0;
+                        return d > _lastWeekStart && d <= _lastWeekEnd;
+                    });
+                    _compareLabel = 'vs 上周';
+                } else if(_comparePeriod === 'last7days') {
+                    var _todayNum = parseInt(window.safeDOM.val('globalDate').substring(8,10)) || 15;
+                    var _lastStart = _todayNum - 14;
+                    var _lastEnd = _todayNum - 7;
+                    _lossesCompare = (db.loss || []).filter(function(l) {
+                        if(!l.date) return false;
+                        if(!String(l.date).startsWith(month)) return false;
+                        var d = parseInt(String(l.date).substring(8,10)) || 0;
+                        return d > _lastStart && d <= _lastEnd;
+                    });
+                    _compareLabel = 'vs 前7天';
+                }
+                var compStats = _calcRepeatStatsSim(_lossesCompare, SIM_THRESHOLD);
                 
                 // 环比变化值
-                var changeRate = prevStats.total > 0 ? curStats.rate - prevStats.rate : curStats.rate;
-                var changeEvents = curStats.events - prevStats.events;
+                var changeRate = compStats.total > 0 ? curStats.rate - compStats.rate : curStats.rate;
+                var changeEvents = curStats.events - compStats.events;
                 var trendIcon = changeRate > 0 ? '<i class="fa-solid fa-arrow-up" style="color:var(--danger);"></i>' : (changeRate < 0 ? '<i class="fa-solid fa-arrow-down" style="color:var(--success);"></i>' : '<i class="fa-solid fa-minus" style="color:var(--text-muted);"></i>');
                 var trendColor = changeRate > 0 ? 'var(--danger)' : (changeRate < 0 ? 'var(--success)' : 'var(--text-muted)');
                 
-                // 重复TOP5
+                // 重复TOP5（基于相似度聚类后的统计）
                 var sortedDesc = Object.keys(curStats.map).sort(function(a,b) { return curStats.map[b] - curStats.map[a]; });
                 var top5Html = sortedDesc.slice(0,5).map(function(k) {
                     return '<span style="font-size:11px;color:var(--text-main);border-bottom:1px dashed var(--border-light);padding:2px 0;display:flex;justify-content:space-between;">' +
@@ -1576,7 +1610,6 @@
                         '<span style="font-weight:900;color:' + (curStats.map[k] >= 3 ? 'var(--danger)' : 'var(--warning)') + ';margin-left:8px;">×' + curStats.map[k] + '次</span>' +
                     '</span>';
                 }).join('') || '<span style="font-size:11px;color:var(--text-muted);">暂无重复LOSS</span>';
-                
                 function escapeHtml(str) {
                     var div = document.createElement('div');
                     div.appendChild(document.createTextNode(str));
@@ -1628,25 +1661,37 @@
                 }).join('');
                 
                 _postLayout.innerHTML = '' +
-                    // ★ LOSS重复发生率卡片（自动统计+同比环比）
+                    // ★ LOSS重复发生率卡片（自动统计+可选择的环比对比）★
                     '<div style="display:flex;gap:10px;flex-wrap:wrap;background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:12px 16px;align-items:center;">' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:100px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复发生率</span>' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复率</span>' +
                             '<span style="font-size:24px;font-weight:900;color:' + (curStats.rate > 30 ? 'var(--danger)' : curStats.rate > 15 ? 'var(--warning)' : 'var(--success)') + ';">' + curStats.rate + '%</span>' +
                             '<span style="font-size:11px;font-weight:700;color:' + trendColor + ';">' + trendIcon + ' 环比' + (changeRate >= 0 ? '+' : '') + changeRate + '%</span>' +
-                        '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px;">同比:' + (_yoYChange >= 0 ? '+' : '') + _yoYChange + '%</span>' +
+                            '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px;">' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">异常件数</span>' +
                             '<span style="font-size:20px;font-weight:900;">' + curStats.total + '</span>' +
-                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + (changeEvents >= 0 ? '+' : '') + changeEvents + ' vs 上月</span>' +
-                        '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px;">本周重复' + _twRate + '% | 上周' + _lwRate + '%</span>' +
+                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + (changeEvents >= 0 ? '+' : '') + changeEvents + ' ' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复占比</span>' +
-                            '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '/' + curStats.total + '</span>' +
-                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + curStats.buckets + '类重复</span>' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复事件</span>' +
+                            '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '件</span>' +
+                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">共' + curStats.buckets + '种重复</span>' +
                         '</div>' +
+                        '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:120px;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px;">环比对比:</span>' +
+                            '<select id="sys-compare-period" onchange="renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);">' +
+                                '<option value="lastMonth"' + (_comparePeriod==='lastMonth'?' selected':'') + '>vs 上月</option>' +
+                                '<option value="lastWeek"' + (_comparePeriod==='lastWeek'?' selected':'') + '>vs 上周</option>' +
+                                '<option value="last7days"' + (_comparePeriod==='last7days'?' selected':'') + '>vs 前7天</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS（相似度≥75%）：</span>' +
+                            top5Html +
+                        '</div>' +
+                    '</div>' +
                         '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS：</span>' +
                             top5Html +
