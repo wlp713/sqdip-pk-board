@@ -85,7 +85,38 @@
         .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(2, 132, 199, 0.08); min-height: 28px;}
         .section-title h3 { font-size: 15px !important; color: var(--text-main); display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 0.5px;}
         .section-title h3::before { content: ''; display: block; width: 4px; height: 14px; background: var(--midea-blue); border-radius: 2px; }
-        .btn { padding: 5px 14px; border-radius: var(--radius); cursor: pointer; font-size: 12px !important; border: 1px solid var(--border); background: var(--bg-panel); display: flex; align-items: center; gap: 6px; font-weight: 700; transition: all 0.2s; color: var(--midea-blue);}
+        /* ── ════════════════════════════════════════════════
+   微感知线框 — 全局输入框、下拉框、日期选择器
+   默认轻灵、交互强烈、品牌蓝聚焦反馈
+   ════════════════════════════════════════════════ ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not(.btn):not([type="image"]),
+select:not(.btn),
+textarea:not(.btn) {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+    box-sizing: border-box;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not(.btn):not([type="image"]):hover,
+select:not(.btn):hover,
+textarea:not(.btn):hover {
+    border-color: #CBD5E1;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not(.btn):not([type="image"]):focus,
+select:not(.btn):focus,
+textarea:not(.btn):focus {
+    border-color: #1890FF;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    outline: none;
+}
+::placeholder { color: #94A3B8; }
+
+.btn { padding: 5px 14px; border-radius: var(--radius); cursor: pointer; font-size: 12px !important; border: 1px solid var(--border); background: var(--bg-panel); display: flex; align-items: center; gap: 6px; font-weight: 700; transition: all 0.2s; color: var(--midea-blue);}
         .btn:hover { background: var(--midea-blue); color: white; border-color: var(--midea-blue); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,78,216,0.15);}
         .btn-primary { background: var(--midea-blue); color: white; border: 1px solid var(--midea-blue); box-shadow: 0 4px 10px rgba(29,78,216,0.15);}
         .btn-primary:hover { background: var(--midea-dark); border-color: var(--midea-dark); }
@@ -101,8 +132,10 @@
         table.grid th, table.grid td { border: 1px solid var(--border-light); padding: 0 4px; text-align: center; height: 32px; vertical-align: middle; font-size: 12px !important;}
         table.grid th { background: var(--midea-blue); color: #ffffff; font-weight: 800; position: sticky; top: 0; z-index: 10; font-size: 12px; padding: 8px 6px; letter-spacing: 0.3px; border-bottom: 2px solid rgba(255,255,255,0.15);}
         table.grid td { padding: 5px 6px; font-size: 12px; vertical-align: middle; border-color: var(--border-light); }
-        table.grid input, table.grid select { width: 100%; height: 100%; border: none; text-align: center; font-size: 12px !important; font-weight: 600; outline: none; background: transparent; font-family: inherit; transition: 0.2s; color: var(--text-main); padding: 2px 0;}
-        table.grid input:focus, table.grid select:focus { background: rgba(255,255,255,0.95); box-shadow: inset 0 0 0 2px var(--midea-blue); border-radius: 2px;}
+        table.grid input, table.grid select { width: 100%; height: 100%; border: none; text-align: center; font-size: 12px !important; font-weight: 600; outline: none; background: transparent; font-family: inherit; transition: 0.15s; color: var(--text-main); padding: 2px 4px; box-sizing: border-box;}
+        table.grid td select { padding-right: 18px; } /* 下拉箭头留白 */
+        table.grid input:focus, table.grid select:focus { background: #ffffff; box-shadow: inset 0 0 0 2px #1890FF; border-radius: 2px;}
+        table.grid select { appearance: auto; -webkit-appearance: auto; -moz-appearance: auto; }
         table.grid input[readonly], textarea[readonly] { color: var(--text-muted); font-weight: normal; background: rgba(0,0,0,0.02) !important; cursor: not-allowed; }
         table.grid tbody tr:nth-child(even) td { background: #f8fafc; }
         table.grid tbody tr:hover td { background: #e8f4fd; }
@@ -330,8 +363,8 @@
         }
         .ai-action-btn:hover { opacity: 1; transform: scale(1.1); }
         input.text-left { text-align: left !important; padding-left: 10px !important; }
-        tr.filter-row th { background: rgba(224,242,254,0.7); padding: 2px; top: 32px;}
-        tr.filter-row input, tr.filter-row select { width: 100%; height: 22px; font-size: 11px !important; border: 1px solid rgba(2,132,199,0.2); border-radius: 3px; background: white; padding: 0 4px;}
+        tr.filter-row th { background: rgba(224,242,254,0.7); padding: 4px 2px; top: 32px;}
+        tr.filter-row input, tr.filter-row select { width: 100%; height: 28px; font-size: 11px !important; border: 1px solid #E2E8F0; border-radius: 4px; background: #FFFFFF; padding: 0 6px;}
         .row-parent td { background: rgba(2, 132, 199, 0.06); font-weight: 800; color: var(--midea-dark); }
         .val-danger { color: var(--danger) !important; font-weight: 800; }
         .val-danger-bg { background: #fef2f2 !important; }
@@ -516,8 +549,8 @@
         @keyframes pulseBg { 0% { background-color: rgba(243, 232, 255, 0.3); } 100% { background-color: rgba(243, 232, 255, 0.8); } }
         .badge-improve { background: rgba(5, 150, 105, 0.1); color: var(--success); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
         .badge-deteriorate { background: rgba(225, 29, 72, 0.1); color: var(--danger); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; }
-        input[type="date"].ai-date-picker { border: 1px solid rgba(2,132,199,0.3); border-radius: 6px; padding: 4px 8px; font-family: inherit; font-weight: 700; color: var(--midea-dark); outline: none; background: rgba(255,255,255,0.9); }
-        input[type="date"].ai-date-picker:focus { box-shadow: 0 0 0 2px rgba(2,132,199,0.2); }
+        input[type="date"].ai-date-picker { border: 1px solid #E2E8F0 !important; border-radius: 6px; padding: 6px 10px; font-family: inherit; font-weight: 700; color: #334155; outline: none; background: #FFFFFF; }
+        input[type="date"].ai-date-picker:focus { border-color: #1890FF !important; box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important; outline: none; }
         /* 紧凑报告样式 */
         .compact-report-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 99999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .compact-report-box { background: white; border-radius: 12px; padding: 0; max-width: 1000px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
@@ -1029,19 +1062,19 @@ body.theme-carbon { --bg-sidebar: #0F172A; }
 body.theme-coral { --bg-sidebar: #831843; }
 body.theme-warm { --bg-sidebar: #78350F; }
 
-/* === 二十三、输入框框线统一 — 细线+半透明 === */
-input, select, textarea { border: 1px solid rgba(0,0,0,0.12) !important; border-radius: 4px !important; }
-table.grid td input, table.grid td select, table.excel-grid td input, table.excel-grid td select, #p-input table.excel-grid td input, #p-input table.excel-grid td select, tr.row-parent ~ tr td input, tr.row-parent ~ tr td select { border: 1px solid rgba(0,0,0,0.10) !important; border-radius: 3px !important; }
-input[readonly], textarea[readonly] { border: 1px solid rgba(0,0,0,0.06) !important; background: rgba(0,0,0,0.02) !important; }
-input:focus, select:focus, textarea:focus { border-color: #2563EB !important; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10) !important; outline: none !important; }
-table.grid td input:focus, table.grid td select:focus, table.excel-grid td input:focus, table.excel-grid td select:focus { border-color: #2563EB !important; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10) !important; background: #FFFFFF !important; }
-input[type="date"] { border: 1px solid rgba(0,0,0,0.12) !important; border-radius: 4px !important; }
-tr.filter-row input, tr.filter-row select { border: 1px solid rgba(0,0,0,0.10) !important; }
-.prod-input, .prod-shift-table td input[type="number"], .prod-shift-table td input[type="text"] { border: 1px solid rgba(0,0,0,0.12) !important; border-radius: 4px !important; }
-.paste-area { border: 2px dashed rgba(0,0,0,0.15) !important; }
-.paste-area:focus { border-style: solid !important; border-color: #2563EB !important; }
-.memo-box { border: 1px solid rgba(0,0,0,0.12) !important; }
-.memo-box:focus { border-color: #2563EB !important; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10) !important; }
-.sys-item input[type="number"] { border: 1px solid rgba(0,0,0,0.10) !important; }
-.sim-row input[type="number"] { border: 1px solid rgba(0,0,0,0.12) !important; }
-.sqdip-card input { border: 1px solid rgba(0,0,0,0.10) !important; border-radius: 4px !important; }
+/* ── 微感知线框覆盖（保证全局一致性） ── */
+table.grid td input, table.grid td select, table.excel-grid td input, table.excel-grid td select, #p-input table.excel-grid td input, #p-input table.excel-grid td select, tr.row-parent ~ tr td input, tr.row-parent ~ tr td select { border: 1px solid #E2E8F0 !important; border-radius: 3px !important; background: #FFFFFF !important; }
+input[readonly], textarea[readonly] { border: 1px solid #E2E8F0 !important; background: rgba(0,0,0,0.02) !important; color: #94A3B8 !important; }
+input:focus, select:focus, textarea:focus { border-color: #1890FF !important; box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important; outline: none !important; }
+table.grid td input:focus, table.grid td select:focus, table.excel-grid td input:focus, table.excel-grid td select:focus { border-color: #1890FF !important; box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important; background: #FFFFFF !important; }
+input[type="date"] { border: 1px solid #E2E8F0 !important; border-radius: 4px !important; background: #FFFFFF !important; }
+tr.filter-row input, tr.filter-row select { border: 1px solid #E2E8F0 !important; height: 28px !important; border-radius: 4px !important; padding-right: 20px !important; }
+tr.filter-row th input, tr.filter-row th select { background: #FFFFFF !important; }
+.prod-input, .prod-shift-table td input[type="number"], .prod-shift-table td input[type="text"] { border: 1px solid #E2E8F0 !important; border-radius: 4px !important; background: #FFFFFF !important; }
+.paste-area { border: 2px dashed #E2E8F0 !important; }
+.paste-area:focus { border-style: solid !important; border-color: #1890FF !important; }
+.memo-box { border: 1px solid #E2E8F0 !important; }
+.memo-box:focus { border-color: #1890FF !important; box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important; }
+.sys-item input[type="number"] { border: 1px solid #E2E8F0 !important; }
+.sim-row input[type="number"] { border: 1px solid #E2E8F0 !important; }
+.sqdip-card input { border: 1px solid #E2E8F0 !important; border-radius: 4px !important; }
