@@ -244,6 +244,10 @@
             <div class="sys-detail-toolbar">
                 <span style="font-weight:900;color:var(--text-muted);" data-i18n="label_month">月份</span>
                 <input type="month" id="sys-detail-month" class="btn" onchange="typeof renderSysDetail==='function'&&renderSysDetail()">
+                <span style="font-weight:900;color:var(--text-muted);margin-left:6px;">主范围</span>
+                <input type="date" id="sys-main-start" class="btn" style="width:120px;font-size:12px;" onchange="localStorage.setItem('mbs_main_start',this.value);window._handleMainRangeChange()">
+                <span style="font-weight:900;color:var(--text-muted);">至</span>
+                <input type="date" id="sys-main-end" class="btn" style="width:120px;font-size:12px;" onchange="localStorage.setItem('mbs_main_end',this.value);window._handleMainRangeChange()">
                 <span style="font-weight:900;color:var(--text-muted);">车间/部门</span>
                 <select id="sys-detail-owner-filter" class="btn" onchange="typeof renderSysDetail==='function'&&renderSysDetail()">
                     <option value="">全部</option><option>PRO1</option><option>PRO2</option><option>PRO3</option><option>PRO4</option><option>PE</option>

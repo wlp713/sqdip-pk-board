@@ -1946,6 +1946,21 @@
             var d = new Date(); d.setDate(d.getDate() - 1);
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
+        // ★ 主范围默认日期:当月第一天
+        function _defaultMainStart() {
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-01';
+        }
+        // ★ 主范围默认日期:当天
+        function _defaultMainEnd() {
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+        // ★ 主范围日期变更处理
+        window._handleMainRangeChange = function() {
+            console.log('[DEBUG] _handleMainRangeChange 触发');
+            typeof renderSysDetail==='function'&&renderSysDetail();
+        };
         // ★ 环比日期变更处理：局部加载 → 重新计算 → 更新指标&TOP列表
         var _compareChangeTimer = null;
         window._handleCompareChange = function() {
@@ -2051,7 +2066,22 @@
                 var dmChecked = dmRows.filter(function(r) { return r.dmDone === true; }).length;
                 var dmDoneRate = dmRows.length > 0 ? Math.round(dmChecked / dmRows.length * 100) : 0;
                                 // ★ LOSS重复发生率——自动统计+可选的环比对比 ★
-                var _lossesThisMonth = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(month); });
+                // ★ 主范围：从日期范围输入框获取起始+结束日期（代替全月固定范围）
+                var _msEl = document.getElementById('sys-main-start');
+                var _meEl = document.getElementById('sys-main-end');
+                var _mainStart = (_msEl && _msEl.value) || localStorage.getItem('mbs_main_start') || _defaultMainStart();
+                var _mainEnd = (_meEl && _meEl.value) || localStorage.getItem('mbs_main_end') || _defaultMainEnd();
+                // 确保日期格式有效(至少10字符 YYYY-MM-DD)
+                if (!_mainStart || String(_mainStart).length < 10) _mainStart = _defaultMainStart();
+                if (!_mainEnd || String(_mainEnd).length < 10) _mainEnd = _defaultMainEnd();
+                // ★ 初始化主范围输入框（空值时填入默认值）
+                if (_msEl && !_msEl.value) { _msEl.value = _mainStart; }
+                if (_meEl && !_meEl.value) { _meEl.value = _mainEnd; }
+                var _mainRangeLabel = String(_mainStart).substring(5) + ' 至 ' + String(_mainEnd).substring(5);
+                var _lossesMain = (db.loss || []).filter(function(l) {
+                    return l.date && String(l.date) >= String(_mainStart) && String(l.date) <= String(_mainEnd);
+                });
+                console.log('[DEBUG] 主范围: start=', _mainStart, 'end=', _mainEnd, 'lossesCount=', _lossesMain.length);
                 function _safeStr(s) { return String(s||'').trim().toLowerCase(); }
                 function _charBigramSimilarity(a, b) {
                     a = _safeStr(a); b = _safeStr(b);
@@ -2089,10 +2119,10 @@
                         rate: lossArr.length > 0 ? Math.round(events / lossArr.length * 100) : 0 };
                 }
                 var SIM_THRESHOLD = 0.75; // 75%相似度阈值为重复事件
-                var curStats = _getCachedLossStats(_lossesThisMonth, month, SIM_THRESHOLD);
+                var curStats = _getCachedLossStats(_lossesMain, _mainStart + '_' + _mainEnd, SIM_THRESHOLD);
                 if (!curStats) {
-                    curStats = _calcRepeatStatsSim(_lossesThisMonth, SIM_THRESHOLD);
-                    _setCachedLossStats(_lossesThisMonth, month, SIM_THRESHOLD, curStats);
+                    curStats = _calcRepeatStatsSim(_lossesMain, SIM_THRESHOLD);
+                    _setCachedLossStats(_lossesMain, _mainStart + '_' + _mainEnd, SIM_THRESHOLD, curStats);
                 }
                 
                 // 环比对比：从日期范围输入框获取对比起止日期
@@ -2197,17 +2227,20 @@
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:100px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复率</span>' +
                             '<span style="font-size:24px;font-weight:900;color:' + (curStats.rate > 30 ? 'var(--danger)' : curStats.rate > 15 ? 'var(--warning)' : 'var(--success)') + ';">' + curStats.rate + '%</span>' +
+                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
                             '<span style="font-size:11px;font-weight:700;color:' + trendColor + ';">' + trendIcon + ' 环比' + (changeRate >= 0 ? '+' : '') + changeRate + '%</span>' +
-                            '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:2px;">' + _compareLabel + '</span>' +
+                            '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:1px;">' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">异常件数</span>' +
                             '<span style="font-size:20px;font-weight:900;">' + curStats.total + '</span>' +
+                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
                             '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + (changeEvents >= 0 ? '+' : '') + changeEvents + ' ' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复事件</span>' +
                             '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '件</span>' +
+                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
                             '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">共' + curStats.buckets + '种重复</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:200px;">' +
