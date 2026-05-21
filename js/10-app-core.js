@@ -2795,6 +2795,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     if (r.trend === 'new' && curItem && !seenCurIdx[r.curIdx]) {
                         seenCurIdx[r.curIdx] = true;
                         resultItems.push({
+                            curIdx: r.curIdx,
                             desc: curItem.desc,
                             prevDesc: '',
                             curQty: curItem.qty,
@@ -2811,6 +2812,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     if (curItem && prevItem && !seenCurIdx[r.curIdx]) {
                         seenCurIdx[r.curIdx] = true;
                         resultItems.push({
+                            curIdx: r.curIdx,
                             desc: curItem.desc,
                             prevDesc: prevItem.desc,
                             curQty: curItem.qty,
@@ -2982,7 +2984,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             function _crCalcRepeatByBigram(curLosses, prevLosses) {
                 var items = [];
                 var SIM = 0.75;
-                curLosses.forEach(function(cur) {
+                curLosses.forEach(function(cur, idx_) {
                     if (!cur || !cur.desc) return;
                     var curDesc = String(cur.desc).trim();
                     var bestMatch = null;
@@ -2997,6 +2999,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         var _bpQty = Math.abs(safeNum(bestMatch.qty));
                         var _bTrend = (_bQty < _bpQty * 0.7) ? 'improved' : (_bQty > _bpQty * 1.3) ? 'worsened' : 'chronic';
                         items.push({
+                            curIdx: idx_,
                             desc: curDesc,
                             prevDesc: String(bestMatch.desc).trim(),
                             curQty: _bQty,
@@ -3069,16 +3072,33 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 h += '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-style:italic;">' + methodLabel + '</div>';
 
                 if (repeatedItems.length > 0) {
-                    // Sort by curQty DESC then prevQty DESC
+                    // Pre-calculate WTD for each item: match BOTH desc AND prevDesc (semantic variants)
+                    var wtdMap = {};
+                    repeatedItems.forEach(function(item) {
+                        var descs = [item.desc];
+                        if (item.prevDesc && String(item.prevDesc).trim() !== String(item.desc).trim()) {
+                            descs.push(item.prevDesc);
+                        }
+                        var total = 0;
+                        for (var di = 0; di < descs.length; di++) {
+                            total += _calcWTD(descs[di], endDate || startDate);
+                        }
+                        wtdMap[item.desc] = total;
+                    });
+
+                    // Sort by WTD DESC, then Today DESC, then Prev DESC
                     var sortedItems = repeatedItems.slice().sort(function(a, b) {
+                        var wtdA = wtdMap[a.desc] || 0;
+                        var wtdB = wtdMap[b.desc] || 0;
+                        if (wtdB !== wtdA) return wtdB - wtdA;
                         if (b.curQty !== a.curQty) return b.curQty - a.curQty;
                         return b.prevQty - a.prevQty;
                     });
 
                     h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
-                    h += '<tr><th style="width:38%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;">WTD</th><th style="width:15%;text-align:center;">Trend</th></tr>';
-                    sortedItems.slice(0, 8).forEach(function(item) {
-                        var wtd = _calcWTD(item.desc, endDate || startDate);
+                    h += '<tr><th style="width:8%;text-align:center;">#</th><th style="width:30%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;">WTD</th><th style="width:15%;text-align:center;">Trend</th></tr>';
+                    sortedItems.slice(0, 8).forEach(function(item, rankIdx) {
+                        var wtd = wtdMap[item.desc] || 0;
                         // Trend icons: ↑ red = worsened, ↓ green = improved, ↔ yellow = chronic, 🆕 blue = new
                         var trendHtml = '';
                         if (item.trend === 'worsened') {
@@ -3091,6 +3111,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                             trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
                         }
                         h += '<tr>';
+                        h += '<td style="text-align:center;font-weight:700;color:#6b7280;font-size:11px;">' + (rankIdx + 1) + '</td>';
                         h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + item.desc.replace(/"/g,'&quot;') + '</td>';
                         h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.curQty + '</td>';
                         h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.prevQty + '</td>';
@@ -3099,7 +3120,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         h += '</tr>';
                     });
                     if (sortedItems.length > 8) {
-                        h += '<tr><td colspan="5" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
+                        h += '<tr><td colspan="6" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
                     }
                     h += '</table>';
                 } else {
@@ -3130,43 +3151,48 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             document.getElementById('compact-report-content').innerHTML = html;
             document.getElementById('compact-report-wrap').style.display = 'flex';
 
-            // --- 异步 AI 分析 ---
+            // --- 异步 AI 分析 + Bigram 合并 ---
             (async function() {
+                // 1. Always run Bigram first (synchronous, deterministic, catches exact/token matches)
+                var bigramItems = _crCalcRepeatByBigram(losses, _prevLosses);
+                var bigramMatchedIdx = {};
+                bigramItems.forEach(function(item) {
+                    if (item.curIdx !== undefined) bigramMatchedIdx[item.curIdx] = true;
+                });
+
+                // 2. Try AI (asynchronous, semantic matching)
                 var aiResult = null;
                 try {
                     aiResult = await window._aiAnalyzeRepeatLoss(losses, _prevLosses);
                 } catch(e) {
-                    aiResult = { success: false, error: e.message, fallback: true };
+                    aiResult = { success: false };
                 }
 
-                // 渲染 C 部分
+                // 3. Merge: Bigram primary, AI supplements what Bigram missed
+                var mergedItems = bigramItems.slice();
+                var modelLabel = 'Bigram';
+                if (aiResult && aiResult.success) {
+                    var aiItems = aiResult.items || [];
+                    modelLabel = '\u7CBE\u51C6\u5339\u914D';
+                    aiItems.forEach(function(aiItem) {
+                        if (aiItem.curIdx !== undefined && !bigramMatchedIdx[aiItem.curIdx]) {
+                            mergedItems.push(aiItem);
+                            bigramMatchedIdx[aiItem.curIdx] = true;
+                        }
+                    });
+                }
+
                 var cSection = document.getElementById('cr-section-c');
                 if (!cSection) return;
 
                 var cHtml = '';
-                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
-
-                if (aiResult && aiResult.success) {
-                    // AI 分析成功
-                    var aiItems = aiResult.items || [];
-                    var modelName = _getSelectedModel().split('/').pop() || 'AI';
-                    cHtml += _crRenderRepeatSection(
-                        losses.length, _prevLosses.length, _prevDate,
-                        aiItems,
-                        modelName + ' AI Analysis',
-                        db.loss, start, end
-                    );
-                } else {
-                    // AI 失败：回退 Bigram
-                    var fallbackItems = _crCalcRepeatByBigram(losses, _prevLosses);
-                    var errMsg = aiResult ? (aiResult.error || 'unknown') : 'unknown';
-                    cHtml += _crRenderRepeatSection(
-                        losses.length, _prevLosses.length, _prevDate,
-                        fallbackItems,
-                        'API failed(' + errMsg + ') · Fallback',
-                        db.loss, start, end
-                    );
-                }
+                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis \u2014 ' + start + ' vs ' + _prevDate + '</div>';
+                cHtml += _crRenderRepeatSection(
+                    losses.length, _prevLosses.length, _prevDate,
+                    mergedItems,
+                    modelLabel,
+                    db.loss, start, end
+                );
                 cSection.innerHTML = cHtml;
             })();
         };
