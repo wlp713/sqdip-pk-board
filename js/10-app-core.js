@@ -1946,6 +1946,29 @@
             var d = new Date(); d.setDate(d.getDate() - 1);
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
+        // ★ 环比日期变更处理：局部加载 → 重新计算 → 更新指标&TOP列表
+        var _compareChangeTimer = null;
+        window._handleCompareChange = function() {
+            // 防抖：快速连续修改日期只触发最后一次
+            if (_compareChangeTimer) clearTimeout(_compareChangeTimer);
+            // 1. 局部Loading：将LOSS重复率卡片区域替换为加载提示
+            var pl = document.getElementById('sys-detail-post-layout');
+            if (pl) {
+                pl.innerHTML = '' +
+                    '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:16px;">' +
+                        '<i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--primary);"></i>' +
+                        '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">' +
+                            '<span style="font-size:14px;color:var(--text-muted);font-weight:700;">正在重新计算LOSS重复数据...</span>' +
+                            '<span style="font-size:11px;color:var(--text-muted);">已根据新日期范围重新统计</span>' +
+                        '</div>' +
+                    '</div>';
+            }
+            // 2. 给浏览器时间渲染loading态，然后重新计算并渲染完整内容
+            _compareChangeTimer = setTimeout(function() {
+                _compareChangeTimer = null;
+                renderSysDetail();
+            }, 30);
+        };
         window.renderSysDetail = function() {
         try {
             // ★ 性能诊断标记
@@ -2171,9 +2194,9 @@
                         '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:200px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px;">环比对比日期范围:</span>' +
                             '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-                                '<input type="date" id="sys-compare-start" value="' + _compareStart + '" onchange="localStorage.setItem(\'mbs_compare_start\',this.value);renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
+                                '<input type="date" id="sys-compare-start" value="' + _compareStart + '" onchange="localStorage.setItem(\'mbs_compare_start\',this.value);window._handleCompareChange()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
                                 '<span style="font-size:11px;color:var(--text-muted);">至</span>' +
-                                '<input type="date" id="sys-compare-end" value="' + _compareEnd + '" onchange="localStorage.setItem(\'mbs_compare_end\',this.value);renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
+                                '<input type="date" id="sys-compare-end" value="' + _compareEnd + '" onchange="localStorage.setItem(\'mbs_compare_end\',this.value);window._handleCompareChange()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
                             '</div>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
