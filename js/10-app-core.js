@@ -2696,44 +2696,59 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             
             var prompt = '你是一位经验丰富的冰箱压缩机工厂 LOSS 数据分析专家。\n\n';
             prompt += '### 任务\n';
-            prompt += '分析当天与前一天的LOSS数据，识别"重复问题"——即两天内发生的同一类故障模式，即使文字表述不完全相同。\n\n';
-            prompt += '### 冰箱压缩机工厂常见故障分类（请结合这些知识判断重复性）\n';
-            prompt += '【电机类】定子烧毁/短路、转子铸铝缺陷/断条、绕组匝间短路、绝缘击穿、电机引线断裂、绑扎松动\n';
-            prompt += '【阀组类】阀片断裂/变形、排气阀泄漏、吸气阀密封不良、阀板砂眼、阀垫破损\n';
-            prompt += '【机械运动类】曲轴抱死/磨损、连杆断裂/变形、活塞拉缸、轴承烧损、止推面磨损、平衡块松动\n';
-            prompt += '【壳体焊接类】壳体钎焊泄漏、壳体裂纹、焊缝气孔/夹渣、端子焊接不良、接线柱泄漏\n';
-            prompt += '【装配类】螺钉未拧紧/滑丝、定位不准导致配合间隙异常、密封圈切边、异物混入、零件漏装\n';
-            prompt += '【管路系统类】吸气管/排气管断裂、回气管堵塞、毛细管堵塞、过滤器脏堵\n';
-            prompt += '【电气类】PTC启动器不良、保护器动作、电容器故障、接线端子松脱、绝缘电阻低\n';
-            prompt += '【制冷剂系统类】制冷剂泄漏、水分超标、真空度不足、冷冻油不足/劣化\n';
-            prompt += '【噪音振动类】异常噪音、壳体共振、管路碰撞、电磁音大\n';
-            prompt += '【外观类】壳体生锈、涂装不良、标识不清、包装破损\n\n';
-            prompt += '### 判断标准\n';
-            prompt += '1. 描述文字不同但本质是同一类故障模式：例如"定子烧坏"和"电机绕组短路"都是电机定子问题，算重复\n';
-            prompt += '2. 不同线体但完全相同的故障模式：例如 LINE A 和 LINE B 都出现"阀片断裂"，算重复\n';
-            prompt += '3. 同一故障模式即使影响数量差异很大也算重复（这正是需要对比分析的意义）\n';
-            prompt += '4. 工艺动作类（如"更换模具""调整参数"）不视为故障重复，但同一线体连续出现相同设备故障算重复\n\n';
-            prompt += '### 对比分析要求（这才是核心价值）\n';
-            prompt += '对每组重复问题，分析其改善/恶化/持续情况，输出 trend 字段：\n';
-            prompt += '- "improved" = 昨天问题影响大，今天明显减少或消失（如昨天300台→今天0或20台，说明改善有效）\n';
-            prompt += '- "worsened" = 昨天没有或影响小，今天影响变大（如昨天0台→今天150台，说明问题恶化需紧急处理）\n';
-            prompt += '- "chronic" = 两天都持续发生且影响都较大（如昨天200台→今天180台，需重点攻关）\n\n';
+            prompt += '严格分析当天与前一天的LOSS数据，精准识别"重复问题"。\n\n';
+            prompt += '### 核心原则（非常重要）\n';
+            prompt += '1. **必须是同一个具体的故障问题**才算重复，不能是宽泛的大类。例如：\n';
+            prompt += '   ✅ 正确："定子烧毁"和"电机绕组短路" → 都是电机定子绕组的电气故障，是同一个具体问题→算重复\n';
+            prompt += '   ✅ 正确："阀片断裂"和"排气阀片开裂" → 都是阀片机械断裂→算重复\n';
+            prompt += '   ✅ 正确："焊接泄漏"和"钎焊砂眼渗漏" → 都是焊接密封失效→算重复\n';
+            prompt += '   ❌ 错误："电机故障"（太宽泛，没有具体位置和现象）和"定子烧毁"→ 不确定是否为同一个具体问题，不算重复\n';
+            prompt += '   ❌ 错误："装配不良"和"螺钉未拧紧"（"装配不良"太宽泛，螺钉未拧紧太具体，不确定是否指向同一件事）→ 不算重复\n\n';
+            prompt += '2. **文字表述不同但指同一个具体故障，才算重复**：\n';
+            prompt += '   - "定子烧坏" vs "电机绕组短路" → 都是电机定子绕组电气故障，是同一个具体损坏→✅ 算重复\n';
+            prompt += '   - "曲轴抱死" vs "曲轴卡死" → 同一个运动部件抱死→✅ 算重复\n';
+            prompt += '   - "制冷剂泄漏"（太笼统，没有指出具体哪里漏）vs "焊接处制冷剂渗漏"（有具体漏点）→ 不算重复\n\n';
+            prompt += '3. **绝对不算重复的情况**：\n';
+            prompt += '   - 宽泛分类 vs 具体故障："电气故障" vs "PTC不良"→ 不算重复\n';
+            prompt += '   - 不同故障部位："定子问题" vs "轴承问题"→ 不算重复\n';
+            prompt += '   - 工艺调整动作："更换模具"、"调整参数"、"更换刀具"等作业动作不算故障重复\n';
+            prompt += '   - 完全不同的故障："管路断裂" vs "电机烧毁"→ 不同系统部件，不算重复\n\n';
+            prompt += '### 冰箱压缩机常见具体故障参考（用于辅助判断是否是同一个具体问题）\n';
+            prompt += '- 定子绕组烧毁/匝间短路/绝缘击穿 → 电机定子电气损坏(同一个具体故障)\n';
+            prompt += '- 转子断条/铸铝缺陷 → 转子铸造缺陷(同一个具体故障)\n';
+            prompt += '- 阀片断裂/开裂/变形 → 阀片机械损坏(同一个具体故障)\n';
+            prompt += '- 排气阀/吸气阀泄漏/密封不良 → 阀组密封失效(同一个具体故障)\n';
+            prompt += '- 曲轴抱死/磨损/卡死 → 曲轴运动故障(同一个具体故障)\n';
+            prompt += '- 连杆断裂/变形 → 连杆机械损坏(同一个具体故障)\n';
+            prompt += '- 活塞拉缸/卡滞 → 活塞缸套配合故障(同一个具体故障)\n';
+            prompt += '- 壳体钎焊泄漏/焊缝气孔/焊接砂眼 → 焊接密封失效(同一个具体故障)\n';
+            prompt += '- 端子焊接不良/接线柱泄漏 → 电气端子密封失效(同一个具体故障)\n';
+            prompt += '- 轴承烧损/磨损 → 轴承故障(同一个具体故障)\n';
+            prompt += '- 毛细管堵塞/过滤器脏堵 → 管路堵塞(同一个具体故障)\n';
+            prompt += '- PTC启动器不良/保护器动作 → 启动/保护电气故障(同一个具体故障)\n\n';
+            prompt += '### 趋势判断规则（严格基于数据量对比）\n';
+            prompt += '对每组判断为重复的问题，根据今天和昨天的数量对比输出 trend 字段：\n';
+            prompt += '- "improved"：今天数量 < 昨天数量×0.7（减少30%以上）= 改善\n';
+            prompt += '- "worsened"：今天数量 > 昨天数量×1.3（增加30%以上）= 恶化，需要紧急关注\n';
+            prompt += '- "chronic"：介于两者之间 = 持续发生，需要长期攻关\n';
+            prompt += '- 如果昨天没有该问题（新增问题），直接输出 trend="new"\n\n';
             prompt += '### 输入数据\n';
             prompt += '\n**前一天 (' + prevLosses.length + ' 条记录)：**\n' + JSON.stringify(prevList, null, 2) + '\n\n';
             prompt += '**当天 (' + losses.length + ' 条记录)：**\n' + JSON.stringify(curList, null, 2) + '\n\n';
             prompt += '### 输出格式\n';
-            prompt += '只输出以下 JSON，不要多余文字：\n';
+            prompt += '只输出以下 JSON，不要多余文字，不要 markdown 包裹：\n';
             prompt += '{\n';
             prompt += '  "repeated": [\n';
             prompt += '    {\n';
             prompt += '      "curIdx": 当天记录中对应的 idx,\n';
-            prompt += '      "prevIdx": 前一天记录中对应的 idx,\n';
-            prompt += '      "trend": "improved",\n';
-            prompt += '      "reason": "用一句话解释为什么判断为重复以及改善/恶化情况，例如：同一类电机定子故障（定子烧毁），从昨天300台降至今天50台，改善明显，建议持续跟踪定子批次质量"\n';
+            prompt += '      "prevIdx": 前一天记录中对应的 idx（如果是新增问题没有前一天对应，prevIdx填null）, \n';
+            prompt += '      "trend": "improved", // 可选值: improved / worsened / chronic / new\n';
+            prompt += '      "reason": "一句话说明判断依据和趋势，例如：定子绕组烧毁故障，从昨天230台降至今天60台，改善明显，建议确认近期定子批次质量是否已更换供应商"\n';
             prompt += '    }\n';
             prompt += '  ]\n';
             prompt += '}\n';
-            prompt += '注意：trend 和 reason 都要用中文写。如果没有重复问题，输出 {"repeated": []}。';
+            prompt += '如果某个当天的问题在前一天没有找到任何匹配的具体故障，则不输出（不要强行匹配宽泛分类）。\n';
+            prompt += '如果没有重复问题或只有新的问题，输出 {"repeated": []}。';
             
             try {
                 var model = _getSelectedModel();
@@ -2746,7 +2761,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     body: JSON.stringify({
                         model: model,
                         messages: [
-                            { role: 'system', content: '你是一个冰箱压缩机工厂的LOSS分析专家。严格按要求输出JSON，不要有任何多余内容。' },
+                            { role: 'system', content: '你是GMCC冰箱压缩机工厂LOSS数据分析专家。规则:1)只匹配同一个具体故障问题,不是宽泛分类;2)趋势基于数据量精确判断;3)保证输出JSON有效可解析。不含多余文字。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
@@ -2784,6 +2799,22 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 var seenCurIdx = {};
                 repeated.forEach(function(r) {
                     var curItem = curMap[r.curIdx];
+                    // 处理新增问题（prevIdx为null）
+                    if (r.trend === 'new' && curItem && !seenCurIdx[r.curIdx]) {
+                        seenCurIdx[r.curIdx] = true;
+                        resultItems.push({
+                            desc: curItem.desc,
+                            prevDesc: '',
+                            curQty: curItem.qty,
+                            prevQty: 0,
+                            dept: curItem.dept,
+                            line: curItem.line,
+                            shift: curItem.shift,
+                            trend: 'new',
+                            reason: r.reason || '新发生问题'
+                        });
+                        return;
+                    }
                     var prevItem = prevMap[r.prevIdx];
                     if (curItem && prevItem && !seenCurIdx[r.curIdx]) {
                         seenCurIdx[r.curIdx] = true;
@@ -2850,11 +2881,17 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             var otherLines = Object.keys(lineShiftData).filter(function(l) { return lineOrder.indexOf(l) === -1; }).sort();
             sortedLines = sortedLines.concat(otherLines);
 
+            // 智能日期显示：单日只写一个日期，范围写跨度
+            function _fmtDateRange(s, e) {
+                if (s === e) return s;
+                return s + ' ~ ' + e;
+            }
+            var _displayDate = _fmtDateRange(start, end);
             // 构建报告HTML - 双栏布局
             var html = '';
             html += '<div class="cr-content" id="cr-content-inner">';
-            html += '<div class="cr-title">LOSS Daily Brief Report</div>';
-            html += '<div class="cr-subtitle">Period: ' + start + ' ~ ' + end + ' | Total LOSS: ' + totalQty + ' units | Records: ' + losses.length + '</div>';
+            html += '<div class="cr-title">' + _displayDate + ' LOSS Daily Brief Report</div>';
+            html += '<div class="cr-subtitle"><span style="font-size:18px;font-weight:900;color:#dc2626;">Total LOSS: ' + totalQty + ' units</span> &nbsp;|&nbsp; Records: ' + losses.length + '</div>';
             html += '<div class="cr-two-col">';
             // ========== 左栏 (2/3): A. 线体与班次明细 ==========
             html += '<div class="cr-left">';
@@ -2966,7 +3003,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     if (bestSim >= SIM && bestMatch) {
                         var _bQty = Math.abs(safeNum(cur.qty));
                         var _bpQty = Math.abs(safeNum(bestMatch.qty));
-                        var _bTrend = (_bQty < _bpQty * 0.5) ? 'improved' : (_bQty > _bpQty * 1.5) ? 'worsened' : 'chronic';
+                        var _bTrend = (_bQty < _bpQty * 0.7) ? 'improved' : (_bQty > _bpQty * 1.3) ? 'worsened' : 'chronic';
                         items.push({
                             desc: curDesc,
                             prevDesc: String(bestMatch.desc).trim(),
@@ -2981,11 +3018,34 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 });
                 return items;
             }
-            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel) {
+            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel, allLosses, startDate, endDate) {
                 var h = '';
                 var repeatCount = repeatedItems.length;
                 var repeatRate = curTotal > 0 ? Math.round(repeatCount / curTotal * 100) : 0;
                 var newIssues = curTotal - repeatCount;
+
+                // --- 计算本周起始日（周一） ---
+                var _wkStart = (function(dStr) {
+                    var d = new Date(dStr + 'T00:00:00');
+                    var day = d.getDay();
+                    var diff = (day === 0 ? 6 : day - 1);
+                    d.setDate(d.getDate() - diff);
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                })(startDate || endDate);
+
+                // --- 计算每个问题的WTD（本周累计）= 从周一到endDate，同desc的总和 ---
+                function _calcWTD(desc, maxDate) {
+                    if (!allLosses || !desc) return 0;
+                    var sum = 0;
+                    var safeD = String(desc).trim().toLowerCase();
+                    for (var i = 0; i < allLosses.length; i++) {
+                        var l = allLosses[i];
+                        if (l.date >= _wkStart && l.date <= maxDate && String(l.desc||'').trim().toLowerCase() === safeD) {
+                            sum += Math.abs(safeNum(l.qty));
+                        }
+                    }
+                    return sum;
+                }
 
                 h += '<div style="padding: 6px 0;">';
 
@@ -3024,19 +3084,31 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     });
 
                     h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
-                    h += '<tr><th style="width:40%;">Issue</th><th style="width:12%;text-align:right;">Today</th><th style="width:12%;text-align:right;">Prev</th><th style="width:12%;text-align:center;">Trend</th><th style="width:24%;">Analysis</th></tr>';
+                    h += '<tr><th style="width:32%;">Issue</th><th style="width:12%;text-align:right;">Today</th><th style="width:12%;text-align:right;">Prev</th><th style="width:14%;text-align:right;">WTD</th><th style="width:12%;text-align:center;">Trend</th><th style="width:18%;">Analysis</th></tr>';
                     sortedItems.slice(0, 8).forEach(function(item) {
-                        var trendIcon = item.trend === 'improved' ? '<span style="color:#16a34a;">\u2193 Improved</span>' : (item.trend === 'worsened' ? '<span style="color:#dc2626;">\u2191 Worsened</span>' : '<span style="color:#d97706;">\u2194 Chronic</span>');
+                        var wtd = _calcWTD(item.desc, endDate || startDate);
+                        // Trend icons: ↑ red = worsened, ↓ green = improved, ↔ yellow = chronic, 🆕 blue = new
+                        var trendHtml = '';
+                        if (item.trend === 'worsened') {
+                            trendHtml = '<span style="color:#dc2626;font-size:18px;font-weight:900;">\u2191</span>';
+                        } else if (item.trend === 'improved') {
+                            trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';
+                        } else if (item.trend === 'new') {
+                            trendHtml = '<span style="color:#3b82f6;font-size:14px;font-weight:900;">\uD83C\uDD95</span>';
+                        } else {
+                            trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
+                        }
                         h += '<tr>';
                         h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + item.desc.replace(/"/g,'&quot;') + '</td>';
                         h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.curQty + '</td>';
                         h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.prevQty + '</td>';
-                        h += '<td style="text-align:center;font-size:11px;font-weight:700;">' + trendIcon + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:12px;">' + wtd + '</td>';
+                        h += '<td style="text-align:center;font-size:14px;font-weight:900;">' + trendHtml + '</td>';
                         h += '<td style="font-size:10px;color:#475569;word-break:break-word;white-space:normal;line-height:1.3;">' + item.reason + '</td>';
                         h += '</tr>';
                     });
                     if (sortedItems.length > 8) {
-                        h += '<tr><td colspan="5" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
+                        h += '<tr><td colspan="6" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
                     }
                     h += '</table>';
                 } else {
@@ -3090,7 +3162,8 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     cHtml += _crRenderRepeatSection(
                         losses.length, _prevLosses.length, _prevDate,
                         aiItems,
-                        modelName + ' AI Analysis (temp=0)'
+                        modelName + ' AI Analysis',
+                        db.loss, start, end
                     );
                 } else {
                     // AI 失败：回退 Bigram
@@ -3099,7 +3172,8 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     cHtml += _crRenderRepeatSection(
                         losses.length, _prevLosses.length, _prevDate,
                         fallbackItems,
-                        'API failed(' + errMsg + ') · Fallback to text similarity'
+                        'API failed(' + errMsg + ') · Fallback',
+                        db.loss, start, end
                     );
                 }
                 cSection.innerHTML = cHtml;
