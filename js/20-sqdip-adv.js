@@ -830,6 +830,13 @@ window.renderEquipmentTable = function() {
     var checkedCount = rows.filter(function(r) { return r.checked === true; }).length;
     var checkRate = total > 0 ? (checkedCount / total * 100).toFixed(1) : '0.0';
     
+    // ★ 修复Bug1:先更新KPI标签（防止切换模块后标签被上次模块的值污染）
+    var _labelEl = document.getElementById('sys-kpi-1-label'); if (_labelEl) _labelEl.innerText = '总天数';
+    _labelEl = document.getElementById('sys-kpi-2-label'); if (_labelEl) _labelEl.innerText = '点检率';
+    _labelEl = document.getElementById('sys-kpi-3-label'); if (_labelEl) _labelEl.innerText = '未打卡';
+    _labelEl = document.getElementById('sys-kpi-4-label'); if (_labelEl) _labelEl.innerText = '——';
+    _labelEl = document.getElementById('sys-detail-impact'); if (_labelEl) { _labelEl.innerText = '—'; _labelEl.style.color = ''; }
+    
     // Update standard KPI strip (sys-detail-count, sys-detail-rate, sys-detail-risk)
     var el;
     el = document.getElementById('sys-detail-count'); if (el) el.innerText = total + '天';
@@ -913,8 +920,14 @@ window.equipDeleteRow = function(index) {
     if (!db || !db.sysDetail || !db.sysDetail.equipment || !db.sysDetail.equipment[index]) return;
     var r = db.sysDetail.equipment[index];
     if (!confirm('确认删除 ' + (r.date||'') + ' 的设备点检记录？')) return;
+    var delDate = r.date;
     db.sysDetail.equipment.splice(index, 1);
-    if (window.triggerAutoSave) window.triggerAutoSave();
+    // ★ 修复Bug6:标记该日期已删除，防止ensureEquipmentData重新生成
+    if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
+    if (!db.sysDetail._skipDates.equipment) db.sysDetail._skipDates.equipment = {};
+    db.sysDetail._skipDates.equipment[delDate] = true;
+    try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[equipDeleteRow] localStorage保存失败', e); }
+    if (window.forceSaveToFirebase) { window.forceSaveToFirebase().catch(function(){}); } else if (window.triggerAutoSave) { window.triggerAutoSave(); }
     renderEquipmentTable();
 };
 

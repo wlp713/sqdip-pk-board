@@ -1457,23 +1457,15 @@
             // 找到要删除的记录，取出日期
             var delRow = sysDetailRows().find(function(r) { return String(r.id) === String(id); });
             if (delRow) {
-                // 设备点检模块：记录被删除的日期，防止 ensureEquipmentData 再次自动生成
-                if (currentSysDetailType === 'equipment') {
-                    if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
-                    if (!db.sysDetail._skipDates.equipment) db.sysDetail._skipDates.equipment = {};
-                    db.sysDetail._skipDates.equipment[delRow.date] = true;
-                }
-                // 事后模块：记录被删除的DM打卡日期
-                if (currentSysDetailType === 'post' && delRow.type === 'dm_punch') {
-                    if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
-                    if (!db.sysDetail._skipDates.post) db.sysDetail._skipDates.post = {};
-                    db.sysDetail._skipDates.post[delRow.date] = true;
-                }
+                // ★ 修复Bug6:所有模块的预设类型都记录删除日期，防止 ensureSysDetailPresetData 重新生成
+                if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
+                if (!db.sysDetail._skipDates[currentSysDetailType]) db.sysDetail._skipDates[currentSysDetailType] = {};
+                db.sysDetail._skipDates[currentSysDetailType][delRow.date] = true;
             }
             db.sysDetail[currentSysDetailType] = sysDetailRows().filter(r => String(r.id) !== String(id));
             // ★ 立即同步保存到 localStorage，防止页面刷新后从旧数据恢复
             try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delSysRecord] localStorage保存失败', e); }
-            if (typeof forceSaveToFirebase === 'function') forceSaveToFirebase(); else triggerAutoSave();
+            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
             typeof renderSysDetail==="function"&&renderSysDetail(); renderSysOps();
         };
         window.renderSysDetail = function() {
@@ -1483,6 +1475,18 @@
             const ownerFilter = document.getElementById('sys-detail-owner-filter') ? document.getElementById('sys-detail-owner-filter').value : '';
             const head = document.getElementById('sys-detail-head');
             const body = document.getElementById('sys-detail-body');
+            // ★ 修复Bug1:每次渲染前重置KPI标签，避免设备点检模块占用错误标签
+            (function(){
+                var _lbls = ['sys-kpi-1-label','sys-kpi-2-label','sys-kpi-3-label','sys-kpi-4-label'];
+                _lbls.forEach(function(id){
+                    var el = document.getElementById(id);
+                    if(el) el.innerText = '——';
+                });
+                ['sys-detail-count','sys-detail-rate','sys-detail-risk','sys-detail-impact'].forEach(function(id){
+                    var el = document.getElementById(id);
+                    if(el) { el.innerText = '0'; el.style.color = ''; }
+                });
+            })();
             // Auto-generate daily preset data for pre/mid/equipment modules
             if (['pre', 'mid', 'equipment'].includes(currentSysDetailType)) {
                 ensureSysDetailPresetData(month, currentSysDetailType);
@@ -1804,16 +1808,17 @@
             } else {
                 const avgResp = rows.length ? (rows.reduce((s,r)=>s+safeNum(r.responseMin),0)/rows.length).toFixed(1) : '-';
                 const totalWait = rows.reduce((s,r)=>s+safeNum(r.waitMin),0);
+                const avgWait = rows.length ? (rows.reduce((s,r)=>s+safeNum(r.waitMin),0)/rows.length).toFixed(1) : '-';
                 const totalImpact = rows.reduce((s,r)=>s+safeNum(r.impactQty),0);
                 document.getElementById('sys-kpi-1-label').innerText = '本月记录';
                 document.getElementById('sys-detail-count').innerText = rows.length;
                 document.getElementById('sys-kpi-2-label').innerText = '平均响应';
                 document.getElementById('sys-detail-rate').innerText = (avgResp==='-'?'-':avgResp) + '分';
                 document.getElementById('sys-kpi-3-label').innerText = '停机时长';
-                document.getElementById('sys-detail-risk').innerText = totalWait + '分';
+                document.getElementById('sys-detail-risk').innerHTML = totalWait + '分 <span style="font-size:10px;color:var(--text-muted);font-weight:600;">(均' + (avgWait==='-'?'-':avgWait) + '分)</span>';
                 document.getElementById('sys-kpi-4-label').innerText = '影响数量';
                 document.getElementById('sys-detail-impact').innerText = totalImpact + '件';
-                head.innerHTML = `<tr><th style="width:10%;">日期</th><th style="width:8%;">车间</th><th style="width:8%;">线体</th><th style="width:28%;">事件</th><th style="width:10%;">响应(分)</th><th style="width:10%;">停机(分)</th><th style="width:10%;">影响数</th><th style="width:10%;">责任人</th><th style="width:6%;">删</th></tr>`;
+                head.innerHTML = `<tr><th style="width:10%;">日期</th><th style="width:8%;">车间</th><th style="width:8%;">线体</th><th style="width:34%;">事件</th><th style="width:10%;">响应(分)</th><th style="width:10%;">停机(分)</th><th style="width:10%;">影响数</th><th style="width:6%;">责任人</th><th style="width:4%;">删</th></tr>`;
                 body.innerHTML = rows.map(r => `<tr>
                     <td><input type="date" value="${r.date}" onchange="updateSysRecord('${r.id}','date',this.value)" style="width:100%;"></td>
                     <td><select onchange="updateSysRecord('${r.id}','ws',this.value)" style="width:100%;">${PRO_ORDER.map(ws=>`<option ${r.ws===ws?'selected':''}>${ws}</option>`).join('')}</select></td>
@@ -3417,7 +3422,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             renderInput();
         };
         window.addDLine = function(ws) { let newId = Date.now() + Math.random(); let newName = `新线体-${Math.floor(Math.random()*100)}`; db.dLinesConfig[ws].push({id: newId, name: newName}); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines.push({ id: newId, name: newName, t:0, o:0, h:0, att:0, head:0 }); }); triggerAutoSave(); renderInput(); };
-        window.delDLine = function(ws, id) { db.dLinesConfig[ws] = db.dLinesConfig[ws].filter(l => String(l.id) !== String(id)); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines = db.prod[d][ws].dLines.filter(l => String(l.id) !== String(id)); }); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delDLine] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') forceSaveToFirebase(); else triggerAutoSave(); renderInput(); };
+        window.delDLine = function(ws, id) { db.dLinesConfig[ws] = db.dLinesConfig[ws].filter(l => String(l.id) !== String(id)); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines = db.prod[d][ws].dLines.filter(l => String(l.id) !== String(id)); }); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delDLine] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } renderInput(); };
         window.updateFixedLine = function(ws, lineName, field, val) { 
             let dateStr = window.safeDOM.val("globalDate"); 
             if(!db.prod[dateStr]?.[ws]?.lines?.[lineName]) return;
@@ -4592,7 +4597,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
         }
         window.addProblem = function() { db.problems.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), ws:'PRO1', desc:'', loc:'', owner:'', dept:'PE', dueDate:'', status: (currentLang==='zh'?'未解决':(currentLang==='en'?'Open':'ยังไม่แก้')) }); triggerAutoSave(); renderPDCA(); renderSysOps(); };
         window.updateProb = function(id, f, v) { let p = db.problems.find(x=>x.id==id); if(p) { p[f]=v; } triggerAutoSave(); renderSysOps(); };
-        window.delProb = function(id) { db.problems = db.problems.filter(x=>x.id!=id); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delProb] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') forceSaveToFirebase(); else triggerAutoSave(); renderPDCA(); renderSysOps(); };
+        window.delProb = function(id) { db.problems = db.problems.filter(x=>x.id!=id); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delProb] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } renderPDCA(); renderSysOps(); };
         // ★ 性能优化：防抖版 filter render，避免快速输入时频繁重绘
         var _renderLossTimer = null;
         window._debouncedRenderLoss = function() {
@@ -4624,15 +4629,18 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.addLossRecord = function() { if(!db.loss) db.loss = []; db.loss.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), line:'LINE A', shift:'D', desc:'', qty:0, owner:'', dept:'PE', pspId:null, midId:null }); triggerAutoSave(); checkRepeatLoss(); renderLoss(); renderSysOps(); }
         window.updateLoss = function(id, f, v) { let p = db.loss.find(x=>x.id==id); if(p) { p[f] = f==='qty'?safeNum(v):v; } triggerAutoSave(); renderSysOps(); }
         // ★ 修复:delLoss 必须 await forceSaveToFirebase,否则保存失败时用户不知情,数据在几秒后从云端恢复
-        window.delLoss = async function(id) {
+        window.delLoss = function(id) {
             db.loss = db.loss.filter(x=>x.id!=id);
             try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delLoss] localStorage保存失败', e); }
+            // ★ 修复Bug7:不再await forceSaveToFirebase(阻塞UI)，改为无阻塞触发
             if (typeof forceSaveToFirebase === 'function') {
-                var saved = await forceSaveToFirebase();
-                if (!saved) {
-                    console.error('[delLoss] 删除后保存失败,数据可能在几秒后恢复!');
-                    showToast('fa-solid fa-exclamation-triangle', '⚠️ 删除保存失败,请检查网络后重试', 'error');
-                }
+                forceSaveToFirebase().then(function(saved){
+                    if (!saved) {
+                        console.warn('[delLoss] 删除后异步保存失败,数据可能恢复');
+                    }
+                }).catch(function(err){
+                    console.error('[delLoss] 删除后异步保存异常:', err);
+                });
             } else {
                 triggerAutoSave();
             }
@@ -5118,6 +5126,9 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                 var wsMatch = { 'LINE A':'PRO1','LINE B':'PRO2','LINE C':'PRO3','LINE D':'PRO4' }[loss.line] || 'PRO2';
                 if(!db.sysDetail) db.sysDetail = { mid: [] };
                 if(!db.sysDetail.mid) db.sysDetail.mid = [];
+                // ★ 修复Bug2:从LOSS链接到事中自动计算停机时长(420台/时=7台/分)
+                var _impactQty = Math.abs(parseInt(loss.qty)||0);
+                var _waitMin = Math.round(_impactQty / 7);
                 var newMid = {
                     id: Date.now() + Math.random(),
                     date: loss.date,
@@ -5125,8 +5136,8 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                     line: loss.line,
                     event: 'LOSS: '+loss.desc + (loss.shift?' ('+loss.shift+')':''),
                     responseMin: 0,
-                    waitMin: 0,
-                    impactQty: Math.abs(parseInt(loss.qty)||0),
+                    waitMin: _waitMin,
+                    impactQty: _impactQty,
                     patrol: '',
                     action: '',
                     resp: loss.owner || '',
@@ -5308,7 +5319,9 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.delKaizen = function(id) {
             if(!confirm('确定删除该项目?')) return;
             db.kaizen = (db.kaizen||[]).filter(function(x){ return x.id!=id; });
-            triggerAutoSave(); renderKaizen();
+            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delKaizen] localStorage保存失败', e); }
+            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            renderKaizen();
         };
         window.exportKaizenTable = function() {
             var list = db.kaizen || [];
@@ -6356,7 +6369,8 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.delSimLine = function(idx) {
             let sim = ensureSimData();
             sim.lines.splice(idx, 1);
-            if (typeof forceSaveToFirebase === 'function') forceSaveToFirebase(); else triggerAutoSave();
+            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delSimLine] localStorage保存失败', e); }
+            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
             renderSimConfig();
             renderSimAttendance();
         };
