@@ -4595,18 +4595,18 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             let htmlStr = '';
             list.forEach(p => {
                 let deptOptionsHtml = DEPTS.map(d => `<option ${p.dept===d?'selected':''}>${d}</option>`).join('');
-                // PSP关联状态
-                let pspInfo = '';
-                if(p.pspId) {
-                    pspInfo = `<button class="loss-psp-plus linked" data-loss-id="${p.id}" onclick="toggleLossToPsp(this)" title="点击取消关联" style="border:none;background:none;cursor:pointer;padding:2px 6px;"><i class="fa-solid fa-plus" style="color:var(--danger);font-size:18px;font-weight:900;"></i></button>`;
+                // PSP/事中关联状态
+                let pspInfo = '<div style="position:relative;display:inline-block;">';
+                if(p.pspId || p.midId) {
+                    pspInfo += `<button class="loss-psp-plus linked" data-loss-id="${p.id}" onclick="toggleLossLink(this)" title="已关联(点击修改)" style="border:none;background:none;cursor:pointer;padding:2px 6px;"><i class="fa-solid fa-plus" style="color:var(--danger);font-size:18px;font-weight:900;"></i></button>`;
                 } else {
-pspInfo = `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggleLossToPsp(this)" title="点击关联到PSP" style="border:none;background:none;cursor:pointer;padding:2px 6px;"><i class="fa-solid fa-plus" style="color:var(--midea-blue);font-size:14px;"></i></button>`;
+pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggleLossLink(this)" title="点击关联" style="border:none;background:none;cursor:pointer;padding:2px 6px;"><i class="fa-solid fa-plus" style="color:var(--midea-blue);font-size:14px;"></i></button>`;
                 }
-                htmlStr += `<tr><td style="text-align:center;"><input type="checkbox" class="loss-checkbox" data-id="${p.id}" onchange="window.handleLossCheckboxChange(this)"></td><td><input type="date" value="${p.date}" onchange="updateLoss('${p.id}','date',this.value)"></td><td><select onchange="updateLoss('${p.id}','line',this.value)"><option value="LINE A" ${p.line=='LINE A'?'selected':''}>LINE A</option><option value="LINE B" ${p.line=='LINE B'?'selected':''}>LINE B</option><option value="LINE C" ${p.line=='LINE C'?'selected':''}>LINE C</option><option value="LINE D" ${p.line=='LINE D'?'selected':''}>LINE D</option></select></td><td><select onchange="updateLoss('${p.id}','shift',this.value)"><option value="D" ${p.shift=='D'?'selected':''}>D (白班)</option><option value="N" ${p.shift=='N'?'selected':''}>N (夜班)</option></select></td><td class="col-desc"><input type="text" class="text-left" value="${translateUserText(p.desc||'')}" onchange="updateLoss('${p.id}','desc',this.value)" style="font-size:13px;"></td><td><input type="number" class="${p.qty<0?'val-danger':''}" value="${p.qty}" onchange="updateLoss('${p.id}','qty',this.value)"></td><td><input type="text" value="${p.owner}" onchange="updateLoss('${p.id}','owner',this.value)"></td><td><select onchange="updateLoss('${p.id}','dept',this.value)">${deptOptionsHtml}</select></td><td style="text-align:center;">${pspInfo}</td><td><button style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;" onclick="delLoss('${p.id}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+                htmlStr += `<tr><td style="text-align:center;"><input type="checkbox" class="loss-checkbox" data-id="${p.id}" onchange="window.handleLossCheckboxChange(this)"></td><td><input type="date" value="${p.date}" onchange="updateLoss('${p.id}','date',this.value)"></td><td><select onchange="updateLoss('${p.id}','line',this.value)"><option value="LINE A" ${p.line=='LINE A'?'selected':''}>LINE A</option><option value="LINE B" ${p.line=='LINE B'?'selected':''}>LINE B</option><option value="LINE C" ${p.line=='LINE C'?'selected':''}>LINE C</option><option value="LINE D" ${p.line=='LINE D'?'selected':''}>LINE D</option></select></td><td><select onchange="updateLoss('${p.id}','shift',this.value)"><option value="D" ${p.shift=='D'?'selected':''}>D (白班)</option><option value="N" ${p.shift=='N'?'selected':''}>N (夜班)</option></select></td><td class="col-desc"><input type="text" class="text-left" value="${translateUserText(p.desc||'')}" onchange="updateLoss('${p.id}','desc',this.value)" style="font-size:13px;"></td><td><input type="number" class="${p.qty<0?'val-danger':''}" value="${p.qty}" onchange="updateLoss('${p.id}','qty',this.value)"></td><td><input type="text" value="${p.owner}" onchange="updateLoss('${p.id}','owner',this.value)"></td><td><select onchange="updateLoss('${p.id}','dept',this.value)">${deptOptionsHtml}</select></td><td style="text-align:center;">${pspInfo}</div></td><td><button style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;" onclick="delLoss('${p.id}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
             });
             tbody.innerHTML = htmlStr;
         }
-        window.addLossRecord = function() { if(!db.loss) db.loss = []; db.loss.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), line:'LINE A', shift:'D', desc:'', qty:0, owner:'', dept:'PE', pspId:null }); triggerAutoSave(); checkRepeatLoss(); renderLoss(); renderSysOps(); }
+        window.addLossRecord = function() { if(!db.loss) db.loss = []; db.loss.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), line:'LINE A', shift:'D', desc:'', qty:0, owner:'', dept:'PE', pspId:null, midId:null }); triggerAutoSave(); checkRepeatLoss(); renderLoss(); renderSysOps(); }
         window.updateLoss = function(id, f, v) { let p = db.loss.find(x=>x.id==id); if(p) { p[f] = f==='qty'?safeNum(v):v; } triggerAutoSave(); renderSysOps(); }
         // ★ 修复:delLoss 必须 await forceSaveToFirebase,否则保存失败时用户不知情,数据在几秒后从云端恢复
         window.delLoss = async function(id) {
@@ -4913,30 +4913,86 @@ pspInfo = `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggleL
             document.getElementById('lossLinkPSPList').innerHTML = listHtml;
             document.getElementById('lossLinkModal').style.display = 'flex';
         };
-        // ★ 一键切换关联/取消关联(不弹窗,直接操作)
-        window.toggleLossToPsp = function(btn) {
+        var _currentLossLinkId = null;
+        window.toggleLossLink = function(btn) {
             var lossId = btn.dataset.lossId;
             var loss = db.loss.find(function(x) { return x.id == lossId; });
             if(!loss) return;
+            _currentLossLinkId = lossId;
+            document.querySelectorAll('.loss-link-dd').forEach(function(d){ d.style.display='none'; });
+            var dd = document.getElementById('lossLinkDropdown');
+            var items = [];
             if(loss.pspId) {
-                // 已关联 → 取消关联
-                loss.pspId = null;
-                triggerAutoSave();
-                renderLoss();
-                renderPDCA();
-                showToast('fa-solid fa-unlink', '已取消关联', 'warning');
+                var psp = db.problems.find(function(p){ return p.id == loss.pspId; });
+                items.push({ icon:'fa-link', label:'已关联PSP: '+(psp?psp.desc?.slice(0,20)||'#'+String(loss.pspId).slice(-4):'#'+String(loss.pspId).slice(-4)), action:'unlinkPsp' });
             } else {
-                // 未关联 → 自动创建PSP并关联
+                items.push({ icon:'fa-exclamation-circle', label:'关联异常问题闭环(PSP)', action:'linkPsp' });
+            }
+            if(loss.midId) {
+                items.push({ icon:'fa-clock', label:'已关联事中响应', action:'unlinkMid' });
+            } else {
+                items.push({ icon:'fa-gauge-high', label:'关联事中响应', action:'linkMid' });
+            }
+            dd.innerHTML = items.map(function(it){
+                return '<div class="loss-link-dd-item" data-action="'+it.action+'" onclick="execLossLinkAction(\''+it.action+'\')"><i class="fa-solid '+it.icon+'"></i> '+it.label+'</div>';
+            }).join('') + '<div class="loss-link-dd-item" data-action="cancel" onclick="closeLossLinkDD()" style="border-top:1px solid var(--border-light);color:var(--text-muted);font-weight:500;"><i class="fa-solid fa-xmark"></i> 取消</div>';
+            var rect = btn.getBoundingClientRect();
+            dd.style.position = 'fixed';
+            dd.style.top = (rect.bottom + 4) + 'px';
+            dd.style.left = Math.max(4, rect.left - 80) + 'px';
+            dd.style.display = 'block';
+        };
+        window.closeLossLinkDD = function() {
+            document.getElementById('lossLinkDropdown').style.display = 'none';
+        };
+        window.execLossLinkAction = function(action) {
+            var loss = db.loss.find(function(x) { return x.id == _currentLossLinkId; });
+            if(!loss) return closeLossLinkDD();
+            closeLossLinkDD();
+            if(action === 'linkPsp') {
                 var wsMatch = { 'LINE A':'PRO1','LINE B':'PRO2','LINE C':'PRO3','LINE D':'PRO4' }[loss.line] || 'PRO2';
                 var newPsp = { id:Date.now(), date:loss.date, ws:wsMatch, desc:loss.desc, loc:loss.line+'/'+loss.shift, owner:loss.owner, dept:loss.dept, status:'未解决' };
                 db.problems.unshift(newPsp);
                 loss.pspId = newPsp.id;
-                triggerAutoSave();
-                renderLoss();
-                renderPDCA();
-                showToast('fa-solid fa-check-circle', '已从 LOSS 生成 PSP 并自动关联', 'success');
+                triggerAutoSave(); renderLoss(); renderPDCA();
+                showToast('fa-solid fa-check-circle', '✅ 已生成 PSP 并关联', 'success');
+            } else if(action === 'unlinkPsp') {
+                loss.pspId = null;
+                triggerAutoSave(); renderLoss(); renderPDCA();
+                showToast('fa-solid fa-unlink', '已取消PSP关联', 'warning');
+            } else if(action === 'linkMid') {
+                var wsMatch = { 'LINE A':'PRO1','LINE B':'PRO2','LINE C':'PRO3','LINE D':'PRO4' }[loss.line] || 'PRO2';
+                if(!db.sysDetail) db.sysDetail = { mid: [] };
+                if(!db.sysDetail.mid) db.sysDetail.mid = [];
+                var newMid = {
+                    id: Date.now() + Math.random(),
+                    date: loss.date,
+                    ws: wsMatch,
+                    line: loss.line,
+                    event: 'LOSS: '+loss.desc + (loss.shift?' ('+loss.shift+')':''),
+                    responseMin: 0,
+                    waitMin: 0,
+                    impactQty: Math.abs(parseInt(loss.qty)||0),
+                    patrol: '',
+                    action: '',
+                    resp: loss.owner || '',
+                    status: '处理中'
+                };
+                db.sysDetail.mid.unshift(newMid);
+                loss.midId = newMid.id;
+                triggerAutoSave(); renderLoss(); renderSysOps();
+                showToast('fa-solid fa-check-circle', '✅ 已创建事中响应记录并关联', 'success');
+            } else if(action === 'unlinkMid') {
+                loss.midId = null;
+                triggerAutoSave(); renderLoss(); renderSysOps();
+                showToast('fa-solid fa-unlink', '已取消事中关联', 'warning');
             }
         };
+        document.addEventListener('click', function(e) {
+            if(!e.target.closest('.loss-link-dd') && !e.target.closest('.loss-psp-plus')) {
+                document.getElementById('lossLinkDropdown').style.display = 'none';
+            }
+        });
         window.linkLossToPsp = function(pspId) {
             let loss = db.loss.find(x => x.id == _currentLossIdForLink);
             if(!loss) return;
@@ -6323,8 +6379,8 @@ pspInfo = `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggleL
                     // LOSS关联检查
                     let lossTotal = (db.loss||[]).filter(l => l.date && l.date.startsWith(month)).reduce((s,l) => s + Math.abs(Number(l.qty||0)), 0);
                     if(lossTotal > 0) recs.push(`📊 本月LOSS合计 ${lossTotal.toLocaleString()} 件,重点跟进高LOSS产线的根因对策实施`);
-                    let unlinkedLossCount = (db.loss||[]).filter(l => l.date && l.date.startsWith(month) && !l.pspId).length;
-                    if(unlinkedLossCount > 0) recs.push(`🔗 ${unlinkedLossCount} 个LOSS未关联PSP,建议在月度复盘前完成关联和跟踪状态更新`);
+                    let unlinkedLossCount = (db.loss||[]).filter(l => l.date && l.date.startsWith(month) && !l.pspId && !l.midId).length;
+                    if(unlinkedLossCount > 0) recs.push(`🔗 ${unlinkedLossCount} 个LOSS未关联PSP或事中,建议在月度复盘前完成关联和跟踪状态更新`);
                     // 人员推演建议
                     let sim = db.simConfig;
                     if(sim && sim.lines) {
