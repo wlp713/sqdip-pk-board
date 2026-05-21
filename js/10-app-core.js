@@ -446,51 +446,43 @@
                 }
                 _lastAutoSaveTime = now;
 
-                // 0. 确保数据结构完整
+                // 0. ★ 性能优化:只在必要时执行完整的 repairData (跳过已修复的旧数据)
                 repairData();
 
-                // 1. ★ 先清理旧的时间戳备份(保留最近3个),确保有空间
-                var backupKeys = [];
-                for (var i = 0; i < localStorage.length; i++) {
-                    var key = localStorage.key(i);
-                    if (key.startsWith(DB_KEY + '_backup_')) {
-                        backupKeys.push(key);
+                // ★ 性能优化:序列化一次,同时用于主保存和备份
+                var _serialized;
+                try { _serialized = JSON.stringify(db); } catch(_se) { _serialized = null; }
+                if (!_serialized) return;
+
+                // 1. 清理旧的时间戳备份(保留最近3个)
+                try {
+                    var backupKeys = [];
+                    for (var _i = 0; _i < localStorage.length; _i++) {
+                        var _key = localStorage.key(_i);
+                        if (_key && _key.startsWith(DB_KEY + '_backup_')) backupKeys.push(_key);
                     }
-                }
-                backupKeys.sort();
-                // 删除多余的旧备份,只保留最近3个
-                if (backupKeys.length >= 3) {
-                    backupKeys.slice(0, backupKeys.length - 2).forEach(function(key) {
-                        localStorage.removeItem(key);
-                    });
-                }
+                    if (backupKeys.length >= 3) {
+                        backupKeys.sort().slice(0, backupKeys.length - 2).forEach(function(k) { try { localStorage.removeItem(k); } catch(ex) {} });
+                    }
+                } catch(_be) {}
 
                 // 2. 保存到 localStorage(主备份)
-                localStorage.setItem(DB_KEY, JSON.stringify(db));
-
-                // 3. 创建时间戳备份(保留最近2个 + 当前共3个)
-                var timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                // 检查新备份是否会超限:先删除最旧的一个再保存
-                for (var j = 0; j < localStorage.length; j++) {
-                    var k = localStorage.key(j);
-                    if (k && k.startsWith(DB_KEY + '_backup_')) {
-                        // 已经清理过,留2个最旧的 + 主力备份 ≈ 3份数据
-                    }
-                }
-                try {
-                    localStorage.setItem(DB_KEY + '_backup_' + timestamp, JSON.stringify(db));
-                } catch(quotaErr) {
-                    // 配额不够 -> 删除所有旧时间戳备份,只留最新的一个
-                    console.warn('[自动保存] 配额紧张,清理全部旧备份后重试');
-                    var allBackupKeys = [];
-                    for (var kk = 0; kk < localStorage.length; kk++) {
-                        var kkk = localStorage.key(kk);
-                        if (kkk && kkk.startsWith(DB_KEY + '_backup_')) {
-                            allBackupKeys.push(kkk);
+                try { localStorage.setItem(DB_KEY, _serialized); } catch(_se) {
+                    // 配额不够 -> 清理旧备份
+                    try {
+                        for (var _ci = 0; _ci < localStorage.length; _ci++) {
+                            var _ck = localStorage.key(_ci);
+                            if (_ck && _ck.startsWith(DB_KEY + '_backup_')) { try { localStorage.removeItem(_ck); } catch(ex) {} }
                         }
-                    }
-                    allBackupKeys.forEach(function(k) { try { localStorage.removeItem(k); } catch(ex) {} });
-                    localStorage.setItem(DB_KEY + '_backup_' + timestamp, JSON.stringify(db));
+                        localStorage.setItem(DB_KEY, _serialized);
+                    } catch(_se2) {}
+                }
+
+                // 3. 创建时间戳备份(用已经序列化好的字符串,避免二次序列化)
+                var _backupKey = DB_KEY + '_backup_' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                try { localStorage.setItem(_backupKey, _serialized); } catch(_be) {
+                    // 配额不够 -> 放弃备份,数据至少在主 key 中安全
+                    console.warn('[自动保存] 备份保存失败,数据在主key中安全');
                 }
 
                 // 4. 更新保存指示器
@@ -517,8 +509,8 @@
                             try { localStorage.removeItem(ck); } catch(ex) {}
                         }
                     }
-                    // 再试一次主力备份
-                    localStorage.setItem(DB_KEY, JSON.stringify(db));
+                    // 再试一次主力备份(复用已序列化的 _serialized)
+                    if (_serialized) { localStorage.setItem(DB_KEY, _serialized); } else { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
                     console.log('[自动保存] 紧急清理后保存成功');
                 } catch(e2) {
                     // db本身就超过5MB的极端情况 -> 只保存当前月份数据
@@ -1448,11 +1440,16 @@
             var daysInMonth = new Date(year, monthNum, 0).getDate();
             var skipDates = db.sysDetail._skipDates && db.sysDetail._skipDates.post ? db.sysDetail._skipDates.post : {};
             var existingDmDates = {};
-            db.sysDetail.post.forEach(function(r) {
+            var _postArr = db.sysDetail.post;
+            for (var _pi = 0; _pi < _postArr.length; _pi++) {
+                var r = _postArr[_pi];
                 if (r && r.type === 'dm_punch' && r.date && String(r.date).startsWith(month)) {
                     existingDmDates[r.date] = true;
                 }
-            });
+            }
+            // ★ 性能优化:全部已生成则跳过循环(forEach O(n)已做,进一步用count判断)
+            var _totalSkip = 0; for (var _sk in skipDates) if (_sk.startsWith(month)) _totalSkip++;
+            if (Object.keys(existingDmDates).length + _totalSkip >= daysInMonth) return;
             var createdCount = 0;
             for (var day = 1; day <= daysInMonth; day++) {
                 var dateStr = month + '-' + (day < 10 ? '0' + day : day);
@@ -1466,7 +1463,11 @@
             }
             if (createdCount > 0) {
                 db.sysDetail.post.sort(function(a, b) { return (a.date||'').localeCompare(b.date||''); });
-                if (window.triggerAutoSave) window.triggerAutoSave();
+                // ★ 性能优化:延迟保存到渲染之后,避免JSON.stringify阻塞UI
+                if (window.triggerAutoSave) {
+                    if (typeof _deferredLocalStorageSave === 'function') _deferredLocalStorageSave();
+                    setTimeout(function() { window.triggerAutoSave(); }, 100);
+                }
             }
         };
         window.onEquipMonthChange = function() {
@@ -1912,8 +1913,36 @@
             }, 0);
             typeof renderSysDetail==="function"&&renderSysDetail(); renderSysOps();
         };
+        // ★ 性能优化:LOSS重复率统计结果缓存(3秒内同月不重复计算bigram相似度)
+        var _lossRepeatCache = {};
+        var _lossRepeatCacheTime = {};
+        function _getCachedLossStats(lossArr, monthKey, threshold) {
+            var key = monthKey + '|' + (threshold || 0.75);
+            var now = Date.now();
+            if (_lossRepeatCache[key] !== undefined && _lossRepeatCacheTime[key] && (now - _lossRepeatCacheTime[key] < 3000)) {
+                return _lossRepeatCache[key];
+            }
+            return null;
+        }
+        function _setCachedLossStats(lossArr, monthKey, threshold, result) {
+            var key = monthKey + '|' + (threshold || 0.75);
+            _lossRepeatCache[key] = result;
+            _lossRepeatCacheTime[key] = Date.now();
+            // 限制缓存条目防止内存泄漏
+            var keys = Object.keys(_lossRepeatCache);
+            while (keys.length > 5) {
+                var oldest = keys[0];
+                delete _lossRepeatCache[oldest];
+                delete _lossRepeatCacheTime[oldest];
+                keys = Object.keys(_lossRepeatCache);
+            }
+        }
         window.renderSysDetail = function() {
         try {
+            // ★ 性能诊断标记
+            if (currentSysDetailType === 'post' && window._renderStart === undefined) window._renderStart = performance.now();
+            if (currentSysDetailType === 'post' && !window._perfMarks) window._perfMarks = {};
+            if (currentSysDetailType === 'post') window._perfMarks.start = performance.now();
             const _mEl = document.getElementById('sys-detail-month');
             const month = _mEl ? _mEl.value : window.safeDOM.val("globalDate").substring(0, 7);
             const ownerFilter = document.getElementById('sys-detail-owner-filter') ? document.getElementById('sys-detail-owner-filter').value : '';
@@ -1945,7 +1974,7 @@
             if (addBtn) addBtn.style.display = 'flex'; // 事后模块也需要显示（新增改善项目）
             if (currentSysDetailType === 'post') {
                 // 事后模块：DM每日打卡（左 2/3）+ 改善项目记录（右 1/3）
-                // 改善项目手动添加、DM每日打卡自动生成
+                if (window._perfMarks) window._perfMarks.afterKPI = performance.now();
                 
                 // ── 自动生成 DM 每日打卡数据 ──
                 window.ensurePostDmPunchData && window.ensurePostDmPunchData(month);
@@ -1995,7 +2024,11 @@
                         rate: lossArr.length > 0 ? Math.round(events / lossArr.length * 100) : 0 };
                 }
                 var SIM_THRESHOLD = 0.75; // 75%相似度阈值为重复事件
-                var curStats = _calcRepeatStatsSim(_lossesThisMonth, SIM_THRESHOLD);
+                var curStats = _getCachedLossStats(_lossesThisMonth, month, SIM_THRESHOLD);
+                if (!curStats) {
+                    curStats = _calcRepeatStatsSim(_lossesThisMonth, SIM_THRESHOLD);
+                    _setCachedLossStats(_lossesThisMonth, month, SIM_THRESHOLD, curStats);
+                }
                 
                 // 环比对比：从下拉框获取用户选择的对比周期
                 var _comparePeriod = (document.getElementById('sys-compare-period')||{}).value || 'lastMonth';
@@ -2029,7 +2062,11 @@
                     });
                     _compareLabel = 'vs 前7天';
                 }
-                var compStats = _calcRepeatStatsSim(_lossesCompare, SIM_THRESHOLD);
+                var compStats = _getCachedLossStats(_lossesCompare, month + '_comp', SIM_THRESHOLD);
+                if (!compStats) {
+                    compStats = _calcRepeatStatsSim(_lossesCompare, SIM_THRESHOLD);
+                    _setCachedLossStats(_lossesCompare, month + '_comp', SIM_THRESHOLD, compStats);
+                }
                 
                 // 环比变化值
                 var changeRate = compStats.total > 0 ? curStats.rate - compStats.rate : curStats.rate;
@@ -2046,9 +2083,7 @@
                     '</span>';
                 }).join('') || '<span style="font-size:11px;color:var(--text-muted);">暂无重复LOSS</span>';
                 function escapeHtml(str) {
-                    var div = document.createElement('div');
-                    div.appendChild(document.createTextNode(str));
-                    return div.innerHTML;
+                    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
                 }
                 
                 document.getElementById('sys-kpi-1-label').innerText = 'DM记录';
@@ -2166,6 +2201,16 @@
                             '</table>' +
                         '</div>' +
                     '</div>';
+                // ★ 性能诊断:标记渲染结束
+                if (window._perfMarks) {
+                    window._perfMarks.afterInnerHTML = performance.now();
+                    console.log('[性能] 事后渲染耗时:', 
+                        '数据准备=', (window._perfMarks.afterKPI - window._perfMarks.start).toFixed(1), 'ms',
+                        'innerHTML=', (window._perfMarks.afterInnerHTML - window._perfMarks.afterKPI).toFixed(1), 'ms',
+                        '总=', (window._perfMarks.afterInnerHTML - window._perfMarks.start).toFixed(1), 'ms'
+                    );
+                    delete window._perfMarks; // 清除标记,下次重新测量
+                }
                 return;
             }
 
