@@ -1983,7 +1983,7 @@
             if (addBtn) addBtn.style.display = 'flex'; // 事后模块也需要显示（新增改善项目）
             if (currentSysDetailType === 'post') {
                 // ★ 事后模块加载提示:首次渲染时显示加载中,避免用户以为卡死
-                if (!window._postLoading) {
+                if (window._postLoading === undefined) {
                     window._postLoading = true;
                     var _pl = document.getElementById('sys-detail-post-layout');
                     var _postTable2 = document.querySelector('.sys-detail-table');
@@ -2076,10 +2076,10 @@
                     });
                     _compareLabel = (_compareStart.length >= 10 ? _compareStart.substring(5) : '?') + ' 至 ' + (_compareEnd.length >= 10 ? _compareEnd.substring(5) : '?');
                 }
-                var compStats = _getCachedLossStats(_lossesCompare, month + '_comp', SIM_THRESHOLD);
+                var compStats = _getCachedLossStats(_lossesCompare, month + '_comp_' + _compareStart + '_' + _compareEnd, SIM_THRESHOLD);
                 if (!compStats) {
                     compStats = _calcRepeatStatsSim(_lossesCompare, SIM_THRESHOLD);
-                    _setCachedLossStats(_lossesCompare, month + '_comp', SIM_THRESHOLD, compStats);
+                    _setCachedLossStats(_lossesCompare, month + '_comp_' + _compareStart + '_' + _compareEnd, SIM_THRESHOLD, compStats);
                 }
                 
                 // 环比变化值
@@ -2225,7 +2225,7 @@
                     );
                     delete window._perfMarks; // 清除标记,下次重新测量
                 }
-                window._postLoading = false;
+                window._postLoading = true;
                 return;
             }
 
