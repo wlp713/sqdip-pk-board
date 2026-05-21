@@ -2688,9 +2688,9 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
         }
         
-        // 单次AI调用（纯AI，不混合Bigram）
+        // 单次AI调用——仅处理语义模糊匹配（精确匹配已在外部完成）
         window._aiAnalyzeRepeatLoss = async function(losses, prevLosses) {
-            // 构建输入（使用已合并的数据，同一天相同描述已合并）
+            // 构建输入
             var curList = losses.map(function(l, i) {
                 return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
             });
@@ -2698,17 +2698,26 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
             });
             
-            var prompt = '识别当天与前一天LOSS中的重复问题。\n\n';
-            prompt += '规则（严格执行）：\n';
-            prompt += '1. 只匹配同一个具体故障，语义相同就算重复："定子烧坏"="电机绕组短路" ✅，"阀片断裂"="排气阀片开裂" ✅\n';
-            prompt += '2. 不匹配的情况：宽泛分类≠具体故障，不同部件≠重复，调整动作≠故障\n';
-            prompt += '3. 对每对重复输出：improved(今<昨×0.7)，worsened(今>昨×1.3)，chronic(其他)\n\n';
+            // 保守提示词：只匹配非常确定是同一个具体故障的情况
+            var prompt = '给定的当天和前一天数据均已去除完全相同描述，只剩余模糊描述。\n\n';
+            prompt += '你的任务：判断当天的问题是否与前一天的问题是**同一个具体故障**。\n\n';
+            prompt += '### 严格规则（必须遵守）\n';
+            prompt += '1. **只匹配非常确定的同一个具体故障**。不确定就不匹配。\n';
+            prompt += '2. 语义等价才算："定子绕组烧毁"="电机定子短路" ✅ 都是电机定子电气损坏\n';
+            prompt += '3. 绝对不匹配的情况：\n';
+            prompt += '   - 宽泛描述≠具体描述："电机问题"≠"定子烧毁" ❌\n';
+            prompt += '   - 不同部件："轴承问题"≠"阀片断裂" ❌\n';
+            prompt += '   - 操作动作≠故障："更换刀具"≠"刀具崩刃" ❌\n';
+            prompt += '   - 不确定是否同一件事：不匹配 \n\n';
+            prompt += '### 趋势判断\n';
+            prompt += '- improved: 今天<昨天×0.7（减少30%以上）\n';
+            prompt += '- worsened: 今天>昨天×1.3（增加30%以上）\n';
+            prompt += '- chronic: 其他\n\n';
             prompt += '### 输入\n';
-            prompt += '**当天 (' + curList.length + ' 条)：**\n' + JSON.stringify(curList, null, 2) + '\n\n';
-            prompt += '**前一天 (' + prevList.length + ' 条)：**\n' + JSON.stringify(prevList, null, 2) + '\n\n';
-            prompt += '### 输出（只JSON，不要其他文字）\n';
-            prompt += '{"repeated":[{"curIdx":0,"prevIdx":1,"trend":"improved","reason":"..."}]}\n';
-            prompt += '没重复就输出 {"repeated":[]}。不编造，不猜测。';
+            prompt += '当天：' + JSON.stringify(curList) + '\n\n';
+            prompt += '前一天：' + JSON.stringify(prevList) + '\n\n';
+            prompt += '### 输出（严格JSON，不要任何其他文字）\n';
+            prompt += '{"repeated":[{"curIdx":0,"prevIdx":1,"trend":"improved","reason":"一句话判断依据"}]}\n';
             
             try {
                 var model = _getSelectedModel();
@@ -2796,44 +2805,120 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             }
         };
         
-        // ★ 稳定版：调用AI两次取并集，提升低质量模型的识别稳定性
+        // ★ 稳定版重复分析：精确匹配 + AI语义补充，双重AI调用取并集
         window._stableAnalyzeRepeat = async function(losses, prevLosses) {
-            var calls = [window._aiAnalyzeRepeatLoss(losses, prevLosses), window._aiAnalyzeRepeatLoss(losses, prevLosses)];
-            var results = await Promise.all(calls);
+            // 阶段1：精确描述匹配（100%可靠，无AI参与）
+            var curMap = {}, prevMap = {};
+            losses.forEach(function(l, i) {
+                curMap[i] = l;
+            });
+            prevLosses.forEach(function(l, i) {
+                prevMap[i] = l;
+            });
             
-            var matchedIdx = {};
-            var anySuccess = false;
-            for (var ci = 0; ci < results.length; ci++) {
-                var r = results[ci];
-                if (r.success && r.items) {
-                    anySuccess = true;
-                    r.items.forEach(function(item) {
-                        if (item.curIdx === undefined) return;
-                        if (!matchedIdx[item.curIdx]) {
-                            matchedIdx[item.curIdx] = item;
-                        } else {
-                            // Prefer matched items (with prevDesc) over new items
-                            if (item.prevDesc && !matchedIdx[item.curIdx].prevDesc) {
-                                matchedIdx[item.curIdx] = item;
+            var exactMatchedCurIdx = {};
+            var exactResults = [];
+            losses.forEach(function(curItem, ci) {
+                var curDesc = (curItem.desc || '').trim().toLowerCase();
+                if (!curDesc) return;
+                for (var pi = 0; pi < prevLosses.length; pi++) {
+                    var prevDesc = (prevLosses[pi].desc || '').trim().toLowerCase();
+                    if (curDesc === prevDesc) {
+                        exactMatchedCurIdx[ci] = true;
+                        exactResults.push({
+                            curIdx: ci,
+                            desc: curItem.desc,
+                            prevDesc: prevLosses[pi].desc,
+                            curQty: curItem.qty,
+                            prevQty: prevLosses[pi].qty,
+                            dept: curItem.dept || 'Other',
+                            line: curItem.line || '',
+                            shift: curItem.shift || '',
+                            trend: curItem.qty < prevLosses[pi].qty * 0.7 ? 'improved' : (curItem.qty > prevLosses[pi].qty * 1.3 ? 'worsened' : 'chronic'),
+                            reason: 'Same description: ' + curItem.desc + ', ' + curItem.qty + ' vs ' + prevLosses[pi].qty
+                        });
+                        break;
+                    }
+                }
+            });
+            
+            // 阶段2：AI语义匹配剩余未匹配项（双重调用取并集）
+            var unmatchedLosses = [];
+            var unmatchedIdxMap = {};
+            var unmatchedNewIdx = 0;
+            losses.forEach(function(l, i) {
+                if (!exactMatchedCurIdx[i]) {
+                    unmatchedIdxMap[unmatchedNewIdx] = i;
+                    unmatchedLosses.push(l);
+                    unmatchedNewIdx++;
+                }
+            });
+            
+            var unmatchedPrevList = prevLosses.slice(); // 全部前一天数据供AI参考
+            
+            var aiResults = [];
+            if (unmatchedLosses.length > 0 && unmatchedPrevList.length > 0) {
+                var calls = [window._aiAnalyzeRepeatLoss(unmatchedLosses, unmatchedPrevList), window._aiAnalyzeRepeatLoss(unmatchedLosses, unmatchedPrevList)];
+                var results = await Promise.all(calls);
+                
+                var aiMatched = {};
+                for (var ci = 0; ci < results.length; ci++) {
+                    if (results[ci].success && results[ci].items) {
+                        results[ci].items.forEach(function(item) {
+                            if (item.curIdx === undefined) return;
+                            var origCurIdx = unmatchedIdxMap[item.curIdx];
+                            if (origCurIdx === undefined) return;
+                            if (!aiMatched[origCurIdx] || (item.prevDesc && !aiMatched[origCurIdx].prevDesc)) {
+                                aiMatched[origCurIdx] = {
+                                    curIdx: origCurIdx,
+                                    desc: item.desc,
+                                    prevDesc: item.prevDesc,
+                                    curQty: item.curQty,
+                                    prevQty: item.prevQty,
+                                    dept: item.dept,
+                                    line: item.line || '',
+                                    shift: item.shift || '',
+                                    trend: item.trend || 'chronic',
+                                    reason: item.reason || 'AI matched'
+                                };
                             }
-                            // If both have prevDesc, keep the one with more info
-                            if (item.prevDesc && matchedIdx[item.curIdx].prevDesc && item.reason.length > matchedIdx[item.curIdx].reason.length) {
-                                matchedIdx[item.curIdx] = item;
-                            }
-                        }
+                        });
+                    }
+                }
+                
+                Object.keys(aiMatched).forEach(function(idx) {
+                    aiResults.push(aiMatched[idx]);
+                });
+            }
+            
+            // 阶段3：合并结果（精确匹配 + AI语义匹配）
+            var mergedItems = exactResults.concat(aiResults);
+            return { success: true, items: mergedItems, totalCur: losses.length, totalPrev: prevLosses.length };
+        };
+        
+        // ★ 找新问题：当天有但前一天没有的（精确匹配+AI判定）
+        window._findNewIssues = async function(losses, prevLosses, repeatItems) {
+            var repeatCurIdx = {};
+            repeatItems.forEach(function(item) {
+                if (item.curIdx !== undefined) repeatCurIdx[item.curIdx] = true;
+            });
+            
+            var newItems = [];
+            losses.forEach(function(l, i) {
+                if (!repeatCurIdx[i]) {
+                    newItems.push({
+                        curIdx: i,
+                        desc: l.desc || '',
+                        prevDesc: '',
+                        curQty: l.qty,
+                        prevQty: 0,
+                        dept: l.dept || 'Other',
+                        trend: 'new',
+                        reason: 'New issue'
                     });
                 }
-            }
-            
-            if (!anySuccess) {
-                for (var ci = 0; ci < results.length; ci++) {
-                    if (results[ci].error) return results[ci];
-                }
-                return { success: false, error: 'All AI calls failed' };
-            }
-            
-            var mergedItems = Object.keys(matchedIdx).map(function(idx) { return matchedIdx[idx]; });
-            return { success: true, items: mergedItems };
+            });
+            return newItems;
         };
 
 // ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
