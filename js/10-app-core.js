@@ -2718,21 +2718,36 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             return dict[key] || key;
         }
         
-        // ===== Layer 2: AI 批量语义聚类 (仅增量处理) =====
-        window._aiBatchStandardize = async function(texts) {
+        // ===== Layer 2: AI 批量语义聚类 - 强制参考词库 (Reference Dictionary) =====
+        window._aiBatchStandardize = async function(texts, referenceList) {
             if (!texts || texts.length === 0) return {};
             
-            var prompt = '你是一个专业的制造工厂AI分析专家。\n\n';
-            prompt += '任务：将泰语异常描述归类为标准问题。\n\n';
-            prompt += '规则：\n';
-            prompt += '1. 忽略语法变体、口语简写，将相同含义的故障合并为同一个【标准描述】\n';
-            prompt += '2. 分类维度：漏气/泄漏类、电机烧毁/短路类、焊接不良类、机械断裂类、电气故障类等\n';
-            prompt += '3. 例如："รอยรั่ว"、"แก๊สรั่ว"、"รั่ว" → "Gas Leak"\n';
-            prompt += '4. 例如："มอเตอร์ไหม้"、"มอเตอร์พัง"、"มอเตอร์เสีย" → "Motor Burned"\n';
-            prompt += '5. 标准描述使用英文（首字母大写），保持一致性\n\n';
-            prompt += '输入文本（JSON数组）：\n' + JSON.stringify(texts) + '\n\n';
-            prompt += '输出（严格JSON数组，不要其他任何文字）：\n';
-            prompt += '[{"original_text":"...","standard_issue":"..."}]';
+            var refStr = '[]';
+            if (referenceList && referenceList.length > 0) {
+                refStr = JSON.stringify(referenceList);
+            }
+            
+            var prompt = '你是一个极其严谨的精益生产数据分析专家。你的任务是对工厂今日新录入的「泰语异常描述 (Today_Issues)」进行标准化聚类。\n\n';
+            prompt += '【第一优先级：强制基准对照】\n';
+            prompt += '我会提供一个「历史标准异常词库 (Reference_List)」。\n';
+            prompt += '对于今日的每一条数据，你必须优先判断它是否属于 Reference_List 中的已有项。如果属于，必须一字不差地返回历史标准词，绝对禁止创造新词。只有当确认绝对没有匹配项时，才允许生成新的标准泰语描述。\n\n';
+            prompt += '【核心边界：如何判定「相同事件」与「不同事件」】\n';
+            prompt += '必须严格遵守以下工厂物理判定逻辑：\n\n';
+            prompt += '1. 相同事件（Same Event）的定义：\n';
+            prompt += '同一工位/设备 + 同一物理故障。即便泰语录入时的语序不同、使用了缩写或口语，只要指向同一个物理事实，必须归为一类。\n\n';
+            prompt += '✅ 示例 1（语序不同）：งานรั่ว DV (DV漏气) 与 พบรอยรั่วที่จุด DV (在DV发现漏气) -> 必须合并为相同的标准词。\n\n';
+            prompt += '✅ 示例 2（口语与书面语）：เครื่องความต้านทาน Alarm บ่อย (电阻机频繁报警) 与 เครื่องต้านทานร้อง (电阻机响了) -> 必须合并。\n\n';
+            prompt += '2. 不同事件（Different Event）的绝对红线：\n\n';
+            prompt += '红线 A：故障相同，但设备/工位不同（严禁合并）\n\n';
+            prompt += '❌ 示例 3：งานรั่ว DV (DV漏气) 与 งานรั่ว ท่อ (管子漏气) -> 虽然都是漏气，但位置不同，绝对不能合并，必须分别输出不同的标准词。\n\n';
+            prompt += '红线 B：设备相同，但故障现象不同（严禁合并）\n\n';
+            prompt += '❌ 示例 4：เครื่องความต้านทาน Alarm (电阻机报警) 与 เครื่องความต้านทาน ไฟดับ (电阻机断电) -> 虽然都是电阻机，但一个是报警，一个是断电，绝对不能合并。\n\n';
+            prompt += '【输入数据】\n';
+            prompt += 'Reference_List (历史词库): ' + refStr + '\n\n';
+            prompt += 'Today_Issues (今日待处理): ' + JSON.stringify(texts) + '\n\n';
+            prompt += '【输出格式】\n';
+            prompt += '严格返回 JSON 数组，映射今日数据的标准化结果：\n';
+            prompt += '[{"original_text":"今日原始泰语1","standard_issue":"匹配到的历史词或新建词"}, ...]';
             
             try {
                 var resp = await fetch(_AI_API_BASE, {
@@ -2741,7 +2756,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     body: JSON.stringify({
                         model: _getSelectedModel(),
                         messages: [
-                            { role: 'system', content: '你是工厂AI专家。归类相同故障为同一标准描述。只输出JSON数组。严格逐条对应。' },
+                            { role: 'system', content: '你是一个极其严谨的精益生产数据分析专家。\n\n【强制规则】\n1. 必须优先使用 Reference_List 中的已有标准词，一字不差返回，禁止创造新词。\n2. 相同事件：同一工位/设备 + 同一物理故障（忽略泰语语序、口语、缩写差异）。\n3. 不同事件红线：设备不同但故障相同→严禁合并（如DV漏气≠管子漏气）；设备相同但故障不同→严禁合并（如电阻机报警≠电阻机断电）。\n4. 只输出JSON数组，严格逐条对应。不编造。不修改已有标准词。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
@@ -2790,14 +2805,44 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             collectUncached(losses);
             collectUncached(prevLosses);
             
-            // --- Layer 2: AI 批量语义聚类（仅增量） ---
+            // --- Layer 2: 构建 Reference_List (历史标准词库) ---
+            // 从词典中提取所有已存在的 standard_issue（去重）
+            var referenceList = [];
+            var seenRef = {};
+            Object.keys(dict).forEach(function(raw) {
+                var si = dict[raw];
+                if (si && !seenRef[si]) {
+                    seenRef[si] = true;
+                    referenceList.push(si);
+                }
+            });
+            // 再从今日和昨日数据的原始描述中补全（未缓存但已在数据中的描述）
+            function collectRawIssues(arr) {
+                arr.forEach(function(l) {
+                    var d = (l.desc || '').trim().toLowerCase();
+                    if (d && !seenRef[d]) {
+                        seenRef[d] = true;
+                        referenceList.push(d);
+                    }
+                });
+            }
+            collectRawIssues(losses);
+            collectRawIssues(prevLosses);
+            
+            // --- Layer 2: AI 批量语义聚类（仅增量 + 带参考词库） ---
             if (newTexts.length > 0) {
-                var aiMappings = await window._aiBatchStandardize(newTexts);
+                var aiMappings = await window._aiBatchStandardize(newTexts, referenceList);
                 var updated = false;
                 Object.keys(aiMappings).forEach(function(key) {
                     if (!dict[key]) {
                         dict[key] = aiMappings[key];
                         updated = true;
+                        // 将新映射的标准词也加入参考列表（后续让AI复用）
+                        var newSi = aiMappings[key];
+                        if (newSi && !seenRef[newSi]) {
+                            seenRef[newSi] = true;
+                            referenceList.push(newSi);
+                        }
                     }
                 });
                 if (updated) _saveIssueDict(dict);
