@@ -2965,12 +2965,18 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             var totalMTD = 0;
             for(var dk in deptMTD) { if(deptMTD.hasOwnProperty(dk)) totalMTD += deptMTD[dk]; }
 
-            // 表格版本 - Dept | Today | MTD | %(MTD占比)
-            html += '<table class="cr-table" style="margin-top:8px;">';
-            html += '<tr><th>Dept</th><th style="text-align:right;">Today</th><th style="text-align:right;">MTD</th><th style="text-align:right;">%</th></tr>';
-            for(var di = 0; di < deptSorted.length; di++) {
-                var dk = deptSorted[di];
-                var qty = deptData[dk];
+            // 获取本月所有出现过的部门（按MTD降序排列），以显示完整清单
+            var allDepts = Object.keys(deptMTD).sort(function(a,b) {
+                return (deptMTD[b]||0) - (deptMTD[a]||0);
+            });
+
+            // 表格版本 - Dept | Today | Monthly Total | %(月累计占比)
+            html += '<div style="font-size:10px;color:#64748b;margin-bottom:2px;font-style:italic;">Today Impact Ranking (bar chart above)</div>';
+            html += '<table class="cr-table" style="margin-top:6px;">';
+            html += '<tr><th>Dept</th><th style="text-align:right;">Today</th><th style="text-align:right;">Monthly<br>Total</th><th style="text-align:right;">%</th></tr>';
+            for(var di = 0; di < allDepts.length; di++) {
+                var dk = allDepts[di];
+                var qty = deptData[dk] || 0;
                 var mtdQty = deptMTD[dk] || 0;
                 var percentage = totalMTD > 0 ? ((mtdQty / totalMTD) * 100).toFixed(1) : '0.0';
                 html += '<tr><td>' + dk + '</td><td style="text-align:right;">' + qty + '</td><td style="text-align:right;">' + mtdQty + '</td><td style="text-align:right;">' + percentage + '%</td></tr>';
@@ -3121,7 +3127,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         } else if (item.trend === 'improved') {
                             trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';
                         } else if (item.trend === 'new') {
-                            trendHtml = '<span style="color:#dc2626;font-size:13px;font-weight:900;border:1px solid #dc2626;border-radius:3px;padding:1px 4px;">NEW</span>';
+                            trendHtml = '<span style="color:#dc2626;font-size:11px;font-weight:900;border:1px solid #dc2626;border-radius:2px;padding:0px 3px;">NEW</span>';
                         } else {
                             trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
                         }

@@ -1089,9 +1089,9 @@ tr.filter-row th input, tr.filter-row th select { background: #FFFFFF !important
 
 /* ===== Compact Report: A section compact mode ===== */
 .cr-left .cr-line-block { padding: 3px 8px !important; margin-bottom: 4px !important; }
-.cr-left .cr-line-header { font-size: 12px !important; margin-bottom: 2px !important; }
+.cr-left .cr-line-header { font-size: 13px !important; margin-bottom: 2px !important; }
 .cr-left .cr-shift-block { padding: 2px 6px !important; margin: 2px 0 2px 10px !important; }
-.cr-left .cr-shift-header { font-size: 11px !important; margin-bottom: 1px !important; }
+.cr-left .cr-shift-header { font-size: 12px !important; margin-bottom: 1px !important; }
 .cr-left .cr-item { padding: 1px 0 !important; }
-.cr-left .cr-item .cr-qty { font-size: 11px !important; min-width: 36px !important; }
-.cr-left .cr-item .cr-desc { font-size: 11px !important; }
+.cr-left .cr-item .cr-qty { font-size: 12px !important; min-width: 36px !important; }
+.cr-left .cr-item .cr-desc { font-size: 12px !important; }
