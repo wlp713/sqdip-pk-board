@@ -1333,6 +1333,460 @@
             el = document.getElementById('sys-equip-photos'); if (el) el.innerText = equipPhotos;
             el = document.getElementById('sys-equip-count'); if (el) el.innerText = equipTotal + '项';
         }
+
+        // ================= 设备点检/事前事中预设数据函数 (从combined.html迁移) =================
+        function equipGetYear() {
+            var monthFromSelect = document.getElementById('equip-month-select');
+            if (monthFromSelect) {
+                var m = parseInt(monthFromSelect.value) || (new Date().getMonth() + 1);
+                var year = new Date().getFullYear();
+                return year;
+            }
+            return new Date().getFullYear();
+        }
+        function equipGetMonthStr() {
+            var monthSelect = document.getElementById('equip-month-select');
+            var m = monthSelect ? parseInt(monthSelect.value) : (new Date().getMonth() + 1);
+            var year = new Date().getFullYear();
+            return year + '-' + (m < 10 ? '0' + m : m);
+        }
+        function equipGetMonthNum() {
+            var monthSelect = document.getElementById('equip-month-select');
+            return monthSelect ? parseInt(monthSelect.value) : (new Date().getMonth() + 1);
+        }
+        function ensureSysDetailPresetData(month, type) {
+            if (!db) return;
+            if (!db.sysDetail) db.sysDetail = {};
+            if (!db.sysDetail[type]) db.sysDetail[type] = [];
+            var parts = month.split('-');
+            if (parts.length < 2) return;
+            var year = parseInt(parts[0]);
+            var monthNum = parseInt(parts[1]);
+            var daysInMonth = new Date(year, monthNum, 0).getDate();
+            var createdCount = 0;
+            var skipDates = db.sysDetail._skipDates && db.sysDetail._skipDates[type] ? db.sysDetail._skipDates[type] : {};
+            var existingDates = {};
+            db.sysDetail[type].forEach(function(r) {
+                if (r && r.date && String(r.date || '').startsWith(month)) {
+                    existingDates[r.date] = true;
+                }
+            });
+            for (var day = 1; day <= daysInMonth; day++) {
+                var dateStr = month + '-' + (day < 10 ? '0' + day : day);
+                if (existingDates[dateStr]) continue;
+                if (skipDates[dateStr]) continue;
+                var record;
+                if (type === 'pre') {
+                    record = {
+                        id: Date.now() + Math.random() + Math.random(),
+                        date: dateStr, ws: 'PRO2', ownerDept: 'PRO2', line: 'LINE A',
+                        equipment: '', item: '', issue: '', resp: '', status: '未完成'
+                    };
+                } else if (type === 'mid') {
+                    record = {
+                        id: Date.now() + Math.random() + Math.random(),
+                        date: dateStr, ws: 'PRO2', line: 'LINE A', event: '',
+                        responseMin: 0, waitMin: 0, impactQty: 0, patrol: '', action: '', resp: '', status: '已关闭'
+                    };
+                } else if (type === 'equipment') {
+                    record = {
+                        id: Date.now() + Math.random() + Math.random(),
+                        date: dateStr, time: '08:00', checkPlace: '', ws: 'PRO2', dept: 'PRO2',
+                        checked: false, photo: '', notes: ''
+                    };
+                }
+                if (record) {
+                    db.sysDetail[type].push(record);
+                    createdCount++;
+                }
+            }
+            if (createdCount > 0) {
+                db.sysDetail[type].sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
+                if (window.triggerAutoSave) window.triggerAutoSave();
+            }
+        }
+        function ensureEquipmentData() {
+            if (!db.sysDetail) db.sysDetail = {};
+            if (!db.sysDetail.equipment) db.sysDetail.equipment = [];
+            var monthStr = equipGetMonthStr();
+            var parts = monthStr.split('-');
+            if (parts.length < 2) return;
+            var year = parseInt(parts[0]);
+            var monthNum = parseInt(parts[1]);
+            var daysInMonth = new Date(year, monthNum, 0).getDate();
+            var skipDates = db.sysDetail && db.sysDetail._skipDates && db.sysDetail._skipDates.equipment ? db.sysDetail._skipDates.equipment : {};
+            var existingDates = {};
+            db.sysDetail.equipment.forEach(function(r) {
+                if (r && r.date && String(r.date || '').startsWith(monthStr)) {
+                    existingDates[r.date] = true;
+                }
+            });
+            var createdCount = 0;
+            for (var day = 1; day <= daysInMonth; day++) {
+                var dateStr = monthStr + '-' + (day < 10 ? '0' + day : day);
+                if (existingDates[dateStr]) continue;
+                if (skipDates[dateStr]) continue;
+                db.sysDetail.equipment.push({
+                    id: Date.now() + Math.random() + Math.random(),
+                    date: dateStr, time: '08:00', checkPlace: '', ws: 'PRO2', dept: 'PE',
+                    checked: false, photo: '', notes: ''
+                });
+                createdCount++;
+            }
+            if (createdCount > 0) {
+                db.sysDetail.equipment.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
+                if (window.triggerAutoSave) window.triggerAutoSave();
+            }
+        }
+        window.ensurePostDmPunchData = function(month) {
+            if (!db || !db.sysDetail) return;
+            if (!db.sysDetail.post) db.sysDetail.post = [];
+            var parts = month.split('-');
+            if (parts.length < 2) return;
+            var year = parseInt(parts[0]);
+            var monthNum = parseInt(parts[1]);
+            var daysInMonth = new Date(year, monthNum, 0).getDate();
+            var skipDates = db.sysDetail._skipDates && db.sysDetail._skipDates.post ? db.sysDetail._skipDates.post : {};
+            var existingDmDates = {};
+            db.sysDetail.post.forEach(function(r) {
+                if (r && r.type === 'dm_punch' && r.date && String(r.date).startsWith(month)) {
+                    existingDmDates[r.date] = true;
+                }
+            });
+            var createdCount = 0;
+            for (var day = 1; day <= daysInMonth; day++) {
+                var dateStr = month + '-' + (day < 10 ? '0' + day : day);
+                if (existingDmDates[dateStr]) continue;
+                if (skipDates[dateStr]) continue;
+                db.sysDetail.post.push({
+                    id: Date.now() + Math.random() + Math.random(),
+                    date: dateStr, type: 'dm_punch', dmDone: false
+                });
+                createdCount++;
+            }
+            if (createdCount > 0) {
+                db.sysDetail.post.sort(function(a, b) { return (a.date||'').localeCompare(b.date||''); });
+                if (window.triggerAutoSave) window.triggerAutoSave();
+            }
+        };
+        window.onEquipMonthChange = function() {
+            ensureEquipmentData();
+            renderEquipmentTable();
+        };
+        window.renderEquipmentTable = function() {
+            var monthStr = equipGetMonthStr();
+            var wsFilter = document.getElementById('equip-ws-filter') ? document.getElementById('equip-ws-filter').value : '';
+            var allData = (db && db.sysDetail && db.sysDetail.equipment) ? db.sysDetail.equipment : [];
+            var rows = allData.filter(function(r) { return String(r.date || '').startsWith(monthStr); });
+            if (wsFilter) {
+                rows = rows.filter(function(r) { return r.ws === wsFilter; });
+            }
+            var body = document.getElementById('sys-detail-body');
+            if (!body) return;
+            var total = rows.length;
+            var checkedCount = rows.filter(function(r) { return r.checked === true; }).length;
+            var checkRate = total > 0 ? (checkedCount / total * 100).toFixed(1) : '0.0';
+            var _labelEl = document.getElementById('sys-kpi-1-label'); if (_labelEl) _labelEl.innerText = '总天数';
+            _labelEl = document.getElementById('sys-kpi-2-label'); if (_labelEl) _labelEl.innerText = '点检率';
+            _labelEl = document.getElementById('sys-kpi-3-label'); if (_labelEl) _labelEl.innerText = '未打卡';
+            _labelEl = document.getElementById('sys-kpi-4-label'); if (_labelEl) _labelEl.innerText = '——';
+            _labelEl = document.getElementById('sys-detail-impact'); if (_labelEl) { _labelEl.innerText = '—'; _labelEl.style.color = ''; }
+            var el;
+            el = document.getElementById('sys-detail-count'); if (el) el.innerText = total + '天';
+            el = document.getElementById('sys-detail-rate'); if (el) {
+                el.innerText = checkRate + '%';
+                el.style.color = parseFloat(checkRate) >= 95 ? 'var(--success)' : (parseFloat(checkRate) >= 80 ? 'var(--warning)' : 'var(--danger)');
+            }
+            el = document.getElementById('sys-detail-risk'); if (el) {
+                el.innerText = (total - checkedCount) + '天未打卡';
+                el.style.color = (total - checkedCount) > 0 ? 'var(--danger)' : 'var(--success)';
+            }
+            body.innerHTML = rows.length ? rows.map(function(r, idx) {
+                var gIdx = allData.indexOf(r);
+                if (gIdx < 0) gIdx = idx;
+                var photoHtml = '';
+                if (r.photo && String(r.photo).length > 100) {
+                    photoHtml = '<div style="position:relative;display:inline-block;"><img src="' + r.photo + '" style="width:32px;height:32px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid #eee;" onclick="window.openPhotoPreview(\'' + r.photo + '\')" ondblclick="equipOpenPhotoModal(' + gIdx + ')" title="单击预览 / 双击更换">' +
+                        '<span style="position:absolute;bottom:-2px;right:-4px;font-size:7px;background:#0284c7;color:white;border-radius:8px;padding:0 3px;cursor:pointer;line-height:14px;" onclick="event.stopPropagation();equipOpenPhotoModal(' + gIdx + ')">换</span></div>';
+                } else {
+                    photoHtml = '<div class="equip-photo-zone" style="width:32px;height:32px;border:1px dashed #0284c7;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#0284c7;cursor:pointer;padding:0 2px;background:rgba(2,132,199,0.05);" onclick="equipOpenPhotoModal(' + gIdx + ')" title="点击打开图片粘贴窗口">📷粘贴</div>';
+                }
+                return '<tr>' +
+                    '<td style="text-align:center;font-size:11px;">' + (r.date || '') + '</td>' +
+                    '<td style="text-align:center;"><input type="text" value="' + (r.checkPlace || '') + '" onchange="equipUpdateField(' + gIdx + ', \'checkPlace\', this.value)" placeholder="点检位置" style="width:95%;text-align:left;font-size:12px;"></td>' +
+                    '<td style="text-align:center;"><select onchange="equipUpdateField(' + gIdx + ', \'ws\', this.value)" style="width:80px;text-align:center;font-size:12px;">' +
+                        '<option value="PRO1"' + (r.ws==='PRO1'?' selected':'') + '>PRO1</option>' +
+                        '<option value="PRO2"' + (r.ws==='PRO2'?' selected':'') + '>PRO2</option>' +
+                        '<option value="PRO3"' + (r.ws==='PRO3'?' selected':'') + '>PRO3</option>' +
+                        '<option value="PRO4"' + (r.ws==='PRO4'?' selected':'') + '>PRO4</option>' +
+                    '</select></td>' +
+                    '<td style="text-align:center;"><select onchange="equipUpdateField(' + gIdx + ', \'dept\', this.value)" style="width:90%;text-align:center;font-size:12px;">' +
+                        '<option value="PE"' + ((r.dept||'PE')==='PE'?' selected':'') + '>PE设备部门</option>' +
+                        '<option value="品质"' + ((r.dept||'')==='品质'?' selected':'') + '>品质</option>' +
+                        '<option value="工艺"' + ((r.dept||'')==='工艺'?' selected':'') + '>工艺</option>' +
+                        '<option value="模具"' + ((r.dept||'')==='模具'?' selected':'') + '>模具</option>' +
+                        '<option value="生产"' + ((r.dept||'')==='生产'?' selected':'') + '>生产</option>' +
+                        '<option value="物流"' + ((r.dept||'')==='物流'?' selected':'') + '>物流</option>' +
+                        '<option value="其他"' + ((r.dept||'')==='其他'?' selected':'') + '>其他</option>' +
+                    '</select></td>' +
+                    '<td style="text-align:center;"><input type="checkbox" ' + (r.checked ? 'checked' : '') + ' onchange="equipToggleCheck(' + gIdx + ', this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>' +
+                    '<td style="text-align:center;vertical-align:middle;">' + photoHtml + '</td>' +
+                    '<td style="text-align:center;"><i class="fa-solid fa-xmark" style="color:var(--danger);cursor:pointer;font-size:14px;opacity:0.6;transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" onclick="equipDeleteRow(' + gIdx + ')" title="删除该行"></i></td>' +
+                '</tr>';
+            }).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999;">暂无设备点检记录</td></tr>';
+        };
+        window.equipUpdateField = function(index, field, value) {
+            try {
+                var arr = db && db.sysDetail && db.sysDetail.equipment;
+                if (arr && arr[index]) {
+                    arr[index][field] = value;
+                    if (window.triggerAutoSave) window.triggerAutoSave();
+                }
+            } catch(e) { console.error('[equipUpdate ERROR]', e.message); }
+        };
+        window.equipToggleCheck = function(index, checked) {
+            try {
+                var arr = db && db.sysDetail && db.sysDetail.equipment;
+                if (arr && arr[index]) {
+                    arr[index].checked = checked;
+                    if (window.triggerAutoSave) window.triggerAutoSave();
+                    renderEquipmentTable();
+                    if (typeof renderSysOps === 'function') renderSysOps();
+                }
+            } catch(e) { console.error('[equipToggle ERROR]', e.message); }
+        };
+        window.equipDeleteRow = function(index) {
+            if (!db || !db.sysDetail || !db.sysDetail.equipment || !db.sysDetail.equipment[index]) return;
+            var r = db.sysDetail.equipment[index];
+            if (!confirm('确认删除 ' + (r.date||'') + ' 的设备点检记录？')) return;
+            var delDate = r.date;
+            db.sysDetail.equipment.splice(index, 1);
+            if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
+            if (!db.sysDetail._skipDates.equipment) db.sysDetail._skipDates.equipment = {};
+            db.sysDetail._skipDates.equipment[delDate] = true;
+            _deferredLocalStorageSave();
+            setTimeout(function() { if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else if (window.triggerAutoSave) { window.triggerAutoSave(); } }, 0);
+            renderEquipmentTable();
+        };
+        window.equipHandleFileSelect = function(index, input) {
+            var file = input.files[0];
+            if (!file) return;
+            equipProcessPhoto(index, file);
+            input.value = '';
+        };
+        window.equipProcessPhoto = function(index, file) {
+            if (file.size > 2 * 1024 * 1024) { alert('图片大小不能超过2MB'); return; }
+            var reader = new FileReader();
+            reader.onload = function(e) { equipSavePhoto(index, e.target.result); };
+            reader.readAsDataURL(file);
+        };
+        window.equipProcessBlob = function(index, blob) {
+            if (blob.size > 2 * 1024 * 1024) { alert('图片大小不能超过2MB'); return; }
+            var reader = new FileReader();
+            reader.onload = function(e) { equipSavePhoto(index, e.target.result); };
+            reader.readAsDataURL(blob);
+        };
+        window.equipSavePhoto = function(index, dataUrl) {
+            if (!db || !db.sysDetail || !db.sysDetail.equipment || !db.sysDetail.equipment[index]) return;
+            equipCompressImage(dataUrl, 150, 0.4).then(function(compressed) {
+                db.sysDetail.equipment[index].photo = compressed;
+                if (window.triggerAutoSave) window.triggerAutoSave();
+                renderEquipmentTable();
+                if (typeof renderSysOps === 'function') renderSysOps();
+                if (window.showToast) window.showToast('fa-solid fa-check-circle', '图片已添加');
+            });
+        };
+        window.equipCompressImage = function(dataUrl, maxWidth, quality) {
+            return new Promise(function(resolve) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var w = img.width, h = img.height;
+                    if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
+                    canvas.width = w; canvas.height = h;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = dataUrl;
+            });
+        };
+        window.openPhotoPreview = function(dataUrl) {
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;z-index:10001;';
+            overlay.innerHTML = '<div style="background:white;padding:8px;border-radius:8px;max-width:400px;">' +
+                '<div style="text-align:right;margin-bottom:4px;"><button onclick="this.parentElement.parentElement.parentElement.remove()" style="background:none;border:none;font-size:16px;cursor:pointer;">x</button></div>' +
+                '<img src="' + dataUrl + '" style="max-width:360px;max-height:60vh;display:block;border-radius:4px;">' +
+            '</div>';
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        };
+        window.exportEquipmentReport = function() {
+            var monthStr = equipGetMonthStr();
+            var rows = (db && db.sysDetail && db.sysDetail.equipment) ? db.sysDetail.equipment.filter(function(r) { return String(r.date || '').startsWith(monthStr); }) : [];
+            var total = rows.length;
+            var checked = rows.filter(function(r) { return r.checked === true; }).length;
+            var csv = '设备点检统计表\n\n';
+            csv += '项目,数量\n总天数,' + total + '\n已打卡,' + checked + '\n未打卡,' + (total - checked) + '\n点检率,' + (total > 0 ? (checked/total*100).toFixed(1) : '0.0') + '%';
+            var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = '设备点检_' + monthStr + '.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            if (window.showToast) window.showToast('fa-solid fa-file-export', '报表已导出');
+        };
+        window.currentEquipmentPhotoIndex = null;
+        window._equipModalDataUrl = null;
+        window._equipModalCompressed = null;
+        window.equipOpenPhotoModal = function(index) {
+            currentEquipmentPhotoIndex = index;
+            _equipModalDataUrl = null;
+            _equipModalCompressed = null;
+            var row = db && db.sysDetail && db.sysDetail.equipment && db.sysDetail.equipment[index];
+            if (row && row.photo) {
+                _equipModalDataUrl = row.photo;
+                equipModalUpdatePreview();
+            }
+            document.getElementById('equip-photo-modal').style.display = 'flex';
+            if (window._equipModalPasteHandler) {
+                document.removeEventListener('paste', window._equipModalPasteHandler);
+                delete window._equipModalPasteHandler;
+            }
+            setTimeout(function() {
+                var _ta = document.getElementById('equip-photo-paste-textarea');
+                if (_ta) { _ta.focus(); _ta.select(); }
+            }, 50);
+            window._equipModalPasteHandler = function(e) {
+                var modal = document.getElementById('equip-photo-modal');
+                if (!modal || modal.style.display !== 'flex') return;
+                if (e.defaultPrevented) return;
+                equipModalHandlePaste(e);
+            };
+            document.addEventListener('paste', window._equipModalPasteHandler);
+        };
+        window.equipClosePhotoModal = function() {
+            document.getElementById('equip-photo-modal').style.display = 'none';
+            if (window._equipModalPasteHandler) {
+                document.removeEventListener('paste', window._equipModalPasteHandler);
+                delete window._equipModalPasteHandler;
+            }
+            _equipModalDataUrl = null;
+            _equipModalCompressed = null;
+            currentEquipmentPhotoIndex = null;
+        };
+        window.equipModalHandlePaste = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            var clipboardData = event.clipboardData || (event.originalEvent && event.originalEvent.clipboardData);
+            if (!clipboardData) return;
+            for (var i = 0; i < clipboardData.items.length; i++) {
+                var item = clipboardData.items[i];
+                if (item.type.startsWith('image/')) {
+                    try {
+                        var file = item.getAsFile();
+                        if (file) { equipModalLoadFile(file); }
+                    } catch(e) {
+                        console.error('[设备粘贴] 错误:', e);
+                        if (window.showToast) showToast('fa-solid fa-xmark', '粘贴图片失败: ' + e.message, 'error');
+                    }
+                    return;
+                }
+            }
+            if (window.showToast) showToast('fa-solid fa-info-circle', '剪贴板中没有检测到图片');
+        };
+        window.equipModalHandleFileSelect = function(event) {
+            var files = event.target.files;
+            if (files && files.length > 0) { equipModalLoadFile(files[0]); }
+            event.target.value = '';
+        };
+        window.equipModalLoadFile = function(file) {
+            if (file.size > 10 * 1024 * 1024) {
+                if (window.showToast) showToast('fa-solid fa-exclamation-triangle', '图片不能超过10MB', 'error');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                _equipModalDataUrl = e.target.result;
+                equipModalUpdatePreview();
+            };
+            reader.readAsDataURL(file);
+        };
+        window.equipModalUpdatePreview = function() {
+            if (!_equipModalDataUrl) {
+                document.getElementById('equip-photo-preview').style.display = 'none';
+                return;
+            }
+            document.getElementById('equip-photo-preview').style.display = 'block';
+            var previewImg = document.getElementById('equip-photo-preview-img');
+            previewImg.src = _equipModalDataUrl;
+            var origSize = Math.round(_equipModalDataUrl.length * 0.75 / 1024);
+            document.getElementById('equip-photo-orig-size').innerText = origSize + 'KB';
+            var qSlider = document.getElementById('equip-photo-quality');
+            var qLabel = document.getElementById('equip-photo-quality-label');
+            if (qSlider && qLabel) {
+                qLabel.innerText = Math.round(parseFloat(qSlider.value) * 100) + '%';
+            }
+            equipModalCompressCurrent();
+        };
+        window.equipModalCompressCurrent = function() {
+            if (!_equipModalDataUrl) return;
+            var qSlider = document.getElementById('equip-photo-quality');
+            var quality = qSlider ? parseFloat(qSlider.value) : 0.35;
+            equipCompressImageToDataUrl(_equipModalDataUrl, 150, quality).then(function(compressed) {
+                _equipModalCompressed = compressed;
+                var compSize = Math.round(compressed.length * 0.75 / 1024);
+                document.getElementById('equip-photo-comp-size').innerText = compSize + 'KB';
+                document.getElementById('equip-photo-preview-img').src = compressed;
+            });
+        };
+        window.equipModalSavePhoto = function() {
+            if (currentEquipmentPhotoIndex === null || currentEquipmentPhotoIndex === undefined) {
+                if (window.showToast) showToast('fa-solid fa-exclamation-triangle', '未选择设备点检行', 'error');
+                return;
+            }
+            var toSave = _equipModalCompressed || _equipModalDataUrl;
+            if (!toSave) {
+                if (window.showToast) showToast('fa-solid fa-info-circle', '请先粘贴或上传图片');
+                return;
+            }
+            if (!db || !db.sysDetail || !db.sysDetail.equipment || !db.sysDetail.equipment[currentEquipmentPhotoIndex]) {
+                if (window.showToast) showToast('fa-solid fa-exclamation-triangle', '数据不存在', 'error');
+                return;
+            }
+            db.sysDetail.equipment[currentEquipmentPhotoIndex].photo = toSave;
+            if (window.triggerAutoSave) window.triggerAutoSave();
+            if (typeof renderEquipmentTable === 'function') renderEquipmentTable();
+            if (typeof renderSysOps === 'function') renderSysOps();
+            equipClosePhotoModal();
+            if (window.showToast) showToast('fa-solid fa-check-circle', '图片已添加');
+        };
+        window.equipCompressImageToDataUrl = function(dataUrl, maxWidth, quality) {
+            return new Promise(function(resolve) {
+                var img = new Image();
+                img.onload = function() {
+                    var w = img.width, h = img.height;
+                    if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = Math.round(w);
+                    canvas.height = Math.round(h);
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = function() { resolve(dataUrl); };
+                img.src = dataUrl;
+            });
+        };
+        window.equipHandlePaste = function(event, index) {
+            event.preventDefault();
+            event.stopPropagation();
+            equipOpenPhotoModal(index);
+        };
+        window.equipHandleDrop = function(event, index) {
+            event.preventDefault();
+            equipOpenPhotoModal(index);
+        };
         let currentSysDetailType = 'equipment';
         const SYS_DETAIL_META = {
             mid: { title: '事中:Andon响应记录明细', icon: 'fa-gauge-high' },
