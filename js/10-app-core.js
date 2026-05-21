@@ -1956,7 +1956,14 @@
             var endEl = document.getElementById('sys-compare-end');
             window._savedCompareStart = startEl ? startEl.value : localStorage.getItem('mbs_compare_start');
             window._savedCompareEnd = endEl ? endEl.value : localStorage.getItem('mbs_compare_end');
-            // 1. 局部Loading：将LOSS重复率卡片区域替换为加载提示
+            console.log('[DEBUG] _handleCompareChange 触发,',
+                'DOM_start=', startEl ? startEl.value : 'null',
+                'DOM_end=', endEl ? endEl.value : 'null',
+                'LS_start=', localStorage.getItem('mbs_compare_start'),
+                'LS_end=', localStorage.getItem('mbs_compare_end'),
+                'saved=', window._savedCompareStart, '~', window._savedCompareEnd);
+            // 直接使用新日期渲染,不经过setTimeout延时(避免异步地狱：旧状态不同步)
+            // 但保留Loading反馈,让浏览器先绘制loading再计算
             var pl = document.getElementById('sys-detail-post-layout');
             if (pl) {
                 pl.innerHTML = '' +
@@ -1968,11 +1975,11 @@
                         '</div>' +
                     '</div>';
             }
-            // 2. 给浏览器时间渲染loading态，然后重新计算并渲染完整内容
+            // 用setTimeout(0)让浏览器绘制loading后再立即渲染
             _compareChangeTimer = setTimeout(function() {
                 _compareChangeTimer = null;
                 renderSysDetail();
-            }, 30);
+            }, 0);
         };
         window.renderSysDetail = function() {
         try {
@@ -2093,6 +2100,13 @@
                 var _ceEl = document.getElementById('sys-compare-end');
                 var _compareStart = (_csEl && _csEl.value) || window._savedCompareStart || localStorage.getItem('mbs_compare_start') || _defaultCompareStart();
                 var _compareEnd = (_ceEl && _ceEl.value) || window._savedCompareEnd || localStorage.getItem('mbs_compare_end') || _defaultCompareEnd();
+                console.log('[DEBUG] renderSysDetail 日期来源:',
+                    '_csEl=', !!_csEl, '_ceEl=', !!_ceEl,
+                    '_savedStart=', window._savedCompareStart,
+                    '_savedEnd=', window._savedCompareEnd,
+                    '_compareStart=', _compareStart,
+                    '_compareEnd=', _compareEnd,
+                    'lossesCompareCount=', (db.loss||[]).filter(function(l){return l.date&&String(l.date)>=_compareStart&&String(l.date)<=_compareEnd;}).length);
                 // 确保日期格式有效(至少10字符 YYYY-MM-DD)
                 if (!_compareStart || String(_compareStart).length < 10) _compareStart = _defaultCompareStart();
                 if (!_compareEnd || String(_compareEnd).length < 10) _compareEnd = _defaultCompareEnd();
