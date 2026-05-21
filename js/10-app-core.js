@@ -2681,244 +2681,194 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             return result;
         }
         
-        // ★ AI 重复 LOSS 分析
+        // ★ AI 配置
         var _AI_API_BASE = AI_URL;
         function _getSelectedModel() {
             var sel = document.getElementById('ai-model-selector');
             return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
         }
         
-        // 单次AI调用——仅处理语义模糊匹配（精确匹配已在外部完成）
-        window._aiAnalyzeRepeatLoss = async function(losses, prevLosses) {
-            // 构建输入
-            var curList = losses.map(function(l, i) {
-                return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
-            });
-            var prevList = prevLosses.map(function(l, i) {
-                return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
-            });
+        // ===== Layer 1: 本地词典缓存 (LocalStorage) =====
+        var LOSS_ISSUE_DICT_KEY = '_lossIssueDict_v2';
+        
+        // 加载词典
+        function _loadIssueDict() {
+            try {
+                var saved = localStorage.getItem(LOSS_ISSUE_DICT_KEY);
+                return saved ? JSON.parse(saved) : {};
+            } catch(e) {
+                console.warn('[IssueDict] load failed:', e);
+                return {};
+            }
+        }
+        
+        // 保存词典
+        function _saveIssueDict(dict) {
+            try {
+                localStorage.setItem(LOSS_ISSUE_DICT_KEY, JSON.stringify(dict));
+            } catch(e) {
+                console.warn('[IssueDict] save failed:', e);
+            }
+        }
+        
+        // 获取标准化描述：查词典，未缓存则回退到原始文本
+        function _getStandardIssue(dict, text) {
+            if (!text) return '';
+            var key = text.trim();
+            return dict[key] || key;
+        }
+        
+        // ===== Layer 2: AI 批量语义聚类 (仅增量处理) =====
+        window._aiBatchStandardize = async function(texts) {
+            if (!texts || texts.length === 0) return {};
             
-            // 保守提示词：只匹配非常确定是同一个具体故障的情况
-            var prompt = '给定的当天和前一天数据均已去除完全相同描述，只剩余模糊描述。\n\n';
-            prompt += '你的任务：判断当天的问题是否与前一天的问题是**同一个具体故障**。\n\n';
-            prompt += '### 严格规则（必须遵守）\n';
-            prompt += '1. **只匹配非常确定的同一个具体故障**。不确定就不匹配。\n';
-            prompt += '2. 语义等价才算："定子绕组烧毁"="电机定子短路" ✅ 都是电机定子电气损坏\n';
-            prompt += '3. 绝对不匹配的情况：\n';
-            prompt += '   - 宽泛描述≠具体描述："电机问题"≠"定子烧毁" ❌\n';
-            prompt += '   - 不同部件："轴承问题"≠"阀片断裂" ❌\n';
-            prompt += '   - 操作动作≠故障："更换刀具"≠"刀具崩刃" ❌\n';
-            prompt += '   - 不确定是否同一件事：不匹配 \n\n';
-            prompt += '### 趋势判断\n';
-            prompt += '- improved: 今天<昨天×0.7（减少30%以上）\n';
-            prompt += '- worsened: 今天>昨天×1.3（增加30%以上）\n';
-            prompt += '- chronic: 其他\n\n';
-            prompt += '### 输入\n';
-            prompt += '当天：' + JSON.stringify(curList) + '\n\n';
-            prompt += '前一天：' + JSON.stringify(prevList) + '\n\n';
-            prompt += '### 输出（严格JSON，不要任何其他文字）\n';
-            prompt += '{"repeated":[{"curIdx":0,"prevIdx":1,"trend":"improved","reason":"一句话判断依据"}]}\n';
+            var prompt = '你是一个专业的制造工厂AI分析专家。\n\n';
+            prompt += '任务：将泰语异常描述归类为标准问题。\n\n';
+            prompt += '规则：\n';
+            prompt += '1. 忽略语法变体、口语简写，将相同含义的故障合并为同一个【标准描述】\n';
+            prompt += '2. 分类维度：漏气/泄漏类、电机烧毁/短路类、焊接不良类、机械断裂类、电气故障类等\n';
+            prompt += '3. 例如："รอยรั่ว"、"แก๊สรั่ว"、"รั่ว" → "Gas Leak"\n';
+            prompt += '4. 例如："มอเตอร์ไหม้"、"มอเตอร์พัง"、"มอเตอร์เสีย" → "Motor Burned"\n';
+            prompt += '5. 标准描述使用英文（首字母大写），保持一致性\n\n';
+            prompt += '输入文本（JSON数组）：\n' + JSON.stringify(texts) + '\n\n';
+            prompt += '输出（严格JSON数组，不要其他任何文字）：\n';
+            prompt += '[{"original_text":"...","standard_issue":"..."}]';
             
             try {
-                var model = _getSelectedModel();
                 var resp = await fetch(_AI_API_BASE, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': AI_KEY
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': AI_KEY },
                     body: JSON.stringify({
-                        model: model,
+                        model: _getSelectedModel(),
                         messages: [
-                            { role: 'system', content: '只匹配同一个具体故障。语义相同算重复。只输出JSON。不编造。' },
+                            { role: 'system', content: '你是工厂AI专家。归类相同故障为同一标准描述。只输出JSON数组。严格逐条对应。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
-                        max_tokens: 2048
+                        max_tokens: 4096
                     })
                 });
-                
-                if (!resp.ok) {
-                    var errText = await resp.text();
-                    return { success: false, error: 'API error: ' + resp.status + ' ' + errText };
-                }
-                
+                if (!resp.ok) return {};
                 var data = await resp.json();
                 var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-                if (!content) {
-                    return { success: false, error: 'Empty response' };
-                }
-                
-                // 提取 JSON
-                var jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) {
-                    return { success: false, error: 'No JSON in response' };
-                }
-                
+                if (!content) return {};
+                var jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) return {};
                 var parsed = JSON.parse(jsonMatch[0]);
-                var repeated = parsed.repeated || [];
-                
-                // 构建返回
-                var curMap = {};
-                curList.forEach(function(c) { curMap[c.idx] = c; });
-                var prevMap = {};
-                prevList.forEach(function(p) { prevMap[p.idx] = p; });
-                
-                var resultItems = [];
-                var seenCurIdx = {};
-                repeated.forEach(function(r) {
-                    var curItem = curMap[r.curIdx];
-                    if (!curItem || seenCurIdx[r.curIdx]) return;
-                    seenCurIdx[r.curIdx] = true;
-                    
-                    if (r.trend === 'new' || r.prevIdx === null || r.prevIdx === undefined) {
-                        resultItems.push({
-                            curIdx: r.curIdx,
-                            desc: curItem.desc,
-                            prevDesc: '',
-                            curQty: curItem.qty,
-                            prevQty: 0,
-                            dept: curItem.dept,
-                            trend: 'new',
-                            reason: r.reason || 'New issue'
-                        });
-                    } else {
-                        var prevItem = prevMap[r.prevIdx];
-                        if (!prevItem) return;
-                        resultItems.push({
-                            curIdx: r.curIdx,
-                            desc: curItem.desc,
-                            prevDesc: prevItem.desc,
-                            curQty: curItem.qty,
-                            prevQty: prevItem.qty,
-                            dept: curItem.dept,
-                            trend: r.trend || 'chronic',
-                            reason: r.reason || ''
-                        });
+                if (!Array.isArray(parsed)) return {};
+                var result = {};
+                parsed.forEach(function(item) {
+                    if (item.original_text && item.standard_issue) {
+                        result[item.original_text.trim()] = item.standard_issue.trim();
                     }
                 });
-                
-                return { success: true, items: resultItems, totalCur: curList.length, totalPrev: prevList.length };
-                
+                return result;
             } catch(e) {
-                return { success: false, error: e.message || 'Unknown error' };
+                console.warn('[AI Batch Standardize] failed:', e);
+                return {};
             }
         };
         
-        // ★ 稳定版重复分析：精确匹配 + AI语义补充，双重AI调用取并集
+        // ===== Layer 3: 三层架构主入口 =====
+        // 词典缓存 → AI语义聚类 → GroupBy聚合 + 趋势计算
         window._stableAnalyzeRepeat = async function(losses, prevLosses) {
-            // 阶段1：精确描述匹配（100%可靠，无AI参与）
-            var curMap = {}, prevMap = {};
-            losses.forEach(function(l, i) {
-                curMap[i] = l;
-            });
-            prevLosses.forEach(function(l, i) {
-                prevMap[i] = l;
-            });
+            // --- Layer 1: 本地词典缓存 ---
+            var dict = _loadIssueDict();
             
-            var exactMatchedCurIdx = {};
-            var exactResults = [];
-            losses.forEach(function(curItem, ci) {
-                var curDesc = (curItem.desc || '').trim().toLowerCase();
-                if (!curDesc) return;
-                for (var pi = 0; pi < prevLosses.length; pi++) {
-                    var prevDesc = (prevLosses[pi].desc || '').trim().toLowerCase();
-                    if (curDesc === prevDesc) {
-                        exactMatchedCurIdx[ci] = true;
-                        exactResults.push({
-                            curIdx: ci,
-                            desc: curItem.desc,
-                            prevDesc: prevLosses[pi].desc,
-                            curQty: curItem.qty,
-                            prevQty: prevLosses[pi].qty,
-                            dept: curItem.dept || 'Other',
-                            line: curItem.line || '',
-                            shift: curItem.shift || '',
-                            trend: curItem.qty < prevLosses[pi].qty * 0.7 ? 'improved' : (curItem.qty > prevLosses[pi].qty * 1.3 ? 'worsened' : 'chronic'),
-                            reason: 'Same description: ' + curItem.desc + ', ' + curItem.qty + ' vs ' + prevLosses[pi].qty
-                        });
-                        break;
+            // 收集当日和前一天所有唯一的描述，找到未缓存的
+            var newTexts = [];
+            var seenTexts = {};
+            function collectUncached(arr) {
+                arr.forEach(function(l) {
+                    var d = (l.desc || '').trim();
+                    if (d && !seenTexts[d]) {
+                        seenTexts[d] = true;
+                        if (!dict[d]) newTexts.push(d);
                     }
-                }
-            });
-            
-            // 阶段2：AI语义匹配剩余未匹配项（双重调用取并集）
-            var unmatchedLosses = [];
-            var unmatchedIdxMap = {};
-            var unmatchedNewIdx = 0;
-            losses.forEach(function(l, i) {
-                if (!exactMatchedCurIdx[i]) {
-                    unmatchedIdxMap[unmatchedNewIdx] = i;
-                    unmatchedLosses.push(l);
-                    unmatchedNewIdx++;
-                }
-            });
-            
-            var unmatchedPrevList = prevLosses.slice(); // 全部前一天数据供AI参考
-            
-            var aiResults = [];
-            if (unmatchedLosses.length > 0 && unmatchedPrevList.length > 0) {
-                var calls = [window._aiAnalyzeRepeatLoss(unmatchedLosses, unmatchedPrevList), window._aiAnalyzeRepeatLoss(unmatchedLosses, unmatchedPrevList)];
-                var results = await Promise.all(calls);
-                
-                var aiMatched = {};
-                for (var ci = 0; ci < results.length; ci++) {
-                    if (results[ci].success && results[ci].items) {
-                        results[ci].items.forEach(function(item) {
-                            if (item.curIdx === undefined) return;
-                            var origCurIdx = unmatchedIdxMap[item.curIdx];
-                            if (origCurIdx === undefined) return;
-                            if (!aiMatched[origCurIdx] || (item.prevDesc && !aiMatched[origCurIdx].prevDesc)) {
-                                aiMatched[origCurIdx] = {
-                                    curIdx: origCurIdx,
-                                    desc: item.desc,
-                                    prevDesc: item.prevDesc,
-                                    curQty: item.curQty,
-                                    prevQty: item.prevQty,
-                                    dept: item.dept,
-                                    line: item.line || '',
-                                    shift: item.shift || '',
-                                    trend: item.trend || 'chronic',
-                                    reason: item.reason || 'AI matched'
-                                };
-                            }
-                        });
-                    }
-                }
-                
-                Object.keys(aiMatched).forEach(function(idx) {
-                    aiResults.push(aiMatched[idx]);
                 });
             }
+            collectUncached(losses);
+            collectUncached(prevLosses);
             
-            // 阶段3：合并结果（精确匹配 + AI语义匹配）
-            var mergedItems = exactResults.concat(aiResults);
-            return { success: true, items: mergedItems, totalCur: losses.length, totalPrev: prevLosses.length };
-        };
-        
-        // ★ 找新问题：当天有但前一天没有的（精确匹配+AI判定）
-        window._findNewIssues = async function(losses, prevLosses, repeatItems) {
-            var repeatCurIdx = {};
-            repeatItems.forEach(function(item) {
-                if (item.curIdx !== undefined) repeatCurIdx[item.curIdx] = true;
-            });
+            // --- Layer 2: AI 批量语义聚类（仅增量） ---
+            if (newTexts.length > 0) {
+                var aiMappings = await window._aiBatchStandardize(newTexts);
+                var updated = false;
+                Object.keys(aiMappings).forEach(function(key) {
+                    if (!dict[key]) {
+                        dict[key] = aiMappings[key];
+                        updated = true;
+                    }
+                });
+                if (updated) _saveIssueDict(dict);
+            }
             
-            var newItems = [];
-            losses.forEach(function(l, i) {
-                if (!repeatCurIdx[i]) {
-                    newItems.push({
-                        curIdx: i,
-                        desc: l.desc || '',
-                        prevDesc: '',
-                        curQty: l.qty,
-                        prevQty: 0,
-                        dept: l.dept || 'Other',
-                        trend: 'new',
-                        reason: 'New issue'
-                    });
+            // 获取标准化描述（包装）
+            function std(text) {
+                return _getStandardIssue(dict, text);
+            }
+            
+            // --- Layer 3: GroupBy 聚合 + 趋势计算 ---
+            // 按 standard_issue 分组（当日）
+            var todayGroups = {};
+            losses.forEach(function(l) {
+                var si = std(l.desc);
+                if (!todayGroups[si]) {
+                    todayGroups[si] = { standard_issue: si, qty: 0, dept: l.dept || 'Other', line: l.line || '' };
                 }
+                todayGroups[si].qty += Math.abs(safeNum(l.qty));
             });
-            return newItems;
+            
+            // 按 standard_issue 分组（前一天）
+            var prevGroups = {};
+            prevLosses.forEach(function(l) {
+                var si = std(l.desc);
+                if (!prevGroups[si]) {
+                    prevGroups[si] = { standard_issue: si, qty: 0 };
+                }
+                prevGroups[si].qty += Math.abs(safeNum(l.qty));
+            });
+            
+            // 构建输出：所有唯一问题（重复 + 新问题）
+            var allItems = [];
+            var actualRepeatCount = 0;
+            Object.keys(todayGroups).forEach(function(si) {
+                var today = todayGroups[si];
+                var prev = prevGroups[si];
+                var prevQty = prev ? prev.qty : 0;
+                
+                var trend = 'new';
+                if (prevQty > 0) {
+                    actualRepeatCount++;
+                    if (today.qty < prevQty * 0.7) trend = 'improved';
+                    else if (today.qty > prevQty * 1.3) trend = 'worsened';
+                    else trend = 'chronic';
+                }
+                
+                allItems.push({
+                    curIdx: -1,
+                    desc: si,                              // 标准化描述
+                    prevDesc: prev ? si : '',
+                    curQty: today.qty,
+                    prevQty: prevQty,
+                    dept: today.dept,
+                    line: today.line,
+                    trend: trend,
+                    reason: trend === 'improved' ? '改善: ' + prevQty + '→' + today.qty : (trend === 'worsened' ? '恶化: ' + prevQty + '→' + today.qty : (trend === 'chronic' ? '持续' : '新问题'))
+                });
+            });
+            
+            // 按今日数量降序排序
+            allItems.sort(function(a, b) { return b.curQty - a.curQty; });
+            
+            return {
+                success: true,
+                items: allItems,
+                repeatCount: actualRepeatCount,
+                totalCur: Object.keys(todayGroups).length,
+                totalPrev: Object.keys(prevGroups).length,
+                dict: dict
+            };
         };
 
 // ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
@@ -3122,9 +3072,10 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 });
                 return items;
             }
-            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel, allLosses, startDate, endDate) {
+            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel, allLosses, startDate, endDate, optDict, optRepeatCount) {
                 var h = '';
-                var repeatCount = repeatedItems.length;
+                var dict = optDict || null;
+                var repeatCount = (optRepeatCount !== undefined && optRepeatCount !== null) ? optRepeatCount : repeatedItems.length;
                 var repeatRate = curTotal > 0 ? Math.round(repeatCount / curTotal * 100) : 0;
                 var newIssues = curTotal - repeatCount;
 
@@ -3137,15 +3088,23 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
                 })(startDate || endDate);
 
-                // --- 计算每个问题的WTD（本周累计）= 从周一到endDate，同desc的总和 ---
-                function _calcWTD(desc, maxDate) {
-                    if (!allLosses || !desc) return 0;
+                // --- WTD计算：基于清洗后的 standard_issue 累加 ---
+                function _calcWTD(stdIssue, maxDate) {
+                    if (!allLosses || !stdIssue) return 0;
                     var sum = 0;
-                    var safeD = String(desc).trim().toLowerCase();
+                    var targetStd = String(stdIssue).trim().toLowerCase();
                     for (var i = 0; i < allLosses.length; i++) {
                         var l = allLosses[i];
-                        if (l.date >= _wkStart && l.date <= maxDate && String(l.desc||'').trim().toLowerCase() === safeD) {
-                            sum += Math.abs(safeNum(l.qty));
+                        if (l.date >= _wkStart && l.date <= maxDate) {
+                            var rawDesc = (l.desc || '').trim();
+                            // 使用词典清洗为标准化描述再匹配
+                            var lossStd = rawDesc.toLowerCase();
+                            if (dict && dict[rawDesc]) {
+                                lossStd = dict[rawDesc].toLowerCase();
+                            }
+                            if (lossStd === targetStd) {
+                                sum += Math.abs(safeNum(l.qty));
+                            }
                         }
                     }
                     return sum;
@@ -3282,11 +3241,15 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
 
                 if (aiResult && aiResult.success) {
                     var aiItems = aiResult.items || [];
+                    var issueDict = aiResult.dict || null;
+                    var actualRepeatCount = aiResult.repeatCount !== undefined ? aiResult.repeatCount : aiItems.length;
                     cHtml += _crRenderRepeatSection(
                         mergedToday.length, mergedYesterday.length, _prevDate,
                         aiItems,
-                        'AI Repeat Analysis',
-                        db.loss, start, end
+                        'Standardized'
+                            + (issueDict && Object.keys(issueDict).length > 0 ? ' (Dict: ' + Object.keys(issueDict).length + ' issues)' : ''),
+                        db.loss, start, end,
+                        issueDict, actualRepeatCount
                     );
                 } else {
                     cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
