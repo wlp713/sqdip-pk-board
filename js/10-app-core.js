@@ -1951,6 +1951,11 @@
         window._handleCompareChange = function() {
             // 防抖：快速连续修改日期只触发最后一次
             if (_compareChangeTimer) clearTimeout(_compareChangeTimer);
+            // ★ 关键修复:在DOM被loading覆盖之前,先把日期保存到window变量
+            var startEl = document.getElementById('sys-compare-start');
+            var endEl = document.getElementById('sys-compare-end');
+            window._savedCompareStart = startEl ? startEl.value : localStorage.getItem('mbs_compare_start');
+            window._savedCompareEnd = endEl ? endEl.value : localStorage.getItem('mbs_compare_end');
             // 1. 局部Loading：将LOSS重复率卡片区域替换为加载提示
             var pl = document.getElementById('sys-detail-post-layout');
             if (pl) {
@@ -2086,11 +2091,11 @@
                 // 环比对比：从日期范围输入框获取对比起止日期
                 var _csEl = document.getElementById('sys-compare-start');
                 var _ceEl = document.getElementById('sys-compare-end');
-                var _compareStart = (_csEl && _csEl.value) || localStorage.getItem('mbs_compare_start') || _defaultCompareStart();
-                var _compareEnd = (_ceEl && _ceEl.value) || localStorage.getItem('mbs_compare_end') || _defaultCompareEnd();
+                var _compareStart = (_csEl && _csEl.value) || window._savedCompareStart || localStorage.getItem('mbs_compare_start') || _defaultCompareStart();
+                var _compareEnd = (_ceEl && _ceEl.value) || window._savedCompareEnd || localStorage.getItem('mbs_compare_end') || _defaultCompareEnd();
                 // 确保日期格式有效(至少10字符 YYYY-MM-DD)
-                if (_compareStart.length < 10) _compareStart = _defaultCompareStart();
-                if (_compareEnd.length < 10) _compareEnd = _defaultCompareEnd();
+                if (!_compareStart || String(_compareStart).length < 10) _compareStart = _defaultCompareStart();
+                if (!_compareEnd || String(_compareEnd).length < 10) _compareEnd = _defaultCompareEnd();
                 var _lossesCompare = [];
                 var _compareLabel = '';
                 if (_compareStart && _compareEnd) {
