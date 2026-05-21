@@ -539,6 +539,9 @@
         const NEW_MOTOR_NAMES = { 'H_MOTOR': 'H电机线产出', 'F_MOTOR': 'F电机线产出', 'S_MOTOR': 'S系列电机线产出', 'CRANK': '曲轴线产出' };
         // 按照用户历史指令:加入 IP 与 QA 作为独立部门,以及 Pro.1-Pro.6
         const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA'];
+        // ★ 统一AI分析系统提示词：所有分析类AI调用共享此设定
+        // 不自我介绍，只做数据驱动分析，仅结尾可加一句建议
+        const AI_ANALYSIS_SYSTEM = '你精通精益生产、生产管理、冰箱压缩机制造工艺，熟悉美的GMCC冰箱压缩机产品。\n\n规则：\n1. 不要自我介绍，不要提及"资深""专家""专业"等身份描述\n2. 只基于用户提供的现有数据进行分析\n3. 不得在分析过程中提任何建议或改善措施\n4. 仅在输出的最后一部分的结尾处，可以加一句话的建议\n5. 所有分析必须引用具体数字，严禁编造数据\n6. 输出专业简洁，以数据为导向';
         // ================= AI 极速引擎 (动态模型选择) =================
         const AI_URL = "https://api.siliconflow.cn/v1/chat/completions";
         const AI_KEY = "Bearer sk-pdmykhprsbiuskscwrnuwlhdvgfeomexwflenqbrfnvpwyqb";
@@ -546,20 +549,25 @@
             var sel = document.getElementById('ai-model-selector');
             return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
         }
-        async function callAI_API(prompt, retryCount = 0) {
+        async function callAI_API(prompt, retryCount = 0, systemOverride) {
             try {
                 var currentModel = _getPreferredModel();
+                var msgs = [];
+                if (systemOverride !== false) {
+                    msgs.push({ "role": "system", "content": systemOverride || AI_ANALYSIS_SYSTEM });
+                }
+                msgs.push({ "role": "user", "content": prompt });
                 const res = await fetch(AI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': AI_KEY },
-                    body: JSON.stringify({ model: currentModel, messages: [{"role": "user", "content": prompt}], temperature: 0.1, max_tokens: 512 })
+                    body: JSON.stringify({ model: currentModel, messages: msgs, temperature: 0.1, max_tokens: 512 })
                 });
                 const data = await res.json();
                 if (!res.ok) {
                     if (res.status === 429 || (data.error && data.error.code === '429')) {
                         if (retryCount < 3) {
                             await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
-                            return await callAI_API(prompt, retryCount + 1);
+                            return await callAI_API(prompt, retryCount + 1, systemOverride);
                         } else throw new Error("服务器当前太拥挤,重试多次后依然失败,请稍后再试。");
                     }
                     throw new Error(data.error?.message || "API 错误");
@@ -784,7 +792,7 @@
             4. 纯数字字段:target, output, hours, att, head。
             仅输出 JSON 数组,例如:[{"date":"","ws":"","line":"","target":0,"output":0,"hours":0,"att":0,"head":0}]
             不要Markdown。数据:\n${rawText}`;
-            let aiJsonStr = await callAI_API(prompt);
+            let aiJsonStr = await callAI_API(prompt, 0, false); // data task, no system prompt
             btn.innerHTML = originalHtml; btn.disabled = false;
             if(aiJsonStr) {
                 try {
@@ -2370,16 +2378,15 @@
             
             var promptData = buildLossSummary(thisMonthLoss, '本月LOSS') + '\n\n' + buildLossSummary(prevMonthLoss, '上月LOSS');
             
-            const prompt = '你是GMCC（美的冰箱压缩机）泰国工厂GAT的精益数据分析师。产品涵盖往复式/旋转式冰箱压缩机，制造流程包括定子冲压→转子压铸→定子绕线→曲轴箱精密加工→装配（活塞/阀片/连杆）→焊接密封→氦检漏→性能测试→包装入库。MBS工具：标准作业(SW)、TPM、安灯(Andon)、SMED、PSP/PDCA闭环、DM管理、LOSS reduction、VSM。\n\n'
-                + promptData
-                + '\n\n请基于以上真实数据做严格统计分析（90%数据分析+10%精简洞察），输出HTML（不用Markdown，表格加class="ai-result-table"）：\n'
+            const prompt = promptData
+                + '\n\n请基于以上真实数据做严格统计分析，输出HTML（不用Markdown，表格加class="ai-result-table"）：\n'
                 + '1. **本周重复LOSS统计**（按周）：每周重复条目数（相同或语义相近描述出现2次+），列出每周具体重复问题名称及次数\n'
                 + '2. **周环比**：每周重复LOSS数对比上周变化量（+/-）及改善率\n'
                 + '3. **月环比**：本月重复LOSS总数对比上月的变化量及改善率\n'
                 + '4. **重复LOSS TOP5**：本月重复最多的5个问题及影响套数\n'
                 + '5. **责任部门分布**：按部门统计重复LOSS分布\n'
                 + '6. **线体分布**：按LINE A/B/C/D统计重复集中度\n\n'
-                + '⚠️ 红线：只基于数据做统计，严禁编造数据。每条结论必须有数字引用。改善建议限制在5%篇幅内（仅简要提及可能的关注方向，不展开具体措施）。';
+                + '红线：只基于数据做统计，严禁编造数据。每条结论必须有数字引用。仅结尾可加一句话的建议。';
             
             const ans = await callAI_API(prompt);
             target.innerHTML = ans || 'AI 分析失败，请稍后重试。';
@@ -2411,16 +2418,14 @@
             var pspDeptStr = [];
             (function(){ var m={}; probs.forEach(function(p){ var d=p.dept||'未知'; if(!m[d])m[d]={t:0,c:0}; m[d].t++; if(p.status==='已解决'||p.status==='Closed'||p.status==='แก้ไขแล้ว')m[d].c++; }); Object.keys(m).forEach(function(d){ pspDeptStr.push(d+':共'+m[d].t+'件,闭环'+m[d].c+'件,率'+Math.round(m[d].c/m[d].t*100)+'%'); }); })();
             
-            const prompt = `你是GMCC（美的冰箱压缩机）泰国工厂GAT的精益数据分析师。产品涵盖往复式/旋转式冰箱压缩机。MBS工具：标准作业、TPM、安灯、PSP/PDCA、DM管理。
-
-【周期】${start} 至 ${end}
+            const prompt = `【周期】${start} 至 ${end}
 【异常总数】${pspTotal}件 | 【已闭环】${pspClosed}件 | 【闭环率】${pspCloseRate}%
 【各部门闭环率】${pspDeptStr.join('; ')}
 
 【异常明细】
 ${probs.join('\\n')}
 
-请做【数据驱动分析】（90%数据分析 + 10%精简洞察），输出HTML（不用Markdown，表格加class="ai-result-table"）：
+请做【数据驱动分析】，输出HTML（不用Markdown，表格加class="ai-result-table"）：
 
 一、周期内异常态势（基于数据）：
    - 日均异常数、闭环率总体趋势
@@ -2431,12 +2436,9 @@ ${probs.join('\\n')}
 
 三、趋势判断：对比周期起止阶段的变化趋势
 
-四、管理提示（仅10%）：基于以上数据得出的1-2个关键关注方向，不做具体整改展开
-
 【红线】
 - 禁止编造数据或添加未经数据支撑的结论
 - 每条分析必须引用具体数字
-- 建议限制在全文10%以内
 - 语言：${currentLang}`;
             let ans = await callAI_API(prompt);
             btn.innerHTML = oldHtml; btn.disabled = false;
@@ -2484,9 +2486,7 @@ ${probs.join('\\n')}
             losses.forEach(function(l){ if(l.desc) { var k=String(l.desc||'').trim().slice(0,40); lossDescFreq[k]=(lossDescFreq[k]||0)+1; } });
             var repeatItems = Object.keys(lossDescFreq).filter(function(k){return lossDescFreq[k]>=2;}).length;
             
-            const prompt = `你是GMCC（美的冰箱压缩机）泰国工厂GAT的精益数据分析师。
-
-【数据概览】周期${start}-${end} | LOSS总量:${lossTotalQty}件 | 发生${lossCount}次 | 平均${lossAvg}件/次 | 涉及${deptCount}个部门 | 重复问题类型${repeatItems}种
+            const prompt = `【数据概览】周期${start}-${end} | LOSS总量:${lossTotalQty}件 | 发生${lossCount}次 | 平均${lossAvg}件/次 | 涉及${deptCount}个部门 | 重复问题类型${repeatItems}种
 
 【部门排名】
 ${deptRanking.map(function(d,i){return (i+1)+'. '+d.dept+': 损失'+d.qty+'件, 发生'+d.count+'次';}).join('\n')}
@@ -2497,7 +2497,7 @@ ${eventRanking.map(function(e,i){return (i+1)+'. '+e.type+': 损失'+e.qty+'件,
 【TOP10问题】
 ${topIssues.map(function(t,i){return (i+1)+'. ['+t.date+'] '+t.desc+' (损失:'+t.qty+', 部门:'+t.dept+')';}).join('\n')}
 
-请做【数据驱动分析】（90%数据+10%管理提示），输出HTML（不用Markdown，表格加class="ai-result-table"）：
+请做【数据驱动分析】，输出HTML（不用Markdown，表格加class="ai-result-table"）：
 
 一、数据概览：总LOSS量、发生次数、平均损失、涉及部门数、问题类型分布
 
@@ -2513,13 +2513,9 @@ ${topIssues.map(function(t,i){return (i+1)+'. ['+t.date+'] '+t.desc+' (损失:'+
 四、趋势与对比：
    如提供前期数据则做对比；否则基于周期内的日/周趋势判断
 
-五、管理聚焦（仅10%）：简要指出1-2个数据揭示的关注方向，不做整改建议展开
-
 【红线】
 - 严禁编造数据
-- 所有结论必须引用具体数字
-- 结论基于数据，不做无依据的归因推断
-- 管理聚焦不超过全文10%篇幅`;
+- 所有结论必须引用具体数字`;
             let ans = await callAI_API(prompt);
             btn.innerHTML = oldHtml; btn.disabled = false;
             if(ans) { document.getElementById('ai-result-content').innerHTML = ans; document.getElementById('ai-result-modal').style.display = 'flex'; }
@@ -2603,9 +2599,7 @@ ${topIssues.map(function(t,i){return (i+1)+'. ['+t.date+'] '+t.desc+' (损失:'+
 
             // ★ 80%数据驱动分析 + 20%精益/生产/压缩机专业建议
                         // ★ V2优化：90%数据驱动 + 10%GMCC精益洞察 · 同比环比方向
-            const prompt = `你是GMCC（美的冰箱压缩机）泰国工厂GAT的精益数据分析师。
-
-【数据全景】
+            const prompt = `【数据全景】
 周期: ${start} ~ ${end}
 总LOSS量: ${totalLoss} 套 | 记录数: ${losses.length} 条 | 平均: ${(totalLoss / losses.length).toFixed(1)} 套/条
 
@@ -2624,18 +2618,16 @@ ${deptRanking.map(function(d, i){ return (i+1)+'. '+d[0]+' -> '+d[1].qty+'套('+
 【线体排名(按损失)】
 ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+l[1].count+'次)'; }).join('\n')}
 
-请做数据驱动分析（90%）+ 精简洞察（10%），输出HTML格式，表格加class="ai-result-table"：
+请做数据驱动分析，输出HTML格式，表格加class="ai-result-table"：
 
 【报告结构】
 1. 总体罗盘：一句概述周期LOSS表现，突出总损失、平均损失、最多发部门
 2. 核心发现：TOP3数据事实，每个事实包括【现象→影响量→趋势】
 3. 归因聚焦：不超过3点，基于数据特征的推理（不是猜测）
-4. 管理提示（10%）：基于以上分析的1-2个方向性关注点
 
 【红线】
 - 严禁编造数据
 - 所有结论必须有数据支撑
-- 管理提示不超过全文10%
 - 语言: ${currentLang}`;
 
             try {
@@ -2694,7 +2686,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 return { idx: i, date: l.date, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
             });
             
-            var prompt = '你是一位经验丰富的冰箱压缩机工厂 LOSS 数据分析专家。\n\n';
+            var prompt = '';
             prompt += '### 任务\n';
             prompt += '严格分析当天与前一天的LOSS数据，精准识别"重复问题"。\n\n';
             prompt += '### 核心原则（非常重要）\n';
@@ -2743,7 +2735,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             prompt += '      "curIdx": 当天记录中对应的 idx,\n';
             prompt += '      "prevIdx": 前一天记录中对应的 idx（如果是新增问题没有前一天对应，prevIdx填null）, \n';
             prompt += '      "trend": "improved", // 可选值: improved / worsened / chronic / new\n';
-            prompt += '      "reason": "一句话说明判断依据和趋势，例如：定子绕组烧毁故障，从昨天230台降至今天60台，改善明显，建议确认近期定子批次质量是否已更换供应商"\n';
+            prompt += '      "reason": "一句话说明判断依据和趋势，例如：定子绕组烧毁故障，从昨天230台降至今天60台，改善明显"\n';
             prompt += '    }\n';
             prompt += '  ]\n';
             prompt += '}\n';
@@ -2761,7 +2753,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     body: JSON.stringify({
                         model: model,
                         messages: [
-                            { role: 'system', content: '你是GMCC冰箱压缩机工厂LOSS数据分析专家。规则:1)只匹配同一个具体故障问题,不是宽泛分类;2)趋势基于数据量精确判断;3)保证输出JSON有效可解析。不含多余文字。' },
+                            { role: 'system', content: '规则:1)只匹配同一个具体故障问题,不是宽泛分类;2)趋势基于数据量精确判断;3)保证输出JSON有效可解析。不含多余文字。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
@@ -3084,7 +3076,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     });
 
                     h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
-                    h += '<tr><th style="width:32%;">Issue</th><th style="width:12%;text-align:right;">Today</th><th style="width:12%;text-align:right;">Prev</th><th style="width:14%;text-align:right;">WTD</th><th style="width:12%;text-align:center;">Trend</th><th style="width:18%;">Analysis</th></tr>';
+                    h += '<tr><th style="width:38%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;">WTD</th><th style="width:15%;text-align:center;">Trend</th></tr>';
                     sortedItems.slice(0, 8).forEach(function(item) {
                         var wtd = _calcWTD(item.desc, endDate || startDate);
                         // Trend icons: ↑ red = worsened, ↓ green = improved, ↔ yellow = chronic, 🆕 blue = new
@@ -3104,11 +3096,10 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.prevQty + '</td>';
                         h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:12px;">' + wtd + '</td>';
                         h += '<td style="text-align:center;font-size:14px;font-weight:900;">' + trendHtml + '</td>';
-                        h += '<td style="font-size:10px;color:#475569;word-break:break-word;white-space:normal;line-height:1.3;">' + item.reason + '</td>';
                         h += '</tr>';
                     });
                     if (sortedItems.length > 8) {
-                        h += '<tr><td colspan="6" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
+                        h += '<tr><td colspan="5" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
                     }
                     h += '</table>';
                 } else {
@@ -3226,12 +3217,10 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             var lastVal = dataSummary.length > 0 ? Object.values(dataSummary[dataSummary.length-1]).reduce(function(a,b){return a+(typeof b==='number'?b:0);},0) - dataSummary[dataSummary.length-1].date : 0;
             var trendDir = lastVal > firstVal ? '上升' : (lastVal < firstVal ? '下降' : '持平');
             
-            const prompt = `你是GMCC（美的冰箱压缩机）泰国工厂GAT的数据分析师。
-
-【${trendLabel}趋势分析】周期:过去${trendPeriod}天 | 趋势方向:${trendDir}
+            const prompt = `【${trendLabel}趋势分析】周期:过去${trendPeriod}天 | 趋势方向:${trendDir}
 【数据摘要】${trendDataStr}
 
-请做【数据驱动分析】（95%数据分析 + 5%方向提示），纯文本输出，语言:${currentLang}：
+请做【数据驱动分析】，纯文本输出，语言:${currentLang}：
 
 一、趋势概述：整体走势（上升/下降/波动），起止值变化幅度
 
@@ -3243,12 +3232,9 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
    - 是否与排产波动、设备稼动、质量返工、物料齐套、出勤变化等相关
    - 给出数据层面的关联证据，非臆测
 
-五、管理提示（仅5%）：1句简要方向性提醒
-
 【红线】
 - 严禁编造数据
-- 所有分析必须引用具体数字
-- 不得给出具体整改方案和行动措施`;
+- 所有分析必须引用具体数字`;
             let ans = await callAI_API(prompt);
             btn.innerHTML = oldHtml; btn.disabled = false;
             if(ans) { let memoEl = document.getElementById('memoText'); memoEl.value = (memoEl.value ? memoEl.value + '\n\n' : '') + `[AI 数据洞察]:${ans}`; saveMemo(); showToast('fa-solid fa-check', '洞察完成'); }
@@ -3259,15 +3245,13 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             let outTot = document.getElementById('rp-out-tot').innerText; let lossTot = document.getElementById('rp-loss-tot').innerText; let upphTot = document.getElementById('rp-upph-tot').innerText;
             let probInfo = db.problems.map(p => `[${p.dept}]${p.desc}(${p.status})`).join(';').substring(0, 300);
                         // ★ V2优化：数据驱动经营复盘
-            const prompt = `你是GMCC（美的冰箱压缩机）泰国工厂GAT的精益数据分析师。
-
-【宏观经营数据】
+            const prompt = `【宏观经营数据】
 - PRO2总产出: ${outTot}
 - PRO2整体UPPH: ${upphTot}
 - PRO2累计Missing Qty: ${lossTot}
 - 异常概况: ${probInfo}
 
-请做【数据驱动经营复盘】（90%数据分析 + 10%方向提示），输出HTML(<h3>,<ul>,<li>,<strong>)，无Markdown：
+请做【数据驱动经营复盘】，输出HTML(<h3>,<ul>,<li>,<strong>)，无Markdown：
 
 一、经营指标达成综述（基于数据）：
    产出、UPPH、出勤、DM/PSP闭环各指标的数值表现和趋势判断
@@ -3277,12 +3261,9 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
    对交付影响的程度评估
    从数据看瓶颈工序和班次稳定性
 
-三、管理提示（仅10%）：1-2句基于数据的关注方向
-
 【红线】
 - 严禁编造数据
-- 每条结论必须引用具体数字
-- 改善建议不超过全文10%`;
+- 每条结论必须引用具体数字`;
             let summary = await callAI_API(prompt);
             btn.innerHTML = `<i class="fa-solid fa-robot"></i> 重新生成`; contentBox.classList.remove('ai-generating');
             if(summary) { contentBox.innerHTML = summary; } else { contentBox.innerHTML = "生成失败"; }
@@ -3322,13 +3303,13 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             if(!text) return text;
             const tMap = {zh:'中文', en:'英文', th:'泰文(Thai)'};
             const prompt = `直接输出翻译结果,无解释。将此内容翻译为${tMap[langCode]}:\n${text}`;
-            let trans = await callAI_API(prompt); return trans ? trans.trim() : text;
+            let trans = await callAI_API(prompt, 0, false); // translation task, no system prompt
         }
         window.aiTranslateAllProblems = async function(btn) { if(!btn) btn = document.querySelector('.btn-ai[onclick*="aiTranslateAllProblems"]'); if(!btn) return; if(btn.disabled) return; var oldHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 翻译中...'; btn.disabled = true; try { var toT = (db.problems||[]).filter(function(p){ return p.desc && /[\u0E00-\u0E7F]/.test(p.desc); }); if(toT.length === 0) { showToast('fa-solid fa-info-circle', '未检测到泰语内容'); btn.innerHTML = oldHtml; btn.disabled = false; return; } var count = 0; for(var i = 0; i < toT.length; i++) { var orig = toT[i].desc; var t = await executePureTranslation(orig, 'zh'); if(t && t !== orig) { toT[i]._origDesc = toT[i]._origDesc || orig; toT[i].desc = t; count++; } } triggerAutoSave(); renderPDCA(); showToast('fa-solid fa-check', '已翻译 '+count+' 条'); } catch(e) { showToast('fa-solid fa-xmark', '翻译失败: '+e.message); } btn.innerHTML = oldHtml; btn.disabled = false; };
         window.aiTranslateLossProblems = async function(btn) { if(!btn) btn = document.querySelector('.btn-ai[onclick*="aiTranslateLossProblems"]'); if(!btn) return; if(btn.disabled) return; var oldHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 翻译中...'; btn.disabled = true; try { var toT = (db.loss||[]).filter(function(p){ return p.desc && /[\u0E00-\u0E7F]/.test(p.desc); }); if(toT.length === 0) { showToast('fa-solid fa-info-circle', '未检测到泰语内容,无需翻译'); btn.innerHTML = oldHtml; btn.disabled = false; return; } var count = 0; for(var i = 0; i < toT.length; i++) { var originalDesc = toT[i].desc; var translated = await executePureTranslation(originalDesc, 'zh'); if(translated && translated !== originalDesc) { toT[i]._origDesc = toT[i]._origDesc || originalDesc; toT[i].desc = translated; count++; } } triggerAutoSave(); renderLoss(); showToast('fa-solid fa-check', '已翻译 '+count+' 条记录(按 CTRL+Z 可撤回至原始泰语)'); } catch(e) { showToast('fa-solid fa-xmark', '翻译失败: '+e.message); } btn.innerHTML = oldHtml; btn.disabled = false; };
         window.undoTranslateLoss = function() { var undone = 0; (db.loss||[]).forEach(function(p){ if(p._origDesc) { p.desc = p._origDesc; delete p._origDesc; undone++; } }); if(undone > 0) { triggerAutoSave(); renderLoss(); showToast('fa-solid fa-rotate-left', '已撤回 '+undone+' 条记录到原始泰语'); } else { showToast('fa-solid fa-info-circle', '没有可撤回的翻译记录'); } };
         window.aiTranslateMemo = async function() { let m = document.getElementById('memoText'); showToast('fa-solid fa-spinner fa-spin', '翻译中...'); let t = await executePureTranslation(m.value, currentLang); if(t) { m.value = t; saveMemo(); showToast('fa-solid fa-check', '完成'); } };
-        window.aiSuggestCountermeasure = async function(id) { let p = db.problems.find(x => x.id == id); if(!p||!p.desc) return; showToast('fa-solid fa-spinner', '生成中...'); let a = await callAI_API(`你是GMCC泰国工厂数据分析助手。异常:"${p.desc}"。基于压缩机工艺(定子绕线/焊接密封/氦检漏/性能测试/装配精度)，做：1.【数据关联】(70%)该异常在数据中常见特征趋势；2.【工艺参考】(20%)基于压缩机工艺的历史关联；3.【关注方向】(10%)1句简要提示。语言:${currentLang}`); if(a) { p.desc += ` | AI: ${a}`; triggerAutoSave(); renderPDCA(); showToast('fa-solid fa-check', '生成成功'); } };
+        window.aiSuggestCountermeasure = async function(id) { let p = db.problems.find(x => x.id == id); if(!p||!p.desc) return; showToast('fa-solid fa-spinner', '生成中...'); let a = await callAI_API(`异常:"${p.desc}"。基于数据做：1.【数据关联】(70%)该异常在数据中常见特征趋势；2.【模式分析】(20%)基于现有数据的模式识别；3.【方向提示】(10%)1句简要提示。仅结尾可加一句话建议。语言:${currentLang}`); if(a) { p.desc += ` | AI: ${a}`; triggerAutoSave(); renderPDCA(); showToast('fa-solid fa-check', '生成成功'); } };
         // ================= 视图渲染与协同管理 =================
         // 事件类型分类函数
         function classifyEventType(desc) {
