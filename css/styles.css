@@ -568,8 +568,8 @@ textarea:not(.btn):focus {
         .cr-content .cr-title { font-size: 24px; font-weight: 900; text-align: center; color: #1e3a5f; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 4px solid #1e3a5f; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cr-content .cr-subtitle { font-size: 13px; text-align: center; color: #475569; margin-bottom: 10px; font-weight: 700; }
         /* 双栏容器：左右等底部对齐 */
-        .cr-content .cr-two-col { display: flex; gap: 10px; align-items: stretch; }
-        .cr-content .cr-left { flex: 2; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+        .cr-content .cr-two-col { display: flex; gap: 10px; align-items: flex-start; }
+        .cr-content .cr-left { flex: 2; min-width: 0; }
         .cr-content .cr-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .cr-content .cr-divider { width: 2px; background: linear-gradient(180deg, #1e40af, #94a3b8); flex-shrink: 0; border-radius: 2px; }
         .cr-content .cr-section { margin-bottom: 8px; }
@@ -1086,3 +1086,12 @@ tr.filter-row th input, tr.filter-row th select { background: #FFFFFF !important
 .sys-item input[type="number"] { border: 1px solid #E2E8F0 !important; }
 .sim-row input[type="number"] { border: 1px solid #E2E8F0 !important; }
 .sqdip-card input { border: 1px solid #E2E8F0 !important; border-radius: 4px !important; }
+
+/* ===== Compact Report: A section compact mode ===== */
+.cr-left .cr-line-block { padding: 3px 8px !important; margin-bottom: 4px !important; }
+.cr-left .cr-line-header { font-size: 12px !important; margin-bottom: 2px !important; }
+.cr-left .cr-shift-block { padding: 2px 6px !important; margin: 2px 0 2px 10px !important; }
+.cr-left .cr-shift-header { font-size: 11px !important; margin-bottom: 1px !important; }
+.cr-left .cr-item { padding: 1px 0 !important; }
+.cr-left .cr-item .cr-qty { font-size: 11px !important; min-width: 36px !important; }
+.cr-left .cr-item .cr-desc { font-size: 11px !important; }

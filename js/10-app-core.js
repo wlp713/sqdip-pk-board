@@ -2951,17 +2951,32 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             }
             html += '</div>'; // chart-container结束
 
-            // 表格版本(备用)
+            // Calculate MTD (Month-To-Date) for each department
+            var currentMonth = start.substring(0, 7);
+            var monthLosses = db.loss.filter(function(l) {
+                return l.date && String(l.date).startsWith(currentMonth);
+            });
+            var deptMTD = {};
+            monthLosses.forEach(function(l) {
+                var dept = l.dept || 'Other';
+                if(!deptMTD[dept]) deptMTD[dept] = 0;
+                deptMTD[dept] += Math.abs(safeNum(l.qty));
+            });
+            var totalMTD = 0;
+            for(var dk in deptMTD) { if(deptMTD.hasOwnProperty(dk)) totalMTD += deptMTD[dk]; }
+
+            // 表格版本 - Dept | Today | MTD | %(MTD占比)
             html += '<table class="cr-table" style="margin-top:8px;">';
-            html += '<tr><th>Dept</th><th style="text-align:right;">Qty</th><th style="text-align:right;">%</th></tr>';
-            for(var di = 0; di < deptSorted.length; di++) { // 表格显示全部部门
+            html += '<tr><th>Dept</th><th style="text-align:right;">Today</th><th style="text-align:right;">MTD</th><th style="text-align:right;">%</th></tr>';
+            for(var di = 0; di < deptSorted.length; di++) {
                 var dk = deptSorted[di];
                 var qty = deptData[dk];
-                var percentage = totalQty > 0 ? ((qty / totalQty) * 100).toFixed(1) : '0.0';
-                html += '<tr><td>' + dk + '</td><td style="text-align:right;">' + qty + '</td><td style="text-align:right;">' + percentage + '%</td></tr>';
+                var mtdQty = deptMTD[dk] || 0;
+                var percentage = totalMTD > 0 ? ((mtdQty / totalMTD) * 100).toFixed(1) : '0.0';
+                html += '<tr><td>' + dk + '</td><td style="text-align:right;">' + qty + '</td><td style="text-align:right;">' + mtdQty + '</td><td style="text-align:right;">' + percentage + '%</td></tr>';
             }
 
-            html += '<tr class="cr-total-row"><td>Total</td><td style="text-align:right;"><strong>' + totalQty + '</strong></td><td style="text-align:right;">100%</td></tr>';
+            html += '<tr class="cr-total-row"><td>Total</td><td style="text-align:right;"><strong>' + totalQty + '</strong></td><td style="text-align:right;"><strong>' + totalMTD + '</strong></td><td style="text-align:right;">100%</td></tr>';
             html += '</table>';
             html += '</div>'; // section结束
 
@@ -3096,7 +3111,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     });
 
                     h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
-                    h += '<tr><th style="width:8%;text-align:center;">#</th><th style="width:30%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;">WTD</th><th style="width:15%;text-align:center;">Trend</th></tr>';
+                    h += '<tr><th style="width:8%;text-align:center;">#</th><th style="width:30%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;line-height:1.15;padding:6px 4px;">Weekly<br>Total</th><th style="width:15%;text-align:center;">Trend</th></tr>';
                     sortedItems.slice(0, 8).forEach(function(item, rankIdx) {
                         var wtd = wtdMap[item.desc] || 0;
                         // Trend icons: ↑ red = worsened, ↓ green = improved, ↔ yellow = chronic, 🆕 blue = new
@@ -3106,7 +3121,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         } else if (item.trend === 'improved') {
                             trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';
                         } else if (item.trend === 'new') {
-                            trendHtml = '<span style="color:#3b82f6;font-size:14px;font-weight:900;">\uD83C\uDD95</span>';
+                            trendHtml = '<span style="color:#dc2626;font-size:13px;font-weight:900;border:1px solid #dc2626;border-radius:3px;padding:1px 4px;">NEW</span>';
                         } else {
                             trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
                         }
