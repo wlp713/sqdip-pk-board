@@ -539,16 +539,20 @@
         const NEW_MOTOR_NAMES = { 'H_MOTOR': 'H电机线产出', 'F_MOTOR': 'F电机线产出', 'S_MOTOR': 'S系列电机线产出', 'CRANK': '曲轴线产出' };
         // 按照用户历史指令:加入 IP 与 QA 作为独立部门,以及 Pro.1-Pro.6
         const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA'];
-        // ================= AI 极速引擎 (GLM-Z1-9B) =================
+        // ================= AI 极速引擎 (动态模型选择) =================
         const AI_URL = "https://api.siliconflow.cn/v1/chat/completions";
-        const AI_MODEL = "THUDM/GLM-Z1-9B-0414";
         const AI_KEY = "Bearer sk-pdmykhprsbiuskscwrnuwlhdvgfeomexwflenqbrfnvpwyqb";
+        function _getPreferredModel() {
+            var sel = document.getElementById('ai-model-selector');
+            return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
+        }
         async function callAI_API(prompt, retryCount = 0) {
             try {
+                var currentModel = _getPreferredModel();
                 const res = await fetch(AI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': AI_KEY },
-                    body: JSON.stringify({ model: AI_MODEL, messages: [{"role": "user", "content": prompt}], temperature: 0.1, max_tokens: 4096 })
+                    body: JSON.stringify({ model: currentModel, messages: [{"role": "user", "content": prompt}], temperature: 0.1, max_tokens: 512 })
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -1937,15 +1941,6 @@
                 keys = Object.keys(_lossRepeatCache);
             }
         }
-        // ★ 环比对比默认日期:昨天与前天
-        function _defaultCompareStart() {
-            var d = new Date(); d.setDate(d.getDate() - 2);
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-        }
-        function _defaultCompareEnd() {
-            var d = new Date(); d.setDate(d.getDate() - 1);
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-        }
         // ★ 主范围默认日期:当月第一天
         function _defaultMainStart() {
             var d = new Date();
@@ -1960,41 +1955,6 @@
         window._handleMainRangeChange = function() {
             console.log('[DEBUG] _handleMainRangeChange 触发');
             typeof renderSysDetail==='function'&&renderSysDetail();
-        };
-        // ★ 环比日期变更处理：局部加载 → 重新计算 → 更新指标&TOP列表
-        var _compareChangeTimer = null;
-        window._handleCompareChange = function() {
-            // 防抖：快速连续修改日期只触发最后一次
-            if (_compareChangeTimer) clearTimeout(_compareChangeTimer);
-            // ★ 关键修复:在DOM被loading覆盖之前,先把日期保存到window变量
-            var startEl = document.getElementById('sys-compare-start');
-            var endEl = document.getElementById('sys-compare-end');
-            window._savedCompareStart = startEl ? startEl.value : localStorage.getItem('mbs_compare_start');
-            window._savedCompareEnd = endEl ? endEl.value : localStorage.getItem('mbs_compare_end');
-            console.log('[DEBUG] _handleCompareChange 触发,',
-                'DOM_start=', startEl ? startEl.value : 'null',
-                'DOM_end=', endEl ? endEl.value : 'null',
-                'LS_start=', localStorage.getItem('mbs_compare_start'),
-                'LS_end=', localStorage.getItem('mbs_compare_end'),
-                'saved=', window._savedCompareStart, '~', window._savedCompareEnd);
-            // 直接使用新日期渲染,不经过setTimeout延时(避免异步地狱：旧状态不同步)
-            // 但保留Loading反馈,让浏览器先绘制loading再计算
-            var pl = document.getElementById('sys-detail-post-layout');
-            if (pl) {
-                pl.innerHTML = '' +
-                    '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:16px;">' +
-                        '<i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--primary);"></i>' +
-                        '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">' +
-                            '<span style="font-size:14px;color:var(--text-muted);font-weight:700;">正在重新计算LOSS重复数据...</span>' +
-                            '<span style="font-size:11px;color:var(--text-muted);">已根据新日期范围重新统计</span>' +
-                        '</div>' +
-                    '</div>';
-            }
-            // 用setTimeout(0)让浏览器绘制loading后再立即渲染
-            _compareChangeTimer = setTimeout(function() {
-                _compareChangeTimer = null;
-                renderSysDetail();
-            }, 0);
         };
         window.renderSysDetail = function() {
         try {
@@ -2065,8 +2025,7 @@
                 var improveRows = postRows.filter(function(r) { return r.type === 'improvement'; });
                 var dmChecked = dmRows.filter(function(r) { return r.dmDone === true; }).length;
                 var dmDoneRate = dmRows.length > 0 ? Math.round(dmChecked / dmRows.length * 100) : 0;
-                                // ★ LOSS重复发生率——自动统计+可选的环比对比 ★
-                // ★ 主范围：从日期范围输入框获取起始+结束日期（代替全月固定范围）
+                // ★ 主范围：从日期范围输入框获取起始+结束日期
                 var _msEl = document.getElementById('sys-main-start');
                 var _meEl = document.getElementById('sys-main-end');
                 var _mainStart = (_msEl && _msEl.value) || localStorage.getItem('mbs_main_start') || _defaultMainStart();
@@ -2124,41 +2083,7 @@
                     curStats = _calcRepeatStatsSim(_lossesMain, SIM_THRESHOLD);
                     _setCachedLossStats(_lossesMain, _mainStart + '_' + _mainEnd, SIM_THRESHOLD, curStats);
                 }
-                
-                // 环比对比：从日期范围输入框获取对比起止日期
-                var _csEl = document.getElementById('sys-compare-start');
-                var _ceEl = document.getElementById('sys-compare-end');
-                var _compareStart = (_csEl && _csEl.value) || window._savedCompareStart || localStorage.getItem('mbs_compare_start') || _defaultCompareStart();
-                var _compareEnd = (_ceEl && _ceEl.value) || window._savedCompareEnd || localStorage.getItem('mbs_compare_end') || _defaultCompareEnd();
-                console.log('[DEBUG] renderSysDetail 日期来源:',
-                    '_csEl=', !!_csEl, '_ceEl=', !!_ceEl,
-                    '_savedStart=', window._savedCompareStart,
-                    '_savedEnd=', window._savedCompareEnd,
-                    '_compareStart=', _compareStart,
-                    '_compareEnd=', _compareEnd,
-                    'lossesCompareCount=', (db.loss||[]).filter(function(l){return l.date&&String(l.date)>=_compareStart&&String(l.date)<=_compareEnd;}).length);
-                // 确保日期格式有效(至少10字符 YYYY-MM-DD)
-                if (!_compareStart || String(_compareStart).length < 10) _compareStart = _defaultCompareStart();
-                if (!_compareEnd || String(_compareEnd).length < 10) _compareEnd = _defaultCompareEnd();
-                var _lossesCompare = [];
-                var _compareLabel = '';
-                if (_compareStart && _compareEnd) {
-                    _lossesCompare = (db.loss || []).filter(function(l) {
-                        return l.date && String(l.date) >= _compareStart && String(l.date) <= _compareEnd;
-                    });
-                    _compareLabel = (_compareStart.length >= 10 ? _compareStart.substring(5) : '?') + ' 至 ' + (_compareEnd.length >= 10 ? _compareEnd.substring(5) : '?');
-                }
-                var compStats = _getCachedLossStats(_lossesCompare, month + '_comp_' + _compareStart + '_' + _compareEnd, SIM_THRESHOLD);
-                if (!compStats) {
-                    compStats = _calcRepeatStatsSim(_lossesCompare, SIM_THRESHOLD);
-                    _setCachedLossStats(_lossesCompare, month + '_comp_' + _compareStart + '_' + _compareEnd, SIM_THRESHOLD, compStats);
-                }
-                
-                // 环比变化值
-                var changeRate = compStats.total > 0 ? curStats.rate - compStats.rate : curStats.rate;
-                var changeEvents = curStats.events - compStats.events;
-                var trendIcon = changeRate > 0 ? '<i class="fa-solid fa-arrow-up" style="color:var(--danger);"></i>' : (changeRate < 0 ? '<i class="fa-solid fa-arrow-down" style="color:var(--success);"></i>' : '<i class="fa-solid fa-minus" style="color:var(--text-muted);"></i>');
-                var trendColor = changeRate > 0 ? 'var(--danger)' : (changeRate < 0 ? 'var(--success)' : 'var(--text-muted)');
+
                 
                 // 重复TOP5（基于相似度聚类后的统计）
                 var sortedDesc = Object.keys(curStats.map).sort(function(a,b) { return curStats.map[b] - curStats.map[a]; });
@@ -2222,34 +2147,23 @@
                 }).join('');
                 
                 _postLayout.innerHTML = '' +
-                    // ★ LOSS重复发生率卡片（自动统计+可选择的环比对比）★
+                    // ★ LOSS重复发生率卡片（自动统计，主范围）★
                     '<div style="display:flex;gap:10px;flex-wrap:wrap;background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:12px 16px;align-items:center;">' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:100px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复率</span>' +
                             '<span style="font-size:24px;font-weight:900;color:' + (curStats.rate > 30 ? 'var(--danger)' : curStats.rate > 15 ? 'var(--warning)' : 'var(--success)') + ';">' + curStats.rate + '%</span>' +
                             '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
-                            '<span style="font-size:11px;font-weight:700;color:' + trendColor + ';">' + trendIcon + ' 环比' + (changeRate >= 0 ? '+' : '') + changeRate + '%</span>' +
-                            '<span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-top:1px;">' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">异常件数</span>' +
                             '<span style="font-size:20px;font-weight:900;">' + curStats.total + '</span>' +
                             '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
-                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">' + (changeEvents >= 0 ? '+' : '') + changeEvents + ' ' + _compareLabel + '</span>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复事件</span>' +
                             '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '件</span>' +
                             '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
                             '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">共' + curStats.buckets + '种重复</span>' +
-                        '</div>' +
-                        '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:200px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px;">环比对比日期范围:</span>' +
-                            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-                                '<input type="date" id="sys-compare-start" value="' + _compareStart + '" onchange="localStorage.setItem(\'mbs_compare_start\',this.value);window._handleCompareChange()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
-                                '<span style="font-size:11px;color:var(--text-muted);">至</span>' +
-                                '<input type="date" id="sys-compare-end" value="' + _compareEnd + '" onchange="localStorage.setItem(\'mbs_compare_end\',this.value);window._handleCompareChange()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
-                            '</div>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS（相似度≥75%）：</span>' +
@@ -2759,6 +2673,148 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
 
         // ================= 紧凑报告生成(LOSS页面) =================
         window._crData = null;
+        
+        // ★ AI 重复 LOSS 分析（调用 SiliconFlow API，使用统一API配置）
+        // API 配置：复用 AI_URL / AI_KEY 顶层常量
+        var _AI_API_BASE = AI_URL;
+        
+        // 获取当前选中的模型
+        function _getSelectedModel() {
+            var sel = document.getElementById('ai-model-selector');
+            return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
+        }
+        
+        // 调用 API 分析重复 LOSS（温度=0保证确定性，精写提示词驱动语义判断）
+        window._aiAnalyzeRepeatLoss = async function(losses, prevLosses) {
+            // 构建完整输入：不截断描述，包含线体/班次信息辅助判断
+            var curList = losses.map(function(l, i) {
+                return { idx: i, date: l.date, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
+            });
+            var prevList = prevLosses.map(function(l, i) {
+                return { idx: i, date: l.date, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
+            });
+            
+            var prompt = '你是一位经验丰富的冰箱压缩机工厂 LOSS 数据分析专家。\n\n';
+            prompt += '### 任务\n';
+            prompt += '分析当天与前一天的LOSS数据，识别"重复问题"——即两天内发生的同一类故障模式，即使文字表述不完全相同。\n\n';
+            prompt += '### 冰箱压缩机工厂常见故障分类（请结合这些知识判断重复性）\n';
+            prompt += '【电机类】定子烧毁/短路、转子铸铝缺陷/断条、绕组匝间短路、绝缘击穿、电机引线断裂、绑扎松动\n';
+            prompt += '【阀组类】阀片断裂/变形、排气阀泄漏、吸气阀密封不良、阀板砂眼、阀垫破损\n';
+            prompt += '【机械运动类】曲轴抱死/磨损、连杆断裂/变形、活塞拉缸、轴承烧损、止推面磨损、平衡块松动\n';
+            prompt += '【壳体焊接类】壳体钎焊泄漏、壳体裂纹、焊缝气孔/夹渣、端子焊接不良、接线柱泄漏\n';
+            prompt += '【装配类】螺钉未拧紧/滑丝、定位不准导致配合间隙异常、密封圈切边、异物混入、零件漏装\n';
+            prompt += '【管路系统类】吸气管/排气管断裂、回气管堵塞、毛细管堵塞、过滤器脏堵\n';
+            prompt += '【电气类】PTC启动器不良、保护器动作、电容器故障、接线端子松脱、绝缘电阻低\n';
+            prompt += '【制冷剂系统类】制冷剂泄漏、水分超标、真空度不足、冷冻油不足/劣化\n';
+            prompt += '【噪音振动类】异常噪音、壳体共振、管路碰撞、电磁音大\n';
+            prompt += '【外观类】壳体生锈、涂装不良、标识不清、包装破损\n\n';
+            prompt += '### 判断标准\n';
+            prompt += '1. 描述文字不同但本质是同一类故障模式：例如"定子烧坏"和"电机绕组短路"都是电机定子问题，算重复\n';
+            prompt += '2. 不同线体但完全相同的故障模式：例如 LINE A 和 LINE B 都出现"阀片断裂"，算重复\n';
+            prompt += '3. 同一故障模式即使影响数量差异很大也算重复（这正是需要对比分析的意义）\n';
+            prompt += '4. 工艺动作类（如"更换模具""调整参数"）不视为故障重复，但同一线体连续出现相同设备故障算重复\n\n';
+            prompt += '### 对比分析要求（这才是核心价值）\n';
+            prompt += '对每组重复问题，分析其改善/恶化/持续情况，输出 trend 字段：\n';
+            prompt += '- "improved" = 昨天问题影响大，今天明显减少或消失（如昨天300台→今天0或20台，说明改善有效）\n';
+            prompt += '- "worsened" = 昨天没有或影响小，今天影响变大（如昨天0台→今天150台，说明问题恶化需紧急处理）\n';
+            prompt += '- "chronic" = 两天都持续发生且影响都较大（如昨天200台→今天180台，需重点攻关）\n\n';
+            prompt += '### 输入数据\n';
+            prompt += '\n**前一天 (' + prevLosses.length + ' 条记录)：**\n' + JSON.stringify(prevList, null, 2) + '\n\n';
+            prompt += '**当天 (' + losses.length + ' 条记录)：**\n' + JSON.stringify(curList, null, 2) + '\n\n';
+            prompt += '### 输出格式\n';
+            prompt += '只输出以下 JSON，不要多余文字：\n';
+            prompt += '{\n';
+            prompt += '  "repeated": [\n';
+            prompt += '    {\n';
+            prompt += '      "curIdx": 当天记录中对应的 idx,\n';
+            prompt += '      "prevIdx": 前一天记录中对应的 idx,\n';
+            prompt += '      "trend": "improved",\n';
+            prompt += '      "reason": "用一句话解释为什么判断为重复以及改善/恶化情况，例如：同一类电机定子故障（定子烧毁），从昨天300台降至今天50台，改善明显，建议持续跟踪定子批次质量"\n';
+            prompt += '    }\n';
+            prompt += '  ]\n';
+            prompt += '}\n';
+            prompt += '注意：trend 和 reason 都要用中文写。如果没有重复问题，输出 {"repeated": []}。';
+            
+            try {
+                var model = _getSelectedModel();
+                var resp = await fetch(_AI_API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': AI_KEY
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: '你是一个冰箱压缩机工厂的LOSS分析专家。严格按要求输出JSON，不要有任何多余内容。' },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0,
+                        max_tokens: 2048
+                    })
+                });
+                
+                if (!resp.ok) {
+                    var errText = await resp.text();
+                    return { success: false, error: 'API error: ' + resp.status + ' ' + errText, fallback: true };
+                }
+                
+                var data = await resp.json();
+                var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                if (!content) {
+                    return { success: false, error: 'Empty response', fallback: true };
+                }
+                
+                // 提取 JSON（可能被 markdown 包裹）
+                var jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    return { success: false, error: 'No JSON in response', fallback: true };
+                }
+                
+                var parsed = JSON.parse(jsonMatch[0]);
+                var repeated = parsed.repeated || [];
+                
+                // 构建返回数据（使用完整 desc）
+                var curMap = {};
+                curList.forEach(function(c) { curMap[c.idx] = c; });
+                var prevMap = {};
+                prevList.forEach(function(p) { prevMap[p.idx] = p; });
+                
+                var resultItems = [];
+                var seenCurIdx = {};
+                repeated.forEach(function(r) {
+                    var curItem = curMap[r.curIdx];
+                    var prevItem = prevMap[r.prevIdx];
+                    if (curItem && prevItem && !seenCurIdx[r.curIdx]) {
+                        seenCurIdx[r.curIdx] = true;
+                        resultItems.push({
+                            desc: curItem.desc,
+                            prevDesc: prevItem.desc,
+                            curQty: curItem.qty,
+                            prevQty: prevItem.qty,
+                            dept: curItem.dept,
+                            line: curItem.line,
+                            shift: curItem.shift,
+                            trend: r.trend || 'chronic',
+                            reason: r.reason || ''
+                        });
+                    }
+                });
+                
+                return { success: true, items: resultItems, totalCur: curList.length, totalPrev: prevList.length };
+                
+            } catch(e) {
+                return { success: false, error: e.message || 'Unknown error', fallback: true };
+            }
+        };
+
+// ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
+        function _formatPrevDate(dateStr) {
+            if (!dateStr || String(dateStr).length < 10) return '';
+            var d = new Date(dateStr + 'T00:00:00');
+            d.setDate(d.getDate() - 1);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
         window.generateLossCompactReport = function() {
             let start = document.getElementById('loss-ai-start').value;
             let end = document.getElementById('loss-ai-end').value;
@@ -2775,7 +2831,6 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             let lineShiftData = {};
             let deptData = {};
             let totalQty = 0;
-            let maxIssue = { desc: '', qty: 0, line: '', shift: '' };
             losses.forEach(function(l) {
                 var qty = Math.abs(safeNum(l.qty));
                 totalQty += qty;
@@ -2788,21 +2843,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 var dept = l.dept || '其他';
                 if(!deptData[dept]) deptData[dept] = 0;
                 deptData[dept] += qty;
-                // 最大影响事件
-                if(qty > maxIssue.qty) {
-                    maxIssue = { desc: l.desc || '', qty: qty, line: lineKey, shift: l.shift === 'D' ? 'Day' : 'Night' };
-                }
             });
-            // 找到最高损失部门
-            var maxDept = '';
-            var maxDeptQty = 0;
-            var deptKeys = Object.keys(deptData);
-            for(var i = 0; i < deptKeys.length; i++) {
-                if(deptData[deptKeys[i]] > maxDeptQty) {
-                    maxDeptQty = deptData[deptKeys[i]];
-                    maxDept = deptKeys[i];
-                }
-            }
             // 按线体排序
             var lineOrder = ['LINE A','LINE B','LINE C','LINE D'];
             var sortedLines = lineOrder.filter(function(l) { return lineShiftData[l]; });
@@ -2836,6 +2877,8 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     var items = shifts[sk];
                     html += '<div class="cr-shift-block">';
                     html += '<div class="cr-shift-header">' + sk + ' Shift (' + items.length + ' records)</div>';
+                    // Sort items by qty descending
+                    items.sort(function(a,b) { return b.qty - a.qty; });
                     for(var ii = 0; ii < items.length; ii++) {
                         var it = items[ii];
                         html += '<div class="cr-item"><span class="cr-qty">' + it.qty + '</span><span class="cr-desc">' + it.desc + '</span></div>';
@@ -2891,45 +2934,176 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             html += '</table>';
             html += '</div>'; // section结束
 
-            // c. 核心总结
-            html += '<div class="cr-section">';
-            html += '<div class="cr-section-title">C. Core Summary</div>';
+            // c. 重复LOSS分析（对比前一天）— AI驱动 + Bigram回退
+            var _prevDate = _formatPrevDate(start);
+            var _prevLosses = (db.loss || []).filter(function(l) { return l.date === _prevDate; });
 
-            // 使用卡片式布局,更紧凑
-            html += '<div class="cr-summary-cards">';
+            // --- Bigram 回退算法（内联） ---
+            function _crSafeStr(s) { return String(s||'').trim().toLowerCase(); }
+            function _crBigramSim(a, b) {
+                a = _crSafeStr(a); b = _crSafeStr(b);
+                if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+                var bgA = {};
+                for (var i = 0; i < a.length - 1; i++) { var bg = a.substring(i, i+2); bgA[bg] = (bgA[bg]||0) + 1; }
+                var inter = 0;
+                for (var i = 0; i < b.length - 1; i++) { var bg = b.substring(i, i+2); if (bgA[bg] > 0) { bgA[bg]--; inter++; } }
+                var union = Math.max(a.length, b.length) - 1;
+                return union > 0 ? inter / union : 0;
+            }
+            function _crCalcRepeatByBigram(curLosses, prevLosses) {
+                var items = [];
+                var SIM = 0.75;
+                curLosses.forEach(function(cur) {
+                    if (!cur || !cur.desc) return;
+                    var curDesc = String(cur.desc).trim();
+                    var bestMatch = null;
+                    var bestSim = 0;
+                    prevLosses.forEach(function(prev) {
+                        if (!prev || !prev.desc) return;
+                        var sim = _crBigramSim(curDesc, String(prev.desc).trim());
+                        if (sim > bestSim) { bestSim = sim; bestMatch = prev; }
+                    });
+                    if (bestSim >= SIM && bestMatch) {
+                        var _bQty = Math.abs(safeNum(cur.qty));
+                        var _bpQty = Math.abs(safeNum(bestMatch.qty));
+                        var _bTrend = (_bQty < _bpQty * 0.5) ? 'improved' : (_bQty > _bpQty * 1.5) ? 'worsened' : 'chronic';
+                        items.push({
+                            desc: curDesc,
+                            prevDesc: String(bestMatch.desc).trim(),
+                            curQty: _bQty,
+                            prevQty: _bpQty,
+                            dept: cur.dept || 'Other',
+                            similarity: Math.round(bestSim * 100),
+                            trend: _bTrend,
+                            reason: (_bTrend === 'improved' ? 'Improved from ' + _bpQty + ' to ' + _bQty : _bTrend === 'worsened' ? 'Worsened from ' + _bpQty + ' to ' + _bQty : 'Chronic ~' + _bQty + ' units')
+                        });
+                    }
+                });
+                return items;
+            }
+            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel) {
+                var h = '';
+                var repeatCount = repeatedItems.length;
+                var repeatRate = curTotal > 0 ? Math.round(repeatCount / curTotal * 100) : 0;
+                var newIssues = curTotal - repeatCount;
 
-            // 卡片1:最大事件
-            html += '<div class="cr-summary-card" style="border-left:3px solid #dc2626;">';
-            html += '<div class="cr-card-title">Top Incident</div>';
-            html += '<div class="cr-card-content">' + (maxIssue.desc.length > 30 ? maxIssue.desc.substring(0, 30) + '...' : maxIssue.desc) + '</div>';
-            html += '<div class="cr-card-footer">' + maxIssue.qty + ' units · ' + maxIssue.line + ' ' + maxIssue.shift + '</div>';
+                h += '<div style="padding: 6px 0;">';
+
+                // KPI overview
+                h += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">';
+                h += '<div style="flex:1;min-width:70px;background:#fef2f2;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fecaca;">';
+                    h += '<div style="font-size:10px;color:#991b1b;font-weight:700;">Today LOSS</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#dc2626;">' + curTotal + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">' + start + '</div>';
+                h += '</div>';
+                h += '<div style="flex:1;min-width:70px;background:#f0fdf4;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bbf7d0;">';
+                    h += '<div style="font-size:10px;color:#166534;font-weight:700;">Previous Day</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#16a34a;">' + prevTotal + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">' + prevDate + '</div>';
+                h += '</div>';
+                h += '<div style="flex:1;min-width:70px;background:#fffbeb;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fde68a;">';
+                    h += '<div style="font-size:10px;color:#92400e;font-weight:700;">Repeat LOSS</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + repeatCount + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">Rate ' + repeatRate + '%</div>';
+                h += '</div>';
+                h += '<div style="flex:1;min-width:70px;background:#eff6ff;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bfdbfe;">';
+                    h += '<div style="font-size:10px;color:#1e40af;font-weight:700;">New Issues</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#3b82f6;">' + newIssues + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">' + (curTotal > 0 ? Math.round(newIssues / curTotal * 100) : 0) + '% new</div>';
+                h += '</div>';
+                h += '</div>';
+
+                // Method label
+                h += '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-style:italic;">' + methodLabel + '</div>';
+
+                if (repeatedItems.length > 0) {
+                    // Sort by curQty DESC then prevQty DESC
+                    var sortedItems = repeatedItems.slice().sort(function(a, b) {
+                        if (b.curQty !== a.curQty) return b.curQty - a.curQty;
+                        return b.prevQty - a.prevQty;
+                    });
+
+                    h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
+                    h += '<tr><th style="width:40%;">Issue</th><th style="width:12%;text-align:right;">Today</th><th style="width:12%;text-align:right;">Prev</th><th style="width:12%;text-align:center;">Trend</th><th style="width:24%;">Analysis</th></tr>';
+                    sortedItems.slice(0, 8).forEach(function(item) {
+                        var trendIcon = item.trend === 'improved' ? '<span style="color:#16a34a;">\u2193 Improved</span>' : (item.trend === 'worsened' ? '<span style="color:#dc2626;">\u2191 Worsened</span>' : '<span style="color:#d97706;">\u2194 Chronic</span>');
+                        h += '<tr>';
+                        h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + item.desc.replace(/"/g,'&quot;') + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.curQty + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.prevQty + '</td>';
+                        h += '<td style="text-align:center;font-size:11px;font-weight:700;">' + trendIcon + '</td>';
+                        h += '<td style="font-size:10px;color:#475569;word-break:break-word;white-space:normal;line-height:1.3;">' + item.reason + '</td>';
+                        h += '</tr>';
+                    });
+                    if (sortedItems.length > 8) {
+                        h += '<tr><td colspan="5" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
+                    }
+                    h += '</table>';
+                } else {
+                    h += '<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px;border:1px dashed #86efac;margin-bottom:6px;">';
+                    h += '<i class="fa-solid fa-check-circle" style="color:#16a34a;font-size:20px;"></i>';
+                    h += '<div style="font-size:13px;font-weight:700;color:#166534;margin-top:4px;">No Repeat LOSS Detected</div>';
+                    h += '<div style="font-size:11px;color:#4ade80;margin-top:2px;">No similar issues vs ' + prevDate + '</div>';
+                    h += '</div>';
+                }
+                h += '</div>';
+                return h;
+            }
+
+            // --- 初始化：AI 加载占位 ---
+            html += '<div class="cr-section" id="cr-section-c">';
+            html += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
+            html += '<div id="cr-c-loading" style="text-align:center;padding:20px;">';
+            html += '<i class="fa-solid fa-spinner fa-spin" style="font-size:20px;color:#6366f1;"></i>';
+            html += '<div style="font-size:13px;color:#6366f1;margin-top:6px;"><span id="cr-c-model-name">' + (_getSelectedModel().split('/').pop() || 'AI') + '</span> analyzing repeat LOSS...</div>';
             html += '</div>';
-
-            // 卡片2:关键部门
-            html += '<div class="cr-summary-card" style="border-left:3px solid #ea580c;">';
-            html += '<div class="cr-card-title">Key Dept</div>';
-            html += '<div class="cr-card-content">' + maxDept + '</div>';
-            html += '<div class="cr-card-footer">' + maxDeptQty + ' units (' + (totalQty > 0 ? ((maxDeptQty / totalQty * 100).toFixed(1)) : '0.0') + '%)</div>';
             html += '</div>';
-
-            // 卡片3:总体统计
-            html += '<div class="cr-summary-card" style="border-left:3px solid #16a34a;">';
-            html += '<div class="cr-card-title">Overview</div>';
-            html += '<div class="cr-card-content">' + totalQty + ' units total</div>';
-            html += '<div class="cr-card-footer">' + sortedLines.length + ' lines · ' + losses.length + ' records</div>';
-            html += '</div>';
-
-            html += '</div>'; // summary-cards结束
-            html += '</div>'; // section结束
-
+            
+            // 先显示占位
             html += '</div>'; // 右栏结束
             html += '</div>'; // 双栏结束
             html += '</div>';
-            // 存储数据供下载用
             window._crData = { html: html, start: start, end: end, totalQty: totalQty };
-            // 显示模态框
             document.getElementById('compact-report-content').innerHTML = html;
             document.getElementById('compact-report-wrap').style.display = 'flex';
+
+            // --- 异步 AI 分析 ---
+            (async function() {
+                var aiResult = null;
+                try {
+                    aiResult = await window._aiAnalyzeRepeatLoss(losses, _prevLosses);
+                } catch(e) {
+                    aiResult = { success: false, error: e.message, fallback: true };
+                }
+
+                // 渲染 C 部分
+                var cSection = document.getElementById('cr-section-c');
+                if (!cSection) return;
+
+                var cHtml = '';
+                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
+
+                if (aiResult && aiResult.success) {
+                    // AI 分析成功
+                    var aiItems = aiResult.items || [];
+                    var modelName = _getSelectedModel().split('/').pop() || 'AI';
+                    cHtml += _crRenderRepeatSection(
+                        losses.length, _prevLosses.length, _prevDate,
+                        aiItems,
+                        modelName + ' AI Analysis (temp=0)'
+                    );
+                } else {
+                    // AI 失败：回退 Bigram
+                    var fallbackItems = _crCalcRepeatByBigram(losses, _prevLosses);
+                    var errMsg = aiResult ? (aiResult.error || 'unknown') : 'unknown';
+                    cHtml += _crRenderRepeatSection(
+                        losses.length, _prevLosses.length, _prevDate,
+                        fallbackItems,
+                        'API failed(' + errMsg + ') · Fallback to text similarity'
+                    );
+                }
+                cSection.innerHTML = cHtml;
+            })();
         };
         window.downloadCRImage = async function() {
             if(!window._crData) { showToast('fa-solid fa-exclamation-triangle', '请先生成报告', 'error'); return; }

@@ -158,6 +158,7 @@
     <!-- 模块加载 (defer 顺序执行) -->
     <script src="js/10-app-core.js" defer></script>
 
+
 </head>
 <body ondragover="handleDragOver(event)">
     <div id="particles-js"></div>
@@ -370,6 +371,12 @@
                     <option value="zh">🇨🇳 中文</option>
                     <option value="th">🇹🇭 ไทย</option>
                     <option value="en">🇬🇧 EN</option>
+                </select>
+                <select id="ai-model-selector" style="margin-right:15px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);font-weight:600;cursor:pointer;">
+                    <option value="Qwen/Qwen3.5-4B">🤖 Qwen3.5-4B</option>
+                    <option value="THUDM/GLM-4-9B-0414" selected>🤖 GLM-4-9B</option>
+                    <option value="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B">🤖 DeepSeek-R1-8B</option>
+                    <option value="MiniMaxAI/MiniMax-M2.5">🤖 MiniMax-M2.5</option>
                 </select>
                 <span style="color:var(--text-muted); font-size:12px; font-weight:bold;" data-i18n="global_date">全局业务日期:</span>
                 <input type="date" id="globalDate" value="" style="border:1px solid rgba(2,132,199,0.2); padding:4px 10px; border-radius:6px; outline:none; color:var(--text-main); font-weight:800; font-family:inherit; font-size:13px !important; background:white; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);" onchange="handleDateChange()">
@@ -682,6 +689,7 @@
                         <div class="cr-actions">
                             <button class="btn-cr-img" onclick="downloadCRImage()"><i class="fa-solid fa-download"></i> 生成长图</button>
                             <button class="btn-cr-close" onclick="document.getElementById('compact-report-wrap').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+
                         </div>
                     </div>
                     <div class="compact-report-scroll" id="compact-report-content"></div>
