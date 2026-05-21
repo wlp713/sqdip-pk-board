@@ -2667,6 +2667,10 @@ tr.filter-row select {
             const row = sysDetailRows().find(r => String(r.id) === String(id));
             if (!row) return console.warn('Record not found:', id);
             row[field] = ['plan','actual','responseMin','waitMin','impactQty'].includes(field) ? safeNum(value) : value;
+            // ★ 事中模块自动计算停机时长：每小时产量420台 = 每分钟7台
+            if (currentSysDetailType === 'mid' && field === 'impactQty') {
+                row.waitMin = Math.round(safeNum(value) / 7);
+            }
             // 立即保存并同步
             triggerAutoSave();
             typeof renderSysDetail==="function"&&renderSysDetail(); renderSysOps();
@@ -2811,8 +2815,8 @@ tr.filter-row select {
                     <td><input value="${r.line||''}" onchange="updateSysRecord('${r.id}','line',this.value)" style="width:100%;"></td>
                     <td><input value="${r.event||''}" onchange="updateSysRecord('${r.id}','event',this.value)" style="width:100%;min-width:160px;"></td>
                     <td><input type="number" value="${r.responseMin||0}" onchange="updateSysRecord('${r.id}','responseMin',this.value)" style="width:50px;"></td>
-                    <td><input type="number" value="${r.waitMin||0}" onchange="updateSysRecord('${r.id}','waitMin',this.value)" style="width:50px;"></td>
-                    <td><input type="number" value="${r.impactQty||0}" onchange="updateSysRecord('${r.id}','impactQty',this.value)" style="width:55px;"></td>
+                    <td><input type="number" value="${r.waitMin||0}" readonly title="由影响数自动计算(420台/时)" style="width:50px;background:var(--bg-card);color:var(--primary);font-weight:700;" data-field="waitMin"></td>
+                    <td><input type="number" value="${r.impactQty||0}" onchange="updateSysRecord('${r.id}','impactQty',this.value)" style="width:55px;" data-field="impactQty"></td>
                     <td><input value="${r.resp||''}" onchange="updateSysRecord('${r.id}','resp',this.value)" style="width:100%;"></td>
                     <td><button onclick="delSysRecord('${r.id}')" style="border:none;background:none;color:var(--danger);cursor:pointer;"><i class="fa-solid fa-trash-can"></i></button></td>
                 </tr>`).join('') || `<tr><td colspan="9">暂无事中记录,点击新增记录开始录入</td></tr>`;
@@ -5713,6 +5717,61 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                 showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条LOSS记录');
             } catch(e) {
                 console.error('[导出LOSS失败]', e);
+                showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
+            }
+        };
+        // ================= 📊 事前/事中/事后 模块导出Excel =================
+        window.exportSysDetailExcel = function() {
+            var type = currentSysDetailType;
+            if (!type || type === 'equipment') {
+                showToast('fa-solid fa-info-circle', '设备点检模块暂不支持导出', 'warning');
+                return;
+            }
+            var month = document.getElementById('sys-detail-month');
+            var monthVal = month ? month.value : new Date().toISOString().slice(0, 7);
+            var rows = sysDetailRows().filter(function(r) { return String(r.date||'').startsWith(monthVal); });
+            if (type === 'post') {
+                var probs = (db.problems || []).filter(function(p) { return String(p.date||'').startsWith(monthVal); });
+                var losses = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(monthVal); });
+                if (!probs.length && !losses.length) {
+                    showToast('fa-solid fa-info-circle', '本月无事后数据可导出', 'warning');
+                    return;
+                }
+                var xps = probs.map(function(p, i) { return { '序号':i+1, '来源':'PSP闭环', '日期':p.date, '车间':p.ws, '责任部门':p.dept||'', '事件描述':p.desc, '状态':p.status, '复盘动作':'跟进关闭时效与防呆固化' }; });
+                var xls = losses.map(function(l, i) { return { '序号':i+1+xps.length, '来源':'LOSS', '日期':l.date, '车间':l.line+'/'+l.shift, '责任部门':l.dept||'-', '事件描述':l.desc, '状态':l.qty||0, '复盘动作':'识别复发与瓶颈影响套数' }; });
+                var xlsData = xps.concat(xls);
+                var wb = XLSX.utils.book_new();
+                var ws = XLSX.utils.json_to_sheet(xlsData);
+                ws['!cols'] = [{ wch:6 },{ wch:10 },{ wch:12 },{ wch:10 },{ wch:12 },{ wch:50 },{ wch:10 },{ wch:24 }];
+                XLSX.utils.book_append_sheet(wb, ws, '事后汇总');
+                XLSX.writeFile(wb, '事后明细_'+monthVal+'.xlsx');
+                showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条事后记录');
+                return;
+            }
+            if (!rows.length) {
+                showToast('fa-solid fa-info-circle', '本月无数据可导出', 'warning');
+                return;
+            }
+            var sheetName = type === 'pre' ? '事前点检' : type === 'mid' ? '事中响应' : '明细';
+            var fileName = sheetName + '_' + monthVal + '.xlsx';
+            var xlsData = rows.map(function(r, idx) {
+                if (type === 'pre') {
+                    return { '序号':idx+1, '日期':r.date, '车间':r.ws||'', '责任归属':r.ownerDept||'', '线体/设备':r.equipment||r.line||'', '检查项目':r.item||'', '异常说明':r.issue||'', '责任人':r.resp||'', '状态':r.status||'' };
+                } else {
+                    return { '序号':idx+1, '日期':r.date, '车间':r.ws||'', '线体':r.line||'', '事件':r.event||'', '响应时间(分)':r.responseMin||0, '停机时长(分)':r.waitMin||0, '影响数量':r.impactQty||0, '责任人':r.resp||'' };
+                }
+            });
+            try {
+                var wb = XLSX.utils.book_new();
+                var ws = XLSX.utils.json_to_sheet(xlsData);
+                ws['!cols'] = type === 'pre'
+                    ? [{ wch:6 },{ wch:12 },{ wch:10 },{ wch:12 },{ wch:22 },{ wch:22 },{ wch:30 },{ wch:12 },{ wch:8 }]
+                    : [{ wch:6 },{ wch:12 },{ wch:8 },{ wch:8 },{ wch:40 },{ wch:10 },{ wch:10 },{ wch:10 },{ wch:12 }];
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                XLSX.writeFile(wb, fileName);
+                showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条记录');
+            } catch(e) {
+                console.error('[导出失败]', e);
                 showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
             }
         };
@@ -8770,6 +8829,7 @@ window.generatePSPCompactReport = function() {
                 </select>
                 <label style="font-size:12px;font-weight:800;color:var(--danger);" id="sys-unconfirmed-label"><input type="checkbox" id="sys-show-unconfirmed" onchange="typeof renderSysDetail==='function'&&renderSysDetail()" checked> <i class="fa-solid fa-bell"></i> 仅显示未完成</label>
                 <span style="font-size:12px;color:var(--text-muted);font-weight:800;">事前区分车间与设备部门责任;事中记录响应、停机等待、影响套数;事后自动关联 PSP/LOSS。</span>
+                <button class="btn btn-success" onclick="exportSysDetailExcel()" style="margin-left:auto;padding:4px 12px;font-size:11px;background:var(--success);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
             </div>
             <div class="sys-kpi-strip" id="sys-kpi-strip">
                 <div class="sys-kpi-mini"><span id="sys-kpi-1-label">记录数量</span><b id="sys-detail-count">0</b></div>

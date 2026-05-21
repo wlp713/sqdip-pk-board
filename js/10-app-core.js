@@ -1444,6 +1444,11 @@
             const row = sysDetailRows().find(r => String(r.id) === String(id));
             if (!row) return console.warn('Record not found:', id);
             row[field] = ['plan','actual','responseMin','waitMin','impactQty'].includes(field) ? safeNum(value) : value;
+            // ★ 事中模块自动计算停机时长：每小时产量420台 = 每分钟7台
+            if (currentSysDetailType === 'mid' && field === 'impactQty') {
+                row.waitMin = Math.round(safeNum(value) / 7);
+            }
+            // ★ 事中模块：手动改了waitMin也同步更新显示
             // 立即保存并同步
             triggerAutoSave();
             typeof renderSysDetail==="function"&&renderSysDetail(); renderSysOps();
@@ -1679,11 +1684,6 @@
                             top5Html +
                         '</div>' +
                     '</div>' +
-                        '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS：</span>' +
-                            top5Html +
-                        '</div>' +
-                    '</div>' +
                     // ── 双列布局 ──
                     '<div style="display:flex;flex:1;overflow:hidden;gap:8px;">' +
                         // ── 左：DM 每日打卡 ──
@@ -1820,7 +1820,7 @@
                     <td><input value="${r.line||''}" onchange="updateSysRecord('${r.id}','line',this.value)" style="width:100%;"></td>
                     <td><input value="${r.event||''}" onchange="updateSysRecord('${r.id}','event',this.value)" style="width:100%;min-width:160px;"></td>
                     <td><input type="number" value="${r.responseMin||0}" onchange="updateSysRecord('${r.id}','responseMin',this.value)" style="width:50px;"></td>
-                    <td><input type="number" value="${r.waitMin||0}" onchange="updateSysRecord('${r.id}','waitMin',this.value)" style="width:50px;"></td>
+                    <td><input type="number" value="${r.waitMin||0}" readonly title="由影响数自动计算(420台/时)" style="width:50px;background:var(--bg-card);color:var(--primary);font-weight:700;"></td>
                     <td><input type="number" value="${r.impactQty||0}" onchange="updateSysRecord('${r.id}','impactQty',this.value)" style="width:55px;"></td>
                     <td><input value="${r.resp||''}" onchange="updateSysRecord('${r.id}','resp',this.value)" style="width:100%;"></td>
                     <td><button onclick="delSysRecord('${r.id}')" style="border:none;background:none;color:var(--danger);cursor:pointer;"><i class="fa-solid fa-trash-can"></i></button></td>
@@ -4895,6 +4895,145 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                 showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条PSP记录');
             } catch(e) {
                 console.error('[导出PSP失败]', e);
+                showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
+            }
+        };
+        // ================= 📋 事前/事中/事后 导出Excel =================
+        window.exportSysDetailExcel = function() {
+            var month = (document.getElementById('sys-detail-month')||{}).value || window.safeDOM.val("globalDate").substring(0, 7);
+            var typeLabel = { pre:'事前', mid:'事中', post:'事后', equipment:'设备点检' };
+            var label = typeLabel[currentSysDetailType] || '系统运作';
+            var rows = sysDetailRows().filter(function(r) { return String(r.date||'').startsWith(month); });
+            if (currentSysDetailType === 'post') {
+                // 事后特殊处理：分开导出DM打卡和改善项目
+                var dmRows = rows.filter(function(r) { return r.type === 'dm_punch'; });
+                var impRows = rows.filter(function(r) { return r.type === 'improvement'; });
+                var xlsData = [];
+                dmRows.forEach(function(r) {
+                    xlsData.push({ '类型':'DM打卡', '日期':r.date||'', '已完成':r.dmDone?'✓':'—' });
+                });
+                impRows.forEach(function(r) {
+                    xlsData.push({ '类型':'改善项目', '日期':r.date||'', '项目名称':r.projectName||'', '目标':r.target||'', '进展':r.progress||'' });
+                });
+                if (xlsData.length === 0) { showToast('fa-solid fa-info-circle', '本月暂无事后数据', 'warning'); return; }
+                try {
+                    var wb = XLSX.utils.book_new();
+                    var ws = XLSX.utils.json_to_sheet(xlsData);
+                    ws['!cols'] = [
+                        { wch: 10 },
+                        { wch: 14 },
+                        { wch: 10 },
+                        { wch: 30 },
+                        { wch: 20 },
+                        { wch: 20 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws, '事后数据');
+                    var fileName = '事后导出_' + month + '.xlsx';
+                    XLSX.writeFile(wb, fileName);
+                    showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条事后记录');
+                } catch(e) {
+                    console.error('[导出事后失败]', e);
+                    showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
+                }
+                return;
+            }
+            if (currentSysDetailType === 'equipment') {
+                // 设备点检导出
+                if (!rows.length) { showToast('fa-solid fa-info-circle', '本月无设备点检记录', 'warning'); return; }
+                try {
+                    var xlsData = rows.map(function(r) {
+                        return {
+                            '日期': r.date || '',
+                            '点检位置': r.checkPlace || '',
+                            '车间': r.ws || '',
+                            '责任部门': r.dept || '',
+                            '已打卡': r.checked ? '✓' : '—',
+                            '备注': r.notes || ''
+                        };
+                    });
+                    var wb = XLSX.utils.book_new();
+                    var ws = XLSX.utils.json_to_sheet(xlsData);
+                    ws['!cols'] = [
+                        { wch: 14 },
+                        { wch: 20 },
+                        { wch: 10 },
+                        { wch: 16 },
+                        { wch: 10 },
+                        { wch: 30 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws, '设备点检');
+                    var fileName = '设备点检导出_' + month + '.xlsx';
+                    XLSX.writeFile(wb, fileName);
+                    showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条设备点检记录');
+                } catch(e) {
+                    console.error('[导出设备点检失败]', e);
+                    showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
+                }
+                return;
+            }
+            if (!rows.length) {
+                showToast('fa-solid fa-info-circle', '本月暂无' + label + '记录', 'warning');
+                return;
+            }
+            try {
+                var xlsData, cols;
+                if (currentSysDetailType === 'pre') {
+                    xlsData = rows.map(function(r) {
+                        return {
+                            '日期': r.date || '',
+                            '车间': r.ws || '',
+                            '责任归属': r.ownerDept || '',
+                            '线体/设备': r.equipment || r.line || '',
+                            '检查项目': r.item || '',
+                            '异常说明': r.issue || '',
+                            '责任人': r.resp || '',
+                            '状态': r.status || ''
+                        };
+                    });
+                    cols = [
+                        { wch: 14 },
+                        { wch: 10 },
+                        { wch: 12 },
+                        { wch: 20 },
+                        { wch: 20 },
+                        { wch: 30 },
+                        { wch: 12 },
+                        { wch: 10 }
+                    ];
+                } else {
+                    // mid 事中
+                    xlsData = rows.map(function(r) {
+                        return {
+                            '日期': r.date || '',
+                            '车间': r.ws || '',
+                            '线体': r.line || '',
+                            '事件': r.event || '',
+                            '响应(分)': r.responseMin || 0,
+                            '停机时长(分)': r.waitMin || 0,
+                            '影响数量(台)': r.impactQty || 0,
+                            '责任人': r.resp || ''
+                        };
+                    });
+                    cols = [
+                        { wch: 14 },
+                        { wch: 10 },
+                        { wch: 10 },
+                        { wch: 40 },
+                        { wch: 12 },
+                        { wch: 12 },
+                        { wch: 14 },
+                        { wch: 12 }
+                    ];
+                }
+                var wb = XLSX.utils.book_new();
+                var ws = XLSX.utils.json_to_sheet(xlsData);
+                ws['!cols'] = cols;
+                XLSX.utils.book_append_sheet(wb, ws, label + '记录');
+                var fileName = label + '导出_' + month + '.xlsx';
+                XLSX.writeFile(wb, fileName);
+                showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条' + label + '记录');
+            } catch(e) {
+                console.error('[导出' + label + '失败]', e);
                 showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
             }
         };

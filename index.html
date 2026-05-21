@@ -255,6 +255,7 @@
                 </select>
                 <label style="font-size:12px;font-weight:800;color:var(--danger);" id="sys-unconfirmed-label" data-i18n="label_show_uncompleted"><input type="checkbox" id="sys-show-unconfirmed" onchange="typeof renderSysDetail==='function'&&renderSysDetail()" checked> <i class="fa-solid fa-bell"></i> 仅显示未完成</label>
                 <span style="font-size:12px;color:var(--text-muted);font-weight:800;">事前区分车间与设备部门责任；事中记录响应、停机等待、影响套数；事后自动关联 PSP/LOSS。</span>
+                <button class="btn btn-success" onclick="exportSysDetailExcel()" style="margin-left:auto;padding:4px 12px;font-size:11px;background:var(--success);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
             </div>
             <div class="sys-kpi-strip">
                 <div class="sys-kpi-mini"><span id="sys-kpi-1-label">记录数量</span><b id="sys-detail-count">0</b></div>
