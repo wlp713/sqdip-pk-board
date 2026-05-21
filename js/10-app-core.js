@@ -132,6 +132,20 @@
         // ★ 诊断:记录计数器初始值
         console.log('[Firebase] 计数器初始化: ' + _localWriteCounter + ' (来自 localStorage)');
 
+        // ★ 性能优化:延迟的 localStorage 写入,不阻塞 UI(JSON.stringify 大型 db 可能耗时>500ms)
+        //   用于删除函数,让 UI 先渲染再同步到 localStorage
+        var _pendingLocalSave = false;
+        function _deferredLocalStorageSave() {
+            if (_pendingLocalSave) return; // 同帧内多次触发只执行一次
+            _pendingLocalSave = true;
+            setTimeout(function() {
+                _pendingLocalSave = false;
+                try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) {
+                    console.warn('[deferredSave] localStorage保存失败', e);
+                }
+            }, 0);
+        }
+
         // ★ saveToFirebase 包装:确保写入后持久化计数器
         var _origSaveToFirebase = saveToFirebase;
         saveToFirebase = async function() {
@@ -171,8 +185,7 @@
             for (var attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     console.log('[forceSave] 尝试 ' + attempt + '/' + maxRetries);
-                    // ★ 保存前再次清理数据,确保没有不合法key
-                    sanitizeForFirebase(db, 'forceSave');
+                    // ★ 性能优化:不再在此处重复 sanitizeForFirebase,_origSaveToFirebase 内部已做
 
                     _dataChangedSinceLastIntegrityCheck = true;
                     // ★ 关键修复:_origSaveToFirebase 内部 catch 异常并返回 false,不是 throw
@@ -1463,9 +1476,12 @@
                 db.sysDetail._skipDates[currentSysDetailType][delRow.date] = true;
             }
             db.sysDetail[currentSysDetailType] = sysDetailRows().filter(r => String(r.id) !== String(id));
-            // ★ 立即同步保存到 localStorage，防止页面刷新后从旧数据恢复
-            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delSysRecord] localStorage保存失败', e); }
-            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            // ★ 性能优化:延迟保存 localStorage,不阻塞 UI 渲染
+            _deferredLocalStorageSave();
+            // ★ 性能优化:延迟 forceSaveToFirebase 到下一 macrotask,避免 repairData+sanitize 阻塞 UI
+            setTimeout(function() {
+                if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            }, 0);
             typeof renderSysDetail==="function"&&renderSysDetail(); renderSysOps();
         };
         window.renderSysDetail = function() {
@@ -3422,7 +3438,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             renderInput();
         };
         window.addDLine = function(ws) { let newId = Date.now() + Math.random(); let newName = `新线体-${Math.floor(Math.random()*100)}`; db.dLinesConfig[ws].push({id: newId, name: newName}); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines.push({ id: newId, name: newName, t:0, o:0, h:0, att:0, head:0 }); }); triggerAutoSave(); renderInput(); };
-        window.delDLine = function(ws, id) { db.dLinesConfig[ws] = db.dLinesConfig[ws].filter(l => String(l.id) !== String(id)); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines = db.prod[d][ws].dLines.filter(l => String(l.id) !== String(id)); }); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delDLine] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } renderInput(); };
+        window.delDLine = function(ws, id) { db.dLinesConfig[ws] = db.dLinesConfig[ws].filter(l => String(l.id) !== String(id)); Object.keys(db.prod).forEach(d => { db.prod[d][ws].dLines = db.prod[d][ws].dLines.filter(l => String(l.id) !== String(id)); }); _deferredLocalStorageSave(); setTimeout(function(){ if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } }, 0); renderInput(); };
         window.updateFixedLine = function(ws, lineName, field, val) { 
             let dateStr = window.safeDOM.val("globalDate"); 
             if(!db.prod[dateStr]?.[ws]?.lines?.[lineName]) return;
@@ -4597,7 +4613,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
         }
         window.addProblem = function() { db.problems.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), ws:'PRO1', desc:'', loc:'', owner:'', dept:'PE', dueDate:'', status: (currentLang==='zh'?'未解决':(currentLang==='en'?'Open':'ยังไม่แก้')) }); triggerAutoSave(); renderPDCA(); renderSysOps(); };
         window.updateProb = function(id, f, v) { let p = db.problems.find(x=>x.id==id); if(p) { p[f]=v; } triggerAutoSave(); renderSysOps(); };
-        window.delProb = function(id) { db.problems = db.problems.filter(x=>x.id!=id); try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delProb] localStorage保存失败', e); } if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } renderPDCA(); renderSysOps(); };
+        window.delProb = function(id) { db.problems = db.problems.filter(x=>x.id!=id); _deferredLocalStorageSave(); setTimeout(function(){ if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } }, 0); renderPDCA(); renderSysOps(); };
         // ★ 性能优化：防抖版 filter render，避免快速输入时频繁重绘
         var _renderLossTimer = null;
         window._debouncedRenderLoss = function() {
@@ -4631,19 +4647,22 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         // ★ 修复:delLoss 必须 await forceSaveToFirebase,否则保存失败时用户不知情,数据在几秒后从云端恢复
         window.delLoss = function(id) {
             db.loss = db.loss.filter(x=>x.id!=id);
-            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delLoss] localStorage保存失败', e); }
-            // ★ 修复Bug7:不再await forceSaveToFirebase(阻塞UI)，改为无阻塞触发
-            if (typeof forceSaveToFirebase === 'function') {
-                forceSaveToFirebase().then(function(saved){
-                    if (!saved) {
-                        console.warn('[delLoss] 删除后异步保存失败,数据可能恢复');
-                    }
-                }).catch(function(err){
-                    console.error('[delLoss] 删除后异步保存异常:', err);
-                });
-            } else {
-                triggerAutoSave();
-            }
+            // ★ 性能优化:延迟保存 localStorage,不阻塞 UI 渲染
+            _deferredLocalStorageSave();
+            // ★ 性能优化:延迟 forceSaveToFirebase 到下一 macrotask,避免 repairData+sanitize 阻塞 UI
+            setTimeout(function(){
+                if (typeof forceSaveToFirebase === 'function') {
+                    forceSaveToFirebase().then(function(saved){
+                        if (!saved) {
+                            console.warn('[delLoss] 删除后异步保存失败,数据可能恢复');
+                        }
+                    }).catch(function(err){
+                        console.error('[delLoss] 删除后异步保存异常:', err);
+                    });
+                } else {
+                    triggerAutoSave();
+                }
+            }, 0);
             renderLoss();
             renderSysOps();
         }
@@ -5319,8 +5338,10 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.delKaizen = function(id) {
             if(!confirm('确定删除该项目?')) return;
             db.kaizen = (db.kaizen||[]).filter(function(x){ return x.id!=id; });
-            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delKaizen] localStorage保存失败', e); }
-            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            _deferredLocalStorageSave();
+            setTimeout(function(){
+                if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            }, 0);
             renderKaizen();
         };
         window.exportKaizenTable = function() {
@@ -6369,8 +6390,10 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.delSimLine = function(idx) {
             let sim = ensureSimData();
             sim.lines.splice(idx, 1);
-            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[delSimLine] localStorage保存失败', e); }
-            if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            _deferredLocalStorageSave();
+            setTimeout(function(){
+                if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+            }, 0);
             renderSimConfig();
             renderSimAttendance();
         };

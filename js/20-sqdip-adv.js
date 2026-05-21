@@ -926,8 +926,15 @@ window.equipDeleteRow = function(index) {
     if (!db.sysDetail._skipDates) db.sysDetail._skipDates = {};
     if (!db.sysDetail._skipDates.equipment) db.sysDetail._skipDates.equipment = {};
     db.sysDetail._skipDates.equipment[delDate] = true;
-    try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[equipDeleteRow] localStorage保存失败', e); }
-    if (window.forceSaveToFirebase) { window.forceSaveToFirebase().catch(function(){}); } else if (window.triggerAutoSave) { window.triggerAutoSave(); }
+    // ★ ★ ★ ★ ★ 性能优化:延迟保存 localStorage,不阻塞 UI 渲染
+    if (typeof _deferredLocalStorageSave === 'function') {
+        _deferredLocalStorageSave();
+    } else {
+        try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) { console.warn('[equipDeleteRow] localStorage保存失败', e); }
+    }
+    setTimeout(function(){
+        if (window.forceSaveToFirebase) { window.forceSaveToFirebase().catch(function(){}); } else if (window.triggerAutoSave) { window.triggerAutoSave(); }
+    }, 0);
     renderEquipmentTable();
 };
 
