@@ -1227,26 +1227,7 @@
             let date = window.safeDOM.val("globalDate");
             ensureSysData(date);
             let currMonth = date.substring(0, 7);
-            // ══════════ 事前:开班准备(来自开班确认表 sysDetail.pre) ══════════
-            let preRows = (db.sysDetail.pre || []).filter(r => String(r.date||'').startsWith(currMonth));
-            let preTotal = preRows.length;
-            let preDone = preRows.filter(r => r.status === '已完成').length;
-            let preIssueCount = preRows.filter(r => r.issue && r.issue.trim() !== '').length;
-            let preReadyRate = preTotal > 0 ? Math.round(preDone / preTotal * 100) : 0;
-            // 模拟各维度数据(实际可从detail提取更精细字段)
-            let manRate = Math.min(100, preTotal > 0 ? Math.round(preDone/preTotal*100) : Math.round(85 + Math.random()*15));
-            let machineRate = Math.min(100, preTotal > 0 ? Math.round(preDone/preTotal*100) : Math.round(90 + Math.random()*10));
-            let materialRate = Math.min(100, preTotal > 0 ? Math.round((preTotal-preIssueCount)/preTotal*100) : Math.round(80 + Math.random()*20));
-            let methodRate = Math.min(100, preTotal > 0 ? Math.round(preDone/preTotal*100) : Math.round(88 + Math.random()*12));
-            let preRisk = preRows.filter(r => r.status !== '已完成').length;
-            document.getElementById('sys-pre-man').innerText = manRate + '%';
-            document.getElementById('sys-pre-machine').innerText = machineRate + '%';
-            document.getElementById('sys-pre-material').innerText = materialRate + '%';
-            document.getElementById('sys-pre-method').innerText = methodRate + '%';
-            document.getElementById('sys-pre-bar').style.width = preReadyRate + '%';
-            document.getElementById('sys-pre-pct').innerText = preReadyRate + '%';
-            document.getElementById('sys-pre-risk').innerText = preRisk;
-            document.getElementById('sys-pre-count').innerText = preTotal;
+
             // ══════════ 事中:过程响应(来自事中记录 sysDetail.mid) ══════════
             let midRows = (db.sysDetail.mid || []).filter(r => String(r.date||'').startsWith(currMonth));
             let midCount = midRows.length;
@@ -1365,9 +1346,8 @@
             el = document.getElementById('sys-equip-photos'); if (el) el.innerText = equipPhotos;
             el = document.getElementById('sys-equip-count'); if (el) el.innerText = equipTotal + '项';
         }
-        let currentSysDetailType = 'pre';
+        let currentSysDetailType = 'equipment';
         const SYS_DETAIL_META = {
-            pre: { title: '事前:开班准备确认明细', icon: 'fa-hourglass-start' },
             mid: { title: '事中:Andon响应与巡检记录明细', icon: 'fa-gauge-high' },
             post: { title: '事后:闭环与复发复盘', icon: 'fa-flag-checkered' },
             equipment: { title: '每日设备点检记录', icon: 'fa-screwdriver-wrench' }
@@ -1388,6 +1368,8 @@
             }
             var _monthEl = document.getElementById('sys-detail-month');
             if (_monthEl) _monthEl.value = window.safeDOM.val("globalDate").substring(0, 7);
+            // 兼容旧pre→重定向到equipment
+            if (type === 'pre') type = 'equipment';
             document.getElementById('sys-detail-title').innerHTML = `<i class="fa-solid ${SYS_DETAIL_META[type].icon}"></i> ${SYS_DETAIL_META[type].title}`;
             document.getElementById('btn-sys-ai-repeat').style.display = type === 'post' ? 'flex' : 'none';
             // 切换非事后模块时隐藏AI分析结果

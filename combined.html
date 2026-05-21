@@ -8983,22 +8983,22 @@ window.generatePSPCompactReport = function() {
                         <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">数据自动关联各模块,反映运作纪律真实水平</span>
                     </div>
                     <div class="sys-grid">
-                        <div class="sys-box" onclick="window.openSysDetail('pre')">
-                            <h4><i class="fa-solid fa-hourglass-start" style="color:var(--midea-blue);"></i> 事前 - 开班准备确认</h4>
+                        <div class="sys-box" onclick="window.openSysDetail('equipment')">
+                            <h4><i class="fa-solid fa-screwdriver-wrench" style="color:var(--midea-blue);"></i> 每日设备点检</h4>
                             <div class="sys-compact-strip">
-                                <div class="sys-chip"><span class="sys-chip-label">人·出勤到位</span><b id="sys-pre-man">--</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">机·设备点检</span><b id="sys-pre-machine">--</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">料·物料齐套</span><b id="sys-pre-material">--</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">法·SOP确认</span><b id="sys-pre-method">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">本周点检率</span><b id="sys-equip-week">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">本月点检率</span><b id="sys-equip-month">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">异常设备</span><b id="sys-equip-fault">--台</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">今日打卡</span><b id="sys-equip-today">--</b></div>
                             </div>
                             <div class="sys-progress-wrap">
-                                <div class="sys-progress-label">准备就绪率</div>
-                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-pre-bar" style="width:0%;"></div></div>
-                                <span class="sys-progress-num" id="sys-pre-pct">0%</span>
+                                <div class="sys-progress-label">设备完好率</div>
+                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-equip-bar" style="width:0%; background:var(--midea-blue);"></div></div>
+                                <span class="sys-progress-num" id="sys-equip-pct">0%</span>
                             </div>
                             <div class="sys-box-footer">
-                                <span><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> 待办风险 <b id="sys-pre-risk">0</b></span>
-                                <span><i class="fa-solid fa-list-check"></i> 今日检查项 <b id="sys-pre-count">0</b></span>
+                                <span><i class="fa-solid fa-camera"></i> 图片记录 <b id="sys-equip-photos">0</b></span>
+                                <span><i class="fa-solid fa-clipboard-check"></i> 点检项 <b id="sys-equip-count">0</b></span>
                             </div>
                         </div>
                         <div class="sys-box" onclick="window.openSysDetail('mid')">
@@ -9035,24 +9035,6 @@ window.generatePSPCompactReport = function() {
                             <div class="sys-box-footer">
                                 <span><i class="fa-solid fa-bug"></i> 黑洞问题 <b id="sys-post-blackhole">0</b></span>
                                 <span><i class="fa-solid fa-rotate-left"></i> 复发次数 <b id="sys-post-repeat-count">0</b></span>
-                            </div>
-                        </div>
-                        <div class="sys-box" onclick="window.openSysDetail('equipment')">
-                            <h4><i class="fa-solid fa-screwdriver-wrench" style="color:var(--midea-blue);"></i> 每日设备点检</h4>
-                            <div class="sys-compact-strip">
-                                <div class="sys-chip"><span class="sys-chip-label">本周点检率</span><b id="sys-equip-week">--</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">本月点检率</span><b id="sys-equip-month">--</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">异常设备</span><b id="sys-equip-fault">--台</b></div>
-                                <div class="sys-chip"><span class="sys-chip-label">今日打卡</span><b id="sys-equip-today">--</b></div>
-                            </div>
-                            <div class="sys-progress-wrap">
-                                <div class="sys-progress-label">设备完好率</div>
-                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-equip-bar" style="width:0%; background:var(--midea-blue);"></div></div>
-                                <span class="sys-progress-num" id="sys-equip-pct">0%</span>
-                            </div>
-                            <div class="sys-box-footer">
-                                <span><i class="fa-solid fa-camera"></i> 图片记录 <b id="sys-equip-photos">0</b></span>
-                                <span><i class="fa-solid fa-clipboard-check"></i> 点检项 <b id="sys-equip-count">0</b></span>
                             </div>
                         </div>
                     </div>
