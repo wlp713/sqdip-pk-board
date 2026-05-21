@@ -109,8 +109,6 @@
             // 确保关键元素存在
             const criticalIds = [
                 "cloud-status-badge",
-                "sqdip-adv-cloud-status", 
-                "sqdip-adv-month-selector",
                 "globalDate"
             ];
             
@@ -131,10 +129,7 @@
                         console.log("[安全初始化] 调用initApp");
                         initApp();
                     }
-                    if (typeof init === "function") {
-                        console.log("[安全初始化] 调用SQDIP init");
-                        init();
-                    }
+
                     console.log("[安全初始化] 完成");
                 } catch (err) {
                     console.error("[安全初始化] 错误:", err);
@@ -162,7 +157,7 @@
 
     <!-- 模块加载 (defer 顺序执行) -->
     <script src="js/10-app-core.js" defer></script>
-    <script src="js/20-sqdip-adv.js" defer></script>
+
 </head>
 <body ondragover="handleDragOver(event)">
     <div id="particles-js"></div>
@@ -344,7 +339,7 @@
             <button class="toggle-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i class="fa-solid fa-bars-staggered"></i></button>
         </div>
         <button class="nav-link active" onclick="showPage('p-input', this)"><i class="fa-solid fa-keyboard"></i> <span data-i18n="menu_input">实况数据录入</span></button>
-        <button class="nav-link" onclick="showPage('p-sqdip', this)"><i class="fa-solid fa-star"></i> <span data-i18n="menu_sqdip">SQDIP 达成</span></button>
+
         <button class="nav-link" onclick="showPage('p-sys', this)"><i class="fa-solid fa-gears"></i> <span data-i18n="menu_sys">系统运作 (事前后)</span><span id="sys-nav-badge" style="display:none;margin-left:auto;background:var(--danger);color:white;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;"></span></button>
         <button class="nav-link" onclick="showPage('p-monitor', this)"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="menu_monitor">每日生产看板</span></button>
         <div id="save-indicator" style="position:absolute;bottom:10px;left:10px;right:10px;font-size:10px;color:rgba(255,255,255,0.6);text-align:center;padding:4px;white-space:nowrap;overflow:hidden;">💾 <span id="save-indicator-text" data-i18n="msg_ready">就绪</span></div>
@@ -410,138 +405,7 @@
                     </div>
                 </div>
             </div>
-            <div id="p-sqdip" class="page">
-<div class="sqdip-adv-root">
-<div class="global-header">
-        <h1 class="g-title"><i class="fa-solid fa-flag-checkered"></i> GAT SQDIP 达成看板</h1>
-        <div class="controls">
-            <span id="sqdip-adv-cloud-status"><i class="fa-solid fa-spinner fa-spin"></i> 连接中...</span>
-            <select class="select-btn" id="sqdip-adv-ws-selector" onchange="sqdipAdv.changeWs()" style="color:var(--midea-blue); border-color:var(--midea-blue);">
-                <option value="PRO1">PRO1 车间</option>
-                <option value="PRO2" selected>PRO2 车间</option>
-                <option value="PRO3">PRO3 车间</option>
-                <option value="PRO4">PRO4 车间</option>
-            </select>
-            <input type="month" id="sqdip-adv-month-selector" class="select-btn" onchange="sqdipAdv.changeMonth()">
-        </div>
-    </div>
-    <div class="main-layout">
-        <div class="sidebar-panel">
-            <div class="scorecard">
-                <div class="sc-title"><span><i class="fa-solid fa-calendar-check"></i> 月度综合表现</span> <span id="sqdip-adv-sc-month" style="color:var(--midea-blue)">-</span></div>
-                <div class="sc-item"><span style="color:#0ea5e9;">S - 安全达标</span> <span class="sc-val" id="sqdip-adv-sc-s">-</span></div>
-                <div class="sc-item"><span style="color:#8b5cf6;">Q - 质量达标</span> <span class="sc-val" id="sqdip-adv-sc-q">-</span></div>
-                <div class="sc-item"><span style="color:#f59e0b;">D - 交付达标</span> <span class="sc-val" id="sqdip-adv-sc-d">-</span></div>
-                <div class="sc-item"><span style="color:#10b981;">I - 库存达标</span> <span class="sc-val" id="sqdip-adv-sc-i">-</span></div>
-                <div class="sc-item"><span style="color:#ef4444;">P - 效率达标</span> <span class="sc-val" id="sqdip-adv-sc-p">-</span></div>
-                <div class="sc-total">
-                    <div style="font-size:12px; color:var(--text-muted); font-weight:800; margin-bottom:5px;">月度整体达成率</div>
-                    <div class="sc-total-val" id="sqdip-adv-sc-total-rate">0%</div>
-                </div>
-            </div>
-            <div class="panel" style="flex-grow:1;">
-                <div class="panel-title" style="font-size:13px; margin-bottom:8px;"><i class="fa-solid fa-bell" style="color:var(--danger)"></i> 高危异常提示</div>
-                <p style="font-size:11px; color:var(--text-muted); margin-top:0; font-weight:600; margin-bottom:10px;">连续 NG 超过 2 天的指标将被曝光。</p>
-                <div id="sqdip-adv-high-risk-list" style="display:flex; flex-direction:column; gap:6px;">
-                </div>
-            </div>
-        </div>
-        <div class="content-panel">
-            <div id="sqdip-adv-page-main" class="sqdip-adv-page active">
-                <div class="sqdip-container">
-                    <div class="letter-card" onclick="sqdipAdv.openDetail('S')">
-                        <div class="l-header"><div class="l-title" style="color: #0ea5e9;">S</div><div class="l-sub">Safety 安全</div></div>
-                        <div class="letter-grid" id="sqdip-adv-grid-S"></div>
-                    </div>
-                    <div class="letter-card" onclick="sqdipAdv.openDetail('Q')">
-                        <div class="l-header"><div class="l-title" style="color: #8b5cf6;">Q</div><div class="l-sub">Quality 质量</div></div>
-                        <div class="letter-grid" id="sqdip-adv-grid-Q"></div>
-                    </div>
-                    <div class="letter-card" onclick="sqdipAdv.openDetail('D')">
-                        <div class="l-header"><div class="l-title" style="color: #f59e0b;">D</div><div class="l-sub">Delivery 交付</div></div>
-                        <div class="letter-grid" id="sqdip-adv-grid-D"></div>
-                    </div>
-                    <div class="letter-card" onclick="sqdipAdv.openDetail('I')">
-                        <div class="l-header"><div class="l-title" style="color: #10b981;">I</div><div class="l-sub">Inventory 库存</div></div>
-                        <div class="letter-grid" id="sqdip-adv-grid-I"></div>
-                    </div>
-                    <div class="letter-card" onclick="sqdipAdv.openDetail('P')">
-                        <div class="l-header"><div class="l-title" style="color: #ef4444;">P</div><div class="l-sub">Productivity 效率</div></div>
-                        <div class="letter-grid" id="sqdip-adv-grid-P"></div>
-                    </div>
-                </div>
-                <div class="panel" style="margin-top: 15px;">
-                    <div class="panel-title"><i class="fa-solid fa-chart-line" style="color:var(--midea-blue)"></i> GAT SQDIP 整体达标率全景趋势 (当月)</div>
-                    <div style="height: 220px; width: 100%;"><canvas id="sqdip-adv-macroTrendChart"></canvas></div>
-                </div>
-            </div>
-            <div id="sqdip-adv-page-detail" class="sqdip-adv-page">
-                <div class="detail-header">
-                    <div class="d-title-box">
-                        <h1 id="sqdip-adv-detail-title">S : Safety 安全</h1>
-                        <p id="sqdip-adv-detail-subtitle">0工伤，隐患排查100%</p>
-                        <div class="d-rule" id="sqdip-adv-detail-rule">判断规则: ...</div>
-                    </div>
-                    <button class="back-btn" onclick="sqdipAdv.closeDetail()"><i class="fa-solid fa-house"></i> 返回全景看板</button>
-                </div>
-                <div class="detail-header-ext" style="display:flex; gap:12px; margin-bottom:12px; height:280px;">
-                    <div class="panel" style="flex:1; display:flex; flex-direction:column; justify-content:center; padding:14px; gap:6px;">
-                        <div style="font-size:12px; font-weight:800; color:var(--text-muted);" id="sqdip-adv-ext-subtitle"></div>
-                        <div style="font-size:11px;" id="sqdip-adv-ext-rule"></div>
-                        <div style="margin-top:4px; font-size:10px; font-weight:700; color:var(--text-muted);">预警：<span id="sqdip-adv-alert-days" style="font-weight:900; color:var(--danger); font-size:14px;">0</span> 天异常</div>
-                    </div>
-                    <div class="panel" style="flex:3; padding:10px;">
-                        <div style="margin-bottom:2px; font-size:11px; font-weight:800; color:var(--midea-dark);"><i class="fa-solid fa-chart-area" style="color:var(--midea-blue)"></i> <span data-i18n="opt_trend">目标达成波动分析</span></div>
-                        <div style="height:240px; width:100%;"><canvas id="sqdip-adv-trendChart"></canvas></div>
-                    </div>
-                </div>
-                <div class="panel" style="flex-grow:1; display:flex; flex-direction:column; min-height:400px;">
-                    <div class="panel-title">
-                        <span><i class="fa-solid fa-table-list" style="color:var(--midea-blue)"></i> 每日实况数据录入与闭环管理</span>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-action" onclick="window.fillFromDefaultTargets()" title="从长期默认目标填充当前日期的目标值"><i class="fa-solid fa-copy"></i> 从默认目标填充</button>
-                            <button class="btn-action" onclick="sqdipAdv.quickFillMonth()"><i class="fa-solid fa-bolt"></i> 批量填充全月 OK</button>
-                        </div>
-                    </div>
-                    <div class="filter-bar">
-                        <span style="font-size:12px; font-weight:800; color:var(--text-muted);"><i class="fa-solid fa-filter"></i> 筛选:</span>
-                        <input type="text" id="sqdip-adv-f-date" class="f-input" placeholder="日期 (例: 15)" style="width:90px;" oninput="sqdipAdv.renderTable()">
-                        <select id="sqdip-adv-f-status" class="f-input" onchange="sqdipAdv.renderTable()">
-                            <option value="">全部达标状态</option>
-                            <option value="green">🟩 OK</option>
-                            <option value="red">🟥 NG</option>
-                        </select>
-                        <input type="text" id="sqdip-adv-f-reason" class="f-input" placeholder="搜索异常/对策/责任人..." style="flex-grow:1;" oninput="sqdipAdv.renderTable()">
-                    </div>
-                    <div class="table-wrap" style="overflow:auto; flex-grow:1; max-height:520px;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 65px;">日期</th>
-                                    <th style="width: 100px;">Tgt(目标)</th>
-                                    <th style="width: 100px;">Act(实际)</th>
-                                    <th style="width: 70px;">差值</th>
-                                    <th style="width: 70px;">判定</th>
-                                    <th style="width:35%; min-width:200px;">异常说明/精益对策分析</th>
-                                    <th style="width: 100px;">闭环状态</th>
-                                    <th style="width: 110px;">闭环时间</th>
-                                    <th style="width: 120px;">责任人</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sqdip-adv-detail-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="panel" style="margin-top:12px;">
-                    <div class="panel-title" style="margin-bottom:10px;"><i class="fa-solid fa-list-check" style="color:var(--warning)"></i> PSP 待办清单</div>
-                    <ul class="todo-list" id="sqdip-adv-todo-list">
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-            </div>
+
             <div id="p-sys" class="page">
                 <div class="card" style="flex-grow:1; margin:0; display:flex; flex-direction:column;">
                     <div class="section-title">
@@ -888,7 +752,7 @@
                         <span style="font-weight:900;color:var(--text-muted);">报告模块</span>
                         <label><input type="checkbox" class="report-toggle" data-target="report-kpi-section" checked onchange="applyReportFilters()"> 经营KPI</label>
                         <label><input type="checkbox" class="report-toggle" data-target="report-ai-section" checked onchange="applyReportFilters()"> AI总结</label>
-                        <label><input type="checkbox" class="report-toggle" data-target="report-sqdip-section" checked onchange="applyReportFilters()"> SQDIP</label>
+
                         <label><input type="checkbox" class="report-toggle" data-target="report-sys-section" checked onchange="applyReportFilters()"> 事前事中事后</label>
                         <label><input type="checkbox" class="report-toggle" data-target="report-loss-section" checked onchange="applyReportFilters()"> LOSS排名</label>
                         <label><input type="checkbox" class="report-toggle" data-target="report-problem-section" checked onchange="applyReportFilters()"> 闭环率</label>
@@ -934,12 +798,7 @@
                             <div id="ai-summary-content" class="ai-html-content" style="padding:10px 5px; min-height: 80px; transition: all 0.3s ease;">点击上方按钮，AI基于全景数据生成涵盖 UPPH、欠产预警及 Influence Sets (影响套数) 的复盘报告。</div>
                         </div>
                     </div>
-                    <div class="r-dept-container" id="report-sqdip-section" style="border-left: 4px solid var(--midea-blue); background: white;">
-                        <div class="section-title" style="margin-bottom: 8px;">
-                            <h4 style="color:var(--midea-dark); margin:0; font-size:15px !important;"><i class="fa-solid fa-star"></i> SQDIP 达成纳入经营报告</h4>
-                        </div>
-                        <div class="r-dept-grid" id="rp-sqdip-list" style="grid-template-columns: repeat(5, 1fr);"></div>
-                    </div>
+
                     <div class="r-dept-container" id="report-sys-section" style="border-left: 4px solid var(--success); background: white;">
                         <div class="section-title" style="margin-bottom: 8px;">
                             <h4 style="color:var(--success); margin:0; font-size:15px !important;"><i class="fa-solid fa-gears"></i> 事前事中事后</h4>
@@ -992,6 +851,5 @@
             </div>
         </div>
     </main>
-    <script>
-</body>
+    </body>
 </html>
