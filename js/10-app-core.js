@@ -2666,81 +2666,49 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
         // ================= 紧凑报告生成(LOSS页面) =================
         window._crData = null;
         
-        // ★ AI 重复 LOSS 分析（调用 SiliconFlow API，使用统一API配置）
-        // API 配置：复用 AI_URL / AI_KEY 顶层常量
-        var _AI_API_BASE = AI_URL;
+        // ★ 同一天内相同描述的LOSS合并（白班+夜班同问题合并为1条）
+        function _crMergeByDesc(arr) {
+            var map = {}, result = [];
+            arr.forEach(function(l) {
+                var d = (l.desc || '').trim();
+                if (!d) return;
+                if (!map[d]) {
+                    map[d] = { desc: d, qty: 0, dept: l.dept || 'Other', line: l.line || '', shift: l.shift || '', date: l.date };
+                    result.push(map[d]);
+                }
+                map[d].qty += Math.abs(safeNum(l.qty));
+            });
+            return result;
+        }
         
-        // 获取当前选中的模型
+        // ★ AI 重复 LOSS 分析
+        var _AI_API_BASE = AI_URL;
         function _getSelectedModel() {
             var sel = document.getElementById('ai-model-selector');
             return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
         }
         
-        // 调用 API 分析重复 LOSS（温度=0保证确定性，精写提示词驱动语义判断）
+        // 单次AI调用（纯AI，不混合Bigram）
         window._aiAnalyzeRepeatLoss = async function(losses, prevLosses) {
-            // 构建完整输入：不截断描述，包含线体/班次信息辅助判断
+            // 构建输入（使用已合并的数据，同一天相同描述已合并）
             var curList = losses.map(function(l, i) {
-                return { idx: i, date: l.date, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
+                return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
             });
             var prevList = prevLosses.map(function(l, i) {
-                return { idx: i, date: l.date, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
+                return { idx: i, desc: (l.desc || '').trim(), qty: Math.abs(safeNum(l.qty)), line: l.line || '', shift: l.shift || '', dept: l.dept || 'Other' };
             });
             
-            var prompt = '';
-            prompt += '### 任务\n';
-            prompt += '严格分析当天与前一天的LOSS数据，精准识别"重复问题"。\n\n';
-            prompt += '### 核心原则（非常重要）\n';
-            prompt += '1. **必须是同一个具体的故障问题**才算重复，不能是宽泛的大类。例如：\n';
-            prompt += '   ✅ 正确："定子烧毁"和"电机绕组短路" → 都是电机定子绕组的电气故障，是同一个具体问题→算重复\n';
-            prompt += '   ✅ 正确："阀片断裂"和"排气阀片开裂" → 都是阀片机械断裂→算重复\n';
-            prompt += '   ✅ 正确："焊接泄漏"和"钎焊砂眼渗漏" → 都是焊接密封失效→算重复\n';
-            prompt += '   ❌ 错误："电机故障"（太宽泛，没有具体位置和现象）和"定子烧毁"→ 不确定是否为同一个具体问题，不算重复\n';
-            prompt += '   ❌ 错误："装配不良"和"螺钉未拧紧"（"装配不良"太宽泛，螺钉未拧紧太具体，不确定是否指向同一件事）→ 不算重复\n\n';
-            prompt += '2. **文字表述不同但指同一个具体故障，才算重复**：\n';
-            prompt += '   - "定子烧坏" vs "电机绕组短路" → 都是电机定子绕组电气故障，是同一个具体损坏→✅ 算重复\n';
-            prompt += '   - "曲轴抱死" vs "曲轴卡死" → 同一个运动部件抱死→✅ 算重复\n';
-            prompt += '   - "制冷剂泄漏"（太笼统，没有指出具体哪里漏）vs "焊接处制冷剂渗漏"（有具体漏点）→ 不算重复\n\n';
-            prompt += '3. **绝对不算重复的情况**：\n';
-            prompt += '   - 宽泛分类 vs 具体故障："电气故障" vs "PTC不良"→ 不算重复\n';
-            prompt += '   - 不同故障部位："定子问题" vs "轴承问题"→ 不算重复\n';
-            prompt += '   - 工艺调整动作："更换模具"、"调整参数"、"更换刀具"等作业动作不算故障重复\n';
-            prompt += '   - 完全不同的故障："管路断裂" vs "电机烧毁"→ 不同系统部件，不算重复\n\n';
-            prompt += '### 冰箱压缩机常见具体故障参考（用于辅助判断是否是同一个具体问题）\n';
-            prompt += '- 定子绕组烧毁/匝间短路/绝缘击穿 → 电机定子电气损坏(同一个具体故障)\n';
-            prompt += '- 转子断条/铸铝缺陷 → 转子铸造缺陷(同一个具体故障)\n';
-            prompt += '- 阀片断裂/开裂/变形 → 阀片机械损坏(同一个具体故障)\n';
-            prompt += '- 排气阀/吸气阀泄漏/密封不良 → 阀组密封失效(同一个具体故障)\n';
-            prompt += '- 曲轴抱死/磨损/卡死 → 曲轴运动故障(同一个具体故障)\n';
-            prompt += '- 连杆断裂/变形 → 连杆机械损坏(同一个具体故障)\n';
-            prompt += '- 活塞拉缸/卡滞 → 活塞缸套配合故障(同一个具体故障)\n';
-            prompt += '- 壳体钎焊泄漏/焊缝气孔/焊接砂眼 → 焊接密封失效(同一个具体故障)\n';
-            prompt += '- 端子焊接不良/接线柱泄漏 → 电气端子密封失效(同一个具体故障)\n';
-            prompt += '- 轴承烧损/磨损 → 轴承故障(同一个具体故障)\n';
-            prompt += '- 毛细管堵塞/过滤器脏堵 → 管路堵塞(同一个具体故障)\n';
-            prompt += '- PTC启动器不良/保护器动作 → 启动/保护电气故障(同一个具体故障)\n\n';
-            prompt += '### 趋势判断规则（严格基于数据量对比）\n';
-            prompt += '对每组判断为重复的问题，根据今天和昨天的数量对比输出 trend 字段：\n';
-            prompt += '- "improved"：今天数量 < 昨天数量×0.7（减少30%以上）= 改善\n';
-            prompt += '- "worsened"：今天数量 > 昨天数量×1.3（增加30%以上）= 恶化，需要紧急关注\n';
-            prompt += '- "chronic"：介于两者之间 = 持续发生，需要长期攻关\n';
-            prompt += '- 如果昨天没有该问题（新增问题），直接输出 trend="new"\n\n';
-            prompt += '### 输入数据\n';
-            prompt += '\n**前一天 (' + prevLosses.length + ' 条记录)：**\n' + JSON.stringify(prevList, null, 2) + '\n\n';
-            prompt += '**当天 (' + losses.length + ' 条记录)：**\n' + JSON.stringify(curList, null, 2) + '\n\n';
-            prompt += '### 输出格式\n';
-            prompt += '只输出以下 JSON，不要多余文字，不要 markdown 包裹：\n';
-            prompt += '{\n';
-            prompt += '  "repeated": [\n';
-            prompt += '    {\n';
-            prompt += '      "curIdx": 当天记录中对应的 idx,\n';
-            prompt += '      "prevIdx": 前一天记录中对应的 idx（如果是新增问题没有前一天对应，prevIdx填null）, \n';
-            prompt += '      "trend": "improved", // 可选值: improved / worsened / chronic / new\n';
-            prompt += '      "reason": "一句话说明判断依据和趋势，例如：定子绕组烧毁故障，从昨天230台降至今天60台，改善明显"\n';
-            prompt += '    }\n';
-            prompt += '  ]\n';
-            prompt += '}\n';
-            prompt += '如果某个当天的问题在前一天没有找到任何匹配的具体故障，则不输出（不要强行匹配宽泛分类）。\n';
-            prompt += '如果没有重复问题或只有新的问题，输出 {"repeated": []}。';
+            var prompt = '识别当天与前一天LOSS中的重复问题。\n\n';
+            prompt += '规则（严格执行）：\n';
+            prompt += '1. 只匹配同一个具体故障，语义相同就算重复："定子烧坏"="电机绕组短路" ✅，"阀片断裂"="排气阀片开裂" ✅\n';
+            prompt += '2. 不匹配的情况：宽泛分类≠具体故障，不同部件≠重复，调整动作≠故障\n';
+            prompt += '3. 对每对重复输出：improved(今<昨×0.7)，worsened(今>昨×1.3)，chronic(其他)\n\n';
+            prompt += '### 输入\n';
+            prompt += '**当天 (' + curList.length + ' 条)：**\n' + JSON.stringify(curList, null, 2) + '\n\n';
+            prompt += '**前一天 (' + prevList.length + ' 条)：**\n' + JSON.stringify(prevList, null, 2) + '\n\n';
+            prompt += '### 输出（只JSON，不要其他文字）\n';
+            prompt += '{"repeated":[{"curIdx":0,"prevIdx":1,"trend":"improved","reason":"..."}]}\n';
+            prompt += '没重复就输出 {"repeated":[]}。不编造，不猜测。';
             
             try {
                 var model = _getSelectedModel();
@@ -2753,7 +2721,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     body: JSON.stringify({
                         model: model,
                         messages: [
-                            { role: 'system', content: '规则:1)只匹配同一个具体故障问题,不是宽泛分类;2)趋势基于数据量精确判断;3)保证输出JSON有效可解析。不含多余文字。' },
+                            { role: 'system', content: '只匹配同一个具体故障。语义相同算重复。只输出JSON。不编造。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
@@ -2763,25 +2731,25 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 
                 if (!resp.ok) {
                     var errText = await resp.text();
-                    return { success: false, error: 'API error: ' + resp.status + ' ' + errText, fallback: true };
+                    return { success: false, error: 'API error: ' + resp.status + ' ' + errText };
                 }
                 
                 var data = await resp.json();
                 var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
                 if (!content) {
-                    return { success: false, error: 'Empty response', fallback: true };
+                    return { success: false, error: 'Empty response' };
                 }
                 
-                // 提取 JSON（可能被 markdown 包裹）
+                // 提取 JSON
                 var jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) {
-                    return { success: false, error: 'No JSON in response', fallback: true };
+                    return { success: false, error: 'No JSON in response' };
                 }
                 
                 var parsed = JSON.parse(jsonMatch[0]);
                 var repeated = parsed.repeated || [];
                 
-                // 构建返回数据（使用完整 desc）
+                // 构建返回
                 var curMap = {};
                 curList.forEach(function(c) { curMap[c.idx] = c; });
                 var prevMap = {};
@@ -2791,9 +2759,10 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 var seenCurIdx = {};
                 repeated.forEach(function(r) {
                     var curItem = curMap[r.curIdx];
-                    // 处理新增问题（prevIdx为null）
-                    if (r.trend === 'new' && curItem && !seenCurIdx[r.curIdx]) {
-                        seenCurIdx[r.curIdx] = true;
+                    if (!curItem || seenCurIdx[r.curIdx]) return;
+                    seenCurIdx[r.curIdx] = true;
+                    
+                    if (r.trend === 'new' || r.prevIdx === null || r.prevIdx === undefined) {
                         resultItems.push({
                             curIdx: r.curIdx,
                             desc: curItem.desc,
@@ -2801,16 +2770,12 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                             curQty: curItem.qty,
                             prevQty: 0,
                             dept: curItem.dept,
-                            line: curItem.line,
-                            shift: curItem.shift,
                             trend: 'new',
-                            reason: r.reason || '新发生问题'
+                            reason: r.reason || 'New issue'
                         });
-                        return;
-                    }
-                    var prevItem = prevMap[r.prevIdx];
-                    if (curItem && prevItem && !seenCurIdx[r.curIdx]) {
-                        seenCurIdx[r.curIdx] = true;
+                    } else {
+                        var prevItem = prevMap[r.prevIdx];
+                        if (!prevItem) return;
                         resultItems.push({
                             curIdx: r.curIdx,
                             desc: curItem.desc,
@@ -2818,8 +2783,6 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                             curQty: curItem.qty,
                             prevQty: prevItem.qty,
                             dept: curItem.dept,
-                            line: curItem.line,
-                            shift: curItem.shift,
                             trend: r.trend || 'chronic',
                             reason: r.reason || ''
                         });
@@ -2829,8 +2792,48 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 return { success: true, items: resultItems, totalCur: curList.length, totalPrev: prevList.length };
                 
             } catch(e) {
-                return { success: false, error: e.message || 'Unknown error', fallback: true };
+                return { success: false, error: e.message || 'Unknown error' };
             }
+        };
+        
+        // ★ 稳定版：调用AI两次取并集，提升低质量模型的识别稳定性
+        window._stableAnalyzeRepeat = async function(losses, prevLosses) {
+            var calls = [window._aiAnalyzeRepeatLoss(losses, prevLosses), window._aiAnalyzeRepeatLoss(losses, prevLosses)];
+            var results = await Promise.all(calls);
+            
+            var matchedIdx = {};
+            var anySuccess = false;
+            for (var ci = 0; ci < results.length; ci++) {
+                var r = results[ci];
+                if (r.success && r.items) {
+                    anySuccess = true;
+                    r.items.forEach(function(item) {
+                        if (item.curIdx === undefined) return;
+                        if (!matchedIdx[item.curIdx]) {
+                            matchedIdx[item.curIdx] = item;
+                        } else {
+                            // Prefer matched items (with prevDesc) over new items
+                            if (item.prevDesc && !matchedIdx[item.curIdx].prevDesc) {
+                                matchedIdx[item.curIdx] = item;
+                            }
+                            // If both have prevDesc, keep the one with more info
+                            if (item.prevDesc && matchedIdx[item.curIdx].prevDesc && item.reason.length > matchedIdx[item.curIdx].reason.length) {
+                                matchedIdx[item.curIdx] = item;
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (!anySuccess) {
+                for (var ci = 0; ci < results.length; ci++) {
+                    if (results[ci].error) return results[ci];
+                }
+                return { success: false, error: 'All AI calls failed' };
+            }
+            
+            var mergedItems = Object.keys(matchedIdx).map(function(idx) { return matchedIdx[idx]; });
+            return { success: true, items: mergedItems };
         };
 
 // ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
@@ -3172,35 +3175,18 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             document.getElementById('compact-report-content').innerHTML = html;
             document.getElementById('compact-report-wrap').style.display = 'flex';
 
-            // --- 异步 AI 分析 + Bigram 合并 ---
+            // --- 纯AI分析（无Bigram），先合并相同描述，再双重AI调用确保稳定 ---
             (async function() {
-                // 1. Always run Bigram first (synchronous, deterministic, catches exact/token matches)
-                var bigramItems = _crCalcRepeatByBigram(losses, _prevLosses);
-                var bigramMatchedIdx = {};
-                bigramItems.forEach(function(item) {
-                    if (item.curIdx !== undefined) bigramMatchedIdx[item.curIdx] = true;
-                });
+                // 1. Merge same-day identical descriptions (白班+夜班同问题→1条)
+                var mergedToday = _crMergeByDesc(losses);
+                var mergedYesterday = _crMergeByDesc(_prevLosses);
 
-                // 2. Try AI (asynchronous, semantic matching)
+                // 2. Pure AI analysis (double call for stability, union of both)
                 var aiResult = null;
                 try {
-                    aiResult = await window._aiAnalyzeRepeatLoss(losses, _prevLosses);
+                    aiResult = await window._stableAnalyzeRepeat(mergedToday, mergedYesterday);
                 } catch(e) {
-                    aiResult = { success: false };
-                }
-
-                // 3. Merge: Bigram primary, AI supplements what Bigram missed
-                var mergedItems = bigramItems.slice();
-                var modelLabel = 'Bigram';
-                if (aiResult && aiResult.success) {
-                    var aiItems = aiResult.items || [];
-                    modelLabel = '\u7CBE\u51C6\u5339\u914D';
-                    aiItems.forEach(function(aiItem) {
-                        if (aiItem.curIdx !== undefined && !bigramMatchedIdx[aiItem.curIdx]) {
-                            mergedItems.push(aiItem);
-                            bigramMatchedIdx[aiItem.curIdx] = true;
-                        }
-                    });
+                    aiResult = { success: false, error: e.message };
                 }
 
                 var cSection = document.getElementById('cr-section-c');
@@ -3208,12 +3194,19 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
 
                 var cHtml = '';
                 cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis \u2014 ' + start + ' vs ' + _prevDate + '</div>';
-                cHtml += _crRenderRepeatSection(
-                    losses.length, _prevLosses.length, _prevDate,
-                    mergedItems,
-                    modelLabel,
-                    db.loss, start, end
-                );
+
+                if (aiResult && aiResult.success) {
+                    var aiItems = aiResult.items || [];
+                    cHtml += _crRenderRepeatSection(
+                        mergedToday.length, mergedYesterday.length, _prevDate,
+                        aiItems,
+                        'AI Repeat Analysis',
+                        db.loss, start, end
+                    );
+                } else {
+                    cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
+                }
+
                 cSection.innerHTML = cHtml;
             })();
         };
