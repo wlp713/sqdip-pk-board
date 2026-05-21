@@ -1937,6 +1937,15 @@
                 keys = Object.keys(_lossRepeatCache);
             }
         }
+        // ★ 环比对比默认日期:昨天与前天
+        function _defaultCompareStart() {
+            var d = new Date(); d.setDate(d.getDate() - 2);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+        function _defaultCompareEnd() {
+            var d = new Date(); d.setDate(d.getDate() - 1);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
         window.renderSysDetail = function() {
         try {
             // ★ 性能诊断标记
@@ -1973,6 +1982,27 @@
             const addBtn = document.querySelector('#sys-detail-panel .btn-primary');
             if (addBtn) addBtn.style.display = 'flex'; // 事后模块也需要显示（新增改善项目）
             if (currentSysDetailType === 'post') {
+                // ★ 事后模块加载提示:首次渲染时显示加载中,避免用户以为卡死
+                if (!window._postLoading) {
+                    window._postLoading = true;
+                    var _pl = document.getElementById('sys-detail-post-layout');
+                    var _postTable2 = document.querySelector('.sys-detail-table');
+                    if (_postTable2) _postTable2.style.display = 'none';
+                    if (_pl) {
+                        _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">LOSS重复率分析中，请稍候...</span></div>';
+                    } else {
+                        var _pw = document.querySelector('.table-wrap');
+                        if (_pw) {
+                            _pl = document.createElement('div');
+                            _pl.id = 'sys-detail-post-layout';
+                            _pl.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+                            _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">LOSS重复率分析中，请稍候...</span></div>';
+                            _pw.appendChild(_pl);
+                        }
+                    }
+                    setTimeout(function() { renderSysDetail(); }, 50);
+                    return;
+                }
                 // 事后模块：DM每日打卡（左 2/3）+ 改善项目记录（右 1/3）
                 if (window._perfMarks) window._perfMarks.afterKPI = performance.now();
                 
@@ -2030,37 +2060,21 @@
                     _setCachedLossStats(_lossesThisMonth, month, SIM_THRESHOLD, curStats);
                 }
                 
-                // 环比对比：从下拉框获取用户选择的对比周期
-                var _comparePeriod = (document.getElementById('sys-compare-period')||{}).value || 'lastMonth';
+                // 环比对比：从日期范围输入框获取对比起止日期
+                var _csEl = document.getElementById('sys-compare-start');
+                var _ceEl = document.getElementById('sys-compare-end');
+                var _compareStart = (_csEl && _csEl.value) || localStorage.getItem('mbs_compare_start') || _defaultCompareStart();
+                var _compareEnd = (_ceEl && _ceEl.value) || localStorage.getItem('mbs_compare_end') || _defaultCompareEnd();
+                // 确保日期格式有效(至少10字符 YYYY-MM-DD)
+                if (_compareStart.length < 10) _compareStart = _defaultCompareStart();
+                if (_compareEnd.length < 10) _compareEnd = _defaultCompareEnd();
                 var _lossesCompare = [];
                 var _compareLabel = '';
-                if(_comparePeriod === 'lastMonth') {
-                    var _prevMonth = month.split('-')[0] + '-' + String(parseInt(month.split('-')[1]) - 1).padStart(2,'0');
-                    if (parseInt(month.split('-')[1]) === 1) _prevMonth = (parseInt(month.split('-')[0]) - 1) + '-12';
-                    _lossesCompare = (db.loss || []).filter(function(l) { return String(l.date||'').startsWith(_prevMonth); });
-                    _compareLabel = 'vs 上月';
-                } else if(_comparePeriod === 'lastWeek') {
-                    var _todayNum = parseInt(window.safeDOM.val('globalDate').substring(8,10)) || 15;
-                    var _lastWeekStart = _todayNum - 14;
-                    var _lastWeekEnd = _todayNum - 7;
+                if (_compareStart && _compareEnd) {
                     _lossesCompare = (db.loss || []).filter(function(l) {
-                        if(!l.date) return false;
-                        if(!String(l.date).startsWith(month)) return false;
-                        var d = parseInt(String(l.date).substring(8,10)) || 0;
-                        return d > _lastWeekStart && d <= _lastWeekEnd;
+                        return l.date && String(l.date) >= _compareStart && String(l.date) <= _compareEnd;
                     });
-                    _compareLabel = 'vs 上周';
-                } else if(_comparePeriod === 'last7days') {
-                    var _todayNum = parseInt(window.safeDOM.val('globalDate').substring(8,10)) || 15;
-                    var _lastStart = _todayNum - 14;
-                    var _lastEnd = _todayNum - 7;
-                    _lossesCompare = (db.loss || []).filter(function(l) {
-                        if(!l.date) return false;
-                        if(!String(l.date).startsWith(month)) return false;
-                        var d = parseInt(String(l.date).substring(8,10)) || 0;
-                        return d > _lastStart && d <= _lastEnd;
-                    });
-                    _compareLabel = 'vs 前7天';
+                    _compareLabel = (_compareStart.length >= 10 ? _compareStart.substring(5) : '?') + ' 至 ' + (_compareEnd.length >= 10 ? _compareEnd.substring(5) : '?');
                 }
                 var compStats = _getCachedLossStats(_lossesCompare, month + '_comp', SIM_THRESHOLD);
                 if (!compStats) {
@@ -2154,13 +2168,13 @@
                             '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '件</span>' +
                             '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">共' + curStats.buckets + '种重复</span>' +
                         '</div>' +
-                        '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:120px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px;">环比对比:</span>' +
-                            '<select id="sys-compare-period" onchange="renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);">' +
-                                '<option value="lastMonth"' + (_comparePeriod==='lastMonth'?' selected':'') + '>vs 上月</option>' +
-                                '<option value="lastWeek"' + (_comparePeriod==='lastWeek'?' selected':'') + '>vs 上周</option>' +
-                                '<option value="last7days"' + (_comparePeriod==='last7days'?' selected':'') + '>vs 前7天</option>' +
-                            '</select>' +
+                        '<div style="display:flex;flex-direction:column;align-items:flex-start;min-width:200px;">' +
+                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:4px;">环比对比日期范围:</span>' +
+                            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+                                '<input type="date" id="sys-compare-start" value="' + _compareStart + '" onchange="localStorage.setItem(\'mbs_compare_start\',this.value);renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
+                                '<span style="font-size:11px;color:var(--text-muted);">至</span>' +
+                                '<input type="date" id="sys-compare-end" value="' + _compareEnd + '" onchange="localStorage.setItem(\'mbs_compare_end\',this.value);renderSysDetail()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);cursor:pointer;">' +
+                            '</div>' +
                         '</div>' +
                         '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
                             '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS（相似度≥75%）：</span>' +
@@ -2211,6 +2225,7 @@
                     );
                     delete window._perfMarks; // 清除标记,下次重新测量
                 }
+                window._postLoading = false;
                 return;
             }
 
