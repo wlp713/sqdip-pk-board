@@ -1348,7 +1348,7 @@
         }
         let currentSysDetailType = 'equipment';
         const SYS_DETAIL_META = {
-            mid: { title: '事中:Andon响应与巡检记录明细', icon: 'fa-gauge-high' },
+            mid: { title: '事中:Andon响应记录明细', icon: 'fa-gauge-high' },
             post: { title: '事后:闭环与复发复盘', icon: 'fa-flag-checkered' },
             equipment: { title: '每日设备点检记录', icon: 'fa-screwdriver-wrench' }
         };
@@ -1598,9 +1598,14 @@
                     return div.innerHTML;
                 }
                 
+                document.getElementById('sys-kpi-1-label').innerText = 'DM记录';
                 document.getElementById('sys-detail-count').innerText = dmRows.length;
+                document.getElementById('sys-kpi-2-label').innerText = '开展率';
                 document.getElementById('sys-detail-rate').innerText = dmDoneRate + '%';
+                document.getElementById('sys-kpi-3-label').innerText = 'LOSS重复';
                 document.getElementById('sys-detail-risk').innerText = curStats.events;
+                document.getElementById('sys-kpi-4-label').innerText = '——';
+                document.getElementById('sys-detail-impact').innerText = '—';
                 
                 // ── 隐藏原表格，使用自定义分割布局 ──
                 var _postTable = document.querySelector('.sys-detail-table');
@@ -1774,8 +1779,13 @@
                 var filteredRows = rows;
                 if(showUnconfirmed) filteredRows = rows.filter(function(r){ return r.status !== '已完成'; });
                 const ok = filteredRows.filter(r => safeNum(r.actual) >= safeNum(r.plan)).length;
+                document.getElementById('sys-kpi-1-label').innerText = '记录数量';
+                document.getElementById('sys-kpi-2-label').innerText = '达成率';
                 document.getElementById('sys-detail-rate').innerText = (rows.length ? (ok / rows.length * 100).toFixed(1) : 100) + '%';
+                document.getElementById('sys-kpi-3-label').innerText = '待跟进';
                 document.getElementById('sys-detail-risk').innerText = rows.filter(r => r.status !== '已完成').length;
+                document.getElementById('sys-kpi-4-label').innerText = '——';
+                document.getElementById('sys-detail-impact').innerText = '—';
                 head.innerHTML = `<tr><th>日期</th><th>车间</th><th>责任归属</th><th style="min-width:160px;">线体/设备</th><th style="min-width:160px;">检查项目</th><th>异常说明</th><th>责任人</th><th>状态</th><th>删</th></tr>`;
                 body.innerHTML = filteredRows.map(function(r){
                     var rowBg = r.status !== '已完成' ? ' style="background:rgba(239,68,68,0.06);"' : '';
@@ -1792,24 +1802,29 @@
                 </tr>`;
                 }).join('') || `<tr><td colspan="9">暂无事前记录,点击新增记录开始录入</td></tr>`;
             } else {
-                const avgResp = rows.length ? (rows.reduce((s,r)=>s+safeNum(r.responseMin),0)/rows.length).toFixed(1) : 0;
-                document.getElementById('sys-detail-rate').innerText = avgResp + '分';
-                document.getElementById('sys-detail-risk').innerText = rows.filter(r => safeNum(r.waitMin) > 10 || safeNum(r.impactQty) < 0).length;
-                head.innerHTML = `<tr><th>日期</th><th>车间</th><th>线体</th><th>事件</th><th>响应时间(分)</th><th>停机等待(分)</th><th>影响数量</th><th>巡检记录</th><th>临时/永久对策</th><th>责任人</th><th>状态</th><th>删</th></tr>`;
+                const avgResp = rows.length ? (rows.reduce((s,r)=>s+safeNum(r.responseMin),0)/rows.length).toFixed(1) : '-';
+                const totalWait = rows.reduce((s,r)=>s+safeNum(r.waitMin),0);
+                const totalImpact = rows.reduce((s,r)=>s+safeNum(r.impactQty),0);
+                document.getElementById('sys-kpi-1-label').innerText = '本月记录';
+                document.getElementById('sys-detail-count').innerText = rows.length;
+                document.getElementById('sys-kpi-2-label').innerText = '平均响应';
+                document.getElementById('sys-detail-rate').innerText = (avgResp==='-'?'-':avgResp) + '分';
+                document.getElementById('sys-kpi-3-label').innerText = '停机时长';
+                document.getElementById('sys-detail-risk').innerText = totalWait + '分';
+                document.getElementById('sys-kpi-4-label').innerText = '影响数量';
+                document.getElementById('sys-detail-impact').innerText = totalImpact + '件';
+                head.innerHTML = `<tr><th style="width:10%;">日期</th><th style="width:8%;">车间</th><th style="width:8%;">线体</th><th style="width:28%;">事件</th><th style="width:10%;">响应(分)</th><th style="width:10%;">停机(分)</th><th style="width:10%;">影响数</th><th style="width:10%;">责任人</th><th style="width:6%;">删</th></tr>`;
                 body.innerHTML = rows.map(r => `<tr>
-                    <td><input type="date" value="${r.date}" onchange="updateSysRecord('${r.id}','date',this.value)"></td>
-                    <td><select onchange="updateSysRecord('${r.id}','ws',this.value)">${PRO_ORDER.map(ws=>`<option ${r.ws===ws?'selected':''}>${ws}</option>`).join('')}</select></td>
-                    <td><input value="${r.line||''}" onchange="updateSysRecord('${r.id}','line',this.value)"></td>
-                    <td><input value="${r.event||''}" onchange="updateSysRecord('${r.id}','event',this.value)"></td>
-                    <td><input type="number" value="${r.responseMin||0}" onchange="updateSysRecord('${r.id}','responseMin',this.value)"></td>
-                    <td><input type="number" value="${r.waitMin||0}" onchange="updateSysRecord('${r.id}','waitMin',this.value)"></td>
-                    <td><input type="number" value="${r.impactQty||0}" onchange="updateSysRecord('${r.id}','impactQty',this.value)"></td>
-                    <td><input value="${r.patrol||''}" onchange="updateSysRecord('${r.id}','patrol',this.value)"></td>
-                    <td><input value="${r.action||''}" onchange="updateSysRecord('${r.id}','action',this.value)"></td>
-                    <td><input value="${r.resp||''}" onchange="updateSysRecord('${r.id}','resp',this.value)"></td>
-                    <td><select onchange="updateSysRecord('${r.id}','status',this.value)"><option ${r.status==='已关闭'?'selected':''}>已关闭</option><option ${r.status==='处理中'?'selected':''}>处理中</option><option ${r.status==='升级'?'selected':''}>升级</option></select></td>
+                    <td><input type="date" value="${r.date}" onchange="updateSysRecord('${r.id}','date',this.value)" style="width:100%;"></td>
+                    <td><select onchange="updateSysRecord('${r.id}','ws',this.value)" style="width:100%;">${PRO_ORDER.map(ws=>`<option ${r.ws===ws?'selected':''}>${ws}</option>`).join('')}</select></td>
+                    <td><input value="${r.line||''}" onchange="updateSysRecord('${r.id}','line',this.value)" style="width:100%;"></td>
+                    <td><input value="${r.event||''}" onchange="updateSysRecord('${r.id}','event',this.value)" style="width:100%;min-width:160px;"></td>
+                    <td><input type="number" value="${r.responseMin||0}" onchange="updateSysRecord('${r.id}','responseMin',this.value)" style="width:50px;"></td>
+                    <td><input type="number" value="${r.waitMin||0}" onchange="updateSysRecord('${r.id}','waitMin',this.value)" style="width:50px;"></td>
+                    <td><input type="number" value="${r.impactQty||0}" onchange="updateSysRecord('${r.id}','impactQty',this.value)" style="width:55px;"></td>
+                    <td><input value="${r.resp||''}" onchange="updateSysRecord('${r.id}','resp',this.value)" style="width:100%;"></td>
                     <td><button onclick="delSysRecord('${r.id}')" style="border:none;background:none;color:var(--danger);cursor:pointer;"><i class="fa-solid fa-trash-can"></i></button></td>
-                </tr>`).join('') || `<tr><td colspan="12">暂无事中记录,点击新增记录开始录入</td></tr>`;
+                </tr>`).join('') || `<tr><td colspan="9">暂无事中记录,点击新增记录开始录入</td></tr>`;
             }
         } catch(e) { console.error('[renderSysDetail ERROR]', e.message, 'line', e.lineNumber || (e.stack||'').split('\n')[1]); }
         };
