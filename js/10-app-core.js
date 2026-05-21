@@ -2688,67 +2688,46 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             return sel ? sel.value : 'THUDM/GLM-4-9B-0414';
         }
         
-        // ===== Layer 1: 本地词典缓存 (LocalStorage) =====
-        var LOSS_ISSUE_DICT_KEY = '_lossIssueDict_v2';
-        
-        // 加载词典
-        function _loadIssueDict() {
-            try {
-                var saved = localStorage.getItem(LOSS_ISSUE_DICT_KEY);
-                return saved ? JSON.parse(saved) : {};
-            } catch(e) {
-                console.warn('[IssueDict] load failed:', e);
-                return {};
-            }
-        }
-        
-        // 保存词典
-        function _saveIssueDict(dict) {
-            try {
-                localStorage.setItem(LOSS_ISSUE_DICT_KEY, JSON.stringify(dict));
-            } catch(e) {
-                console.warn('[IssueDict] save failed:', e);
-            }
-        }
-        
-        // 获取标准化描述：查词典，未缓存则回退到原始文本
-        function _getStandardIssue(dict, text) {
-            if (!text) return '';
-            var key = text.trim();
-            return dict[key] || key;
-        }
-        
-        // ===== Layer 2: AI 批量语义聚类 - 强制参考词库 (Reference Dictionary) =====
-        window._aiBatchStandardize = async function(texts, referenceList) {
-            if (!texts || texts.length === 0) return {};
-            
-            var refStr = '[]';
-            if (referenceList && referenceList.length > 0) {
-                refStr = JSON.stringify(referenceList);
-            }
-            
-            var prompt = '你是一个极其严谨的精益生产数据分析专家。你的任务是对工厂今日新录入的「泰语异常描述 (Today_Issues)」进行标准化聚类。\n\n';
-            prompt += '【第一优先级：强制基准对照】\n';
-            prompt += '我会提供一个「历史标准异常词库 (Reference_List)」。\n';
-            prompt += '对于今日的每一条数据，你必须优先判断它是否属于 Reference_List 中的已有项。如果属于，必须一字不差地返回历史标准词，绝对禁止创造新词。只有当确认绝对没有匹配项时，才允许生成新的标准泰语描述。\n\n';
-            prompt += '【核心边界：如何判定「相同事件」与「不同事件」】\n';
-            prompt += '必须严格遵守以下工厂物理判定逻辑：\n\n';
-            prompt += '1. 相同事件（Same Event）的定义：\n';
-            prompt += '同一工位/设备 + 同一物理故障。即便泰语录入时的语序不同、使用了缩写或口语，只要指向同一个物理事实，必须归为一类。\n\n';
-            prompt += '✅ 示例 1（语序不同）：งานรั่ว DV (DV漏气) 与 พบรอยรั่วที่จุด DV (在DV发现漏气) -> 必须合并为相同的标准词。\n\n';
-            prompt += '✅ 示例 2（口语与书面语）：เครื่องความต้านทาน Alarm บ่อย (电阻机频繁报警) 与 เครื่องต้านทานร้อง (电阻机响了) -> 必须合并。\n\n';
-            prompt += '2. 不同事件（Different Event）的绝对红线：\n\n';
-            prompt += '红线 A：故障相同，但设备/工位不同（严禁合并）\n\n';
-            prompt += '❌ 示例 3：งานรั่ว DV (DV漏气) 与 งานรั่ว ท่อ (管子漏气) -> 虽然都是漏气，但位置不同，绝对不能合并，必须分别输出不同的标准词。\n\n';
-            prompt += '红线 B：设备相同，但故障现象不同（严禁合并）\n\n';
-            prompt += '❌ 示例 4：เครื่องความต้านทาน Alarm (电阻机报警) 与 เครื่องความต้านทาน ไฟดับ (电阻机断电) -> 虽然都是电阻机，但一个是报警，一个是断电，绝对不能合并。\n\n';
-            prompt += '【输入数据】\n';
-            prompt += 'Reference_List (历史词库): ' + refStr + '\n\n';
-            prompt += 'Today_Issues (今日待处理): ' + JSON.stringify(texts) + '\n\n';
-            prompt += '【输出格式】\n';
-            prompt += '严格返回 JSON 数组，映射今日数据的标准化结果：\n';
-            prompt += '[{"original_text":"今日原始泰语1","standard_issue":"匹配到的历史词或新建词"}, ...]';
-            
+        // ★ 单次全量 AI 对比分析：一次发送今日/昨日/本周数据，AI直接输出最终报表
+        window._aiDirectCompare = async function(todayData, yesterdayData, weeklyData) {
+            // 提取原始描述（去空），作为JSON数组发送
+            var todayList = [];
+            var seenToday = {};
+            todayData.forEach(function(l) {
+                var d = (l.desc || '').trim();
+                if (d && !seenToday[d]) { seenToday[d] = true; todayList.push(d); }
+            });
+            var yesterdayList = [];
+            var seenYes = {};
+            yesterdayData.forEach(function(l) {
+                var d = (l.desc || '').trim();
+                if (d && !seenYes[d]) { seenYes[d] = true; yesterdayList.push(d); }
+            });
+            var weeklyList = [];
+            var seenWk = {};
+            weeklyData.forEach(function(l) {
+                var d = (l.desc || '').trim();
+                if (d && !seenWk[d]) { seenWk[d] = true; weeklyList.push(d); }
+            });
+
+            var prompt = '你是一个泰语工厂的精益生产分析系统。你不需要做复杂的推理，你只需要绝对服从以下的「死命令」，以今天的数据为基准，对比昨天和本周的异常数据，直接输出合并后的 LOSS 统计表。\n\n';
+            prompt += '【输入数据】\n\n';
+            prompt += 'Today_List: ' + JSON.stringify(todayList) + '\n\n';
+            prompt += 'Yesterday_List: ' + JSON.stringify(yesterdayList) + '\n\n';
+            prompt += 'Weekly_List: ' + JSON.stringify(weeklyList) + '\n\n';
+            prompt += '【死命令：什么叫重复（相同事件）】\n';
+            prompt += '必须遵循以下绝对铁律判定：\n\n';
+            prompt += '漏气类铁律：只要都是在 DV 工位的漏气（例如：งานรั่ว DV, พบรอยรั่วที่จุด DV），必须算作同一个事件！但如果是 DV漏气 和 管子漏气，绝对不许合并！\n\n';
+            prompt += '设备报警类铁律：只要都是同一台设备的同一类报警（例如：เครื่องความต้านทาน Alarm บ่อย 和 เครื่องต้านทานร้อง 都是电阻机报警），必须算作同一个事件！\n\n';
+            prompt += '文字变体铁律：忽略所有的泰语语序颠倒、空格、口语化。只要指向同一个工位的同一个故障，就是同一个事件！\n\n';
+            prompt += '【你的任务】\n\n';
+            prompt += '1. 以 Today_List 中的事件为基础进行合并归类，生成标准描述（使用泰语）。\n\n';
+            prompt += '2. 拿着这些归类好的事件，去 Yesterday_List 中数一遍昨天出现了多少次。\n\n';
+            prompt += '3. 再拿着这些事件，去 Weekly_List 中数一遍本周总共出现了多少次。\n\n';
+            prompt += '【强制输出格式（只输出纯JSON）】\n';
+            prompt += '严格输出以下 JSON 数组格式，不要包含任何其他说明文字：\n';
+            prompt += '[{\"Issue\":\"标准的泰语描述(如 งานรั่ว DV)\",\"Today_Count\":今天出现的次数,\"Prev_Count\":昨天出现的次数,\"Weekly_Total\":本周总计出现的次数}, ...]';
+
             try {
                 var resp = await fetch(_AI_API_BASE, {
                     method: 'POST',
@@ -2756,164 +2735,51 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     body: JSON.stringify({
                         model: _getSelectedModel(),
                         messages: [
-                            { role: 'system', content: '你是一个极其严谨的精益生产数据分析专家。\n\n【强制规则】\n1. 必须优先使用 Reference_List 中的已有标准词，一字不差返回，禁止创造新词。\n2. 相同事件：同一工位/设备 + 同一物理故障（忽略泰语语序、口语、缩写差异）。\n3. 不同事件红线：设备不同但故障相同→严禁合并（如DV漏气≠管子漏气）；设备相同但故障不同→严禁合并（如电阻机报警≠电阻机断电）。\n4. 只输出JSON数组，严格逐条对应。不编造。不修改已有标准词。' },
+                            { role: 'system', content: '你是泰语工厂精益生产分析系统。绝对服从死命令。直接输出JSON数组。不输出任何其他文字。' },
                             { role: 'user', content: prompt }
                         ],
                         temperature: 0,
                         max_tokens: 4096
                     })
                 });
-                if (!resp.ok) return {};
+                if (!resp.ok) return { success: false, error: 'API error: ' + resp.status };
                 var data = await resp.json();
                 var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-                if (!content) return {};
-                var jsonMatch = content.match(/\[[\s\S]*\]/);
-                if (!jsonMatch) return {};
+                if (!content) return { success: false, error: 'Empty response' };
+                // 提取 JSON 数组
+                var jsonMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+                if (!jsonMatch) return { success: false, error: 'No JSON array in response' };
                 var parsed = JSON.parse(jsonMatch[0]);
-                if (!Array.isArray(parsed)) return {};
-                var result = {};
+                if (!Array.isArray(parsed)) return { success: false, error: 'Response is not an array' };
+                // 验证每个条目有必填字段
+                var validItems = [];
                 parsed.forEach(function(item) {
-                    if (item.original_text && item.standard_issue) {
-                        result[item.original_text.trim()] = item.standard_issue.trim();
+                    if (item.Issue) {
+                        validItems.push({
+                            Issue: String(item.Issue).trim(),
+                            Today_Count: typeof item.Today_Count === 'number' ? item.Today_Count : parseInt(item.Today_Count) || 0,
+                            Prev_Count: typeof item.Prev_Count === 'number' ? item.Prev_Count : parseInt(item.Prev_Count) || 0,
+                            Weekly_Total: typeof item.Weekly_Total === 'number' ? item.Weekly_Total : parseInt(item.Weekly_Total) || 0
+                        });
                     }
                 });
-                return result;
+                // 计算总计
+                var totalToday = 0, totalPrev = 0, repeatItems = 0;
+                validItems.forEach(function(item) {
+                    totalToday += item.Today_Count;
+                    totalPrev += item.Prev_Count;
+                    if (item.Prev_Count > 0) repeatItems++;
+                });
+                return {
+                    success: true,
+                    items: validItems,
+                    totalCur: totalToday,
+                    totalPrev: totalPrev,
+                    repeatCount: repeatItems
+                };
             } catch(e) {
-                console.warn('[AI Batch Standardize] failed:', e);
-                return {};
+                return { success: false, error: e.message || 'Unknown error' };
             }
-        };
-        
-        // ===== Layer 3: 三层架构主入口 =====
-        // 词典缓存 → AI语义聚类 → GroupBy聚合 + 趋势计算
-        window._stableAnalyzeRepeat = async function(losses, prevLosses) {
-            // --- Layer 1: 本地词典缓存 ---
-            var dict = _loadIssueDict();
-            
-            // 收集当日和前一天所有唯一的描述，找到未缓存的
-            var newTexts = [];
-            var seenTexts = {};
-            function collectUncached(arr) {
-                arr.forEach(function(l) {
-                    var d = (l.desc || '').trim();
-                    if (d && !seenTexts[d]) {
-                        seenTexts[d] = true;
-                        if (!dict[d]) newTexts.push(d);
-                    }
-                });
-            }
-            collectUncached(losses);
-            collectUncached(prevLosses);
-            
-            // --- Layer 2: 构建 Reference_List (历史标准词库) ---
-            // 从词典中提取所有已存在的 standard_issue（去重）
-            var referenceList = [];
-            var seenRef = {};
-            Object.keys(dict).forEach(function(raw) {
-                var si = dict[raw];
-                if (si && !seenRef[si]) {
-                    seenRef[si] = true;
-                    referenceList.push(si);
-                }
-            });
-            // 再从今日和昨日数据的原始描述中补全（未缓存但已在数据中的描述）
-            function collectRawIssues(arr) {
-                arr.forEach(function(l) {
-                    var d = (l.desc || '').trim().toLowerCase();
-                    if (d && !seenRef[d]) {
-                        seenRef[d] = true;
-                        referenceList.push(d);
-                    }
-                });
-            }
-            collectRawIssues(losses);
-            collectRawIssues(prevLosses);
-            
-            // --- Layer 2: AI 批量语义聚类（仅增量 + 带参考词库） ---
-            if (newTexts.length > 0) {
-                var aiMappings = await window._aiBatchStandardize(newTexts, referenceList);
-                var updated = false;
-                Object.keys(aiMappings).forEach(function(key) {
-                    if (!dict[key]) {
-                        dict[key] = aiMappings[key];
-                        updated = true;
-                        // 将新映射的标准词也加入参考列表（后续让AI复用）
-                        var newSi = aiMappings[key];
-                        if (newSi && !seenRef[newSi]) {
-                            seenRef[newSi] = true;
-                            referenceList.push(newSi);
-                        }
-                    }
-                });
-                if (updated) _saveIssueDict(dict);
-            }
-            
-            // 获取标准化描述（包装）
-            function std(text) {
-                return _getStandardIssue(dict, text);
-            }
-            
-            // --- Layer 3: GroupBy 聚合 + 趋势计算 ---
-            // 按 standard_issue 分组（当日）
-            var todayGroups = {};
-            losses.forEach(function(l) {
-                var si = std(l.desc);
-                if (!todayGroups[si]) {
-                    todayGroups[si] = { standard_issue: si, qty: 0, dept: l.dept || 'Other', line: l.line || '' };
-                }
-                todayGroups[si].qty += Math.abs(safeNum(l.qty));
-            });
-            
-            // 按 standard_issue 分组（前一天）
-            var prevGroups = {};
-            prevLosses.forEach(function(l) {
-                var si = std(l.desc);
-                if (!prevGroups[si]) {
-                    prevGroups[si] = { standard_issue: si, qty: 0 };
-                }
-                prevGroups[si].qty += Math.abs(safeNum(l.qty));
-            });
-            
-            // 构建输出：所有唯一问题（重复 + 新问题）
-            var allItems = [];
-            var actualRepeatCount = 0;
-            Object.keys(todayGroups).forEach(function(si) {
-                var today = todayGroups[si];
-                var prev = prevGroups[si];
-                var prevQty = prev ? prev.qty : 0;
-                
-                var trend = 'new';
-                if (prevQty > 0) {
-                    actualRepeatCount++;
-                    if (today.qty < prevQty * 0.7) trend = 'improved';
-                    else if (today.qty > prevQty * 1.3) trend = 'worsened';
-                    else trend = 'chronic';
-                }
-                
-                allItems.push({
-                    curIdx: -1,
-                    desc: si,                              // 标准化描述
-                    prevDesc: prev ? si : '',
-                    curQty: today.qty,
-                    prevQty: prevQty,
-                    dept: today.dept,
-                    line: today.line,
-                    trend: trend,
-                    reason: trend === 'improved' ? '改善: ' + prevQty + '→' + today.qty : (trend === 'worsened' ? '恶化: ' + prevQty + '→' + today.qty : (trend === 'chronic' ? '持续' : '新问题'))
-                });
-            });
-            
-            // 按今日数量降序排序
-            allItems.sort(function(a, b) { return b.curQty - a.curQty; });
-            
-            return {
-                success: true,
-                items: allItems,
-                repeatCount: actualRepeatCount,
-                totalCur: Object.keys(todayGroups).length,
-                totalPrev: Object.keys(prevGroups).length,
-                dict: dict
-            };
         };
 
 // ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
@@ -3117,52 +2983,25 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 });
                 return items;
             }
-            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, repeatedItems, methodLabel, allLosses, startDate, endDate, optDict, optRepeatCount) {
+            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, items, methodLabel) {
                 var h = '';
-                var dict = optDict || null;
-                var repeatCount = (optRepeatCount !== undefined && optRepeatCount !== null) ? optRepeatCount : repeatedItems.length;
-                var repeatRate = curTotal > 0 ? Math.round(repeatCount / curTotal * 100) : 0;
-                var newIssues = curTotal - repeatCount;
-
-                // --- 计算本周起始日（周一） ---
-                var _wkStart = (function(dStr) {
-                    var d = new Date(dStr + 'T00:00:00');
-                    var day = d.getDay();
-                    var diff = (day === 0 ? 6 : day - 1);
-                    d.setDate(d.getDate() - diff);
-                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                })(startDate || endDate);
-
-                // --- WTD计算：基于清洗后的 standard_issue 累加 ---
-                function _calcWTD(stdIssue, maxDate) {
-                    if (!allLosses || !stdIssue) return 0;
-                    var sum = 0;
-                    var targetStd = String(stdIssue).trim().toLowerCase();
-                    for (var i = 0; i < allLosses.length; i++) {
-                        var l = allLosses[i];
-                        if (l.date >= _wkStart && l.date <= maxDate) {
-                            var rawDesc = (l.desc || '').trim();
-                            // 使用词典清洗为标准化描述再匹配
-                            var lossStd = rawDesc.toLowerCase();
-                            if (dict && dict[rawDesc]) {
-                                lossStd = dict[rawDesc].toLowerCase();
-                            }
-                            if (lossStd === targetStd) {
-                                sum += Math.abs(safeNum(l.qty));
-                            }
-                        }
-                    }
-                    return sum;
-                }
+                var repeatCount = 0;
+                var newItemsCount = 0;
+                items.forEach(function(item) {
+                    if (item.Prev_Count > 0) repeatCount++;
+                    else newItemsCount++;
+                });
+                var totalUnique = items.length;
+                var repeatRate = totalUnique > 0 ? Math.round(repeatCount / totalUnique * 100) : 0;
 
                 h += '<div style="padding: 6px 0;">';
 
                 // KPI overview
                 h += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">';
                 h += '<div style="flex:1;min-width:70px;background:#fef2f2;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fecaca;">';
-                    h += '<div style="font-size:10px;color:#991b1b;font-weight:700;">Today LOSS</div>';
+                    h += '<div style="font-size:10px;color:#991b1b;font-weight:700;">Today Total</div>';
                     h += '<div style="font-size:18px;font-weight:900;color:#dc2626;">' + curTotal + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">' + start + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">occurrences</div>';
                 h += '</div>';
                 h += '<div style="flex:1;min-width:70px;background:#f0fdf4;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bbf7d0;">';
                     h += '<div style="font-size:10px;color:#166534;font-weight:700;">Previous Day</div>';
@@ -3170,65 +3009,45 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     h += '<div style="font-size:9px;color:#9ca3af;">' + prevDate + '</div>';
                 h += '</div>';
                 h += '<div style="flex:1;min-width:70px;background:#fffbeb;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fde68a;">';
-                    h += '<div style="font-size:10px;color:#92400e;font-weight:700;">Repeat LOSS</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + repeatCount + '</div>';
+                    h += '<div style="font-size:10px;color:#92400e;font-weight:700;">Repeat</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + repeatCount + '/' + totalUnique + '</div>';
                     h += '<div style="font-size:9px;color:#9ca3af;">Rate ' + repeatRate + '%</div>';
                 h += '</div>';
                 h += '<div style="flex:1;min-width:70px;background:#eff6ff;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bfdbfe;">';
-                    h += '<div style="font-size:10px;color:#1e40af;font-weight:700;">New Issues</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#3b82f6;">' + newIssues + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">' + (curTotal > 0 ? Math.round(newIssues / curTotal * 100) : 0) + '% new</div>';
+                    h += '<div style="font-size:10px;color:#1e40af;font-weight:700;">New</div>';
+                    h += '<div style="font-size:18px;font-weight:900;color:#3b82f6;">' + newItemsCount + '</div>';
+                    h += '<div style="font-size:9px;color:#9ca3af;">unique issues</div>';
                 h += '</div>';
                 h += '</div>';
 
-                // Method label
                 h += '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-style:italic;">' + methodLabel + '</div>';
 
-                if (repeatedItems.length > 0) {
-                    // Pre-calculate WTD for each item: match BOTH desc AND prevDesc (semantic variants)
-                    var wtdMap = {};
-                    repeatedItems.forEach(function(item) {
-                        var descs = [item.desc];
-                        if (item.prevDesc && String(item.prevDesc).trim() !== String(item.desc).trim()) {
-                            descs.push(item.prevDesc);
-                        }
-                        var total = 0;
-                        for (var di = 0; di < descs.length; di++) {
-                            total += _calcWTD(descs[di], endDate || startDate);
-                        }
-                        wtdMap[item.desc] = total;
-                    });
-
-                    // Sort by WTD DESC, then Today DESC, then Prev DESC
-                    var sortedItems = repeatedItems.slice().sort(function(a, b) {
-                        var wtdA = wtdMap[a.desc] || 0;
-                        var wtdB = wtdMap[b.desc] || 0;
-                        if (wtdB !== wtdA) return wtdB - wtdA;
-                        if (b.curQty !== a.curQty) return b.curQty - a.curQty;
-                        return b.prevQty - a.prevQty;
+                if (items.length > 0) {
+                    // Sort by Today_Count DESC
+                    var sortedItems = items.slice().sort(function(a, b) {
+                        return b.Today_Count - a.Today_Count;
                     });
 
                     h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
                     h += '<tr><th style="width:8%;text-align:center;">#</th><th style="width:30%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;line-height:1.15;padding:6px 4px;">Weekly<br>Total</th><th style="width:15%;text-align:center;">Trend</th></tr>';
                     sortedItems.slice(0, 8).forEach(function(item, rankIdx) {
-                        var wtd = wtdMap[item.desc] || 0;
-                        // Trend icons: ↑ red = worsened, ↓ green = improved, ↔ yellow = chronic, 🆕 blue = new
+                        // Trend: JS 判断 Today_Count vs Prev_Count
                         var trendHtml = '';
-                        if (item.trend === 'worsened') {
-                            trendHtml = '<span style="color:#dc2626;font-size:18px;font-weight:900;">\u2191</span>';
-                        } else if (item.trend === 'improved') {
-                            trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';
-                        } else if (item.trend === 'new') {
+                        if (item.Today_Count > item.Prev_Count) {
+                            trendHtml = '<span style="color:#dc2626;font-size:18px;font-weight:900;">\u2191</span>';  // ↑ red = worsened
+                        } else if (item.Today_Count < item.Prev_Count) {
+                            trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';  // ↓ green = improved
+                        } else if (item.Today_Count === 0 && item.Prev_Count === 0) {
                             trendHtml = '<span style="color:#dc2626;font-size:11px;font-weight:900;border:1px solid #dc2626;border-radius:2px;padding:0px 3px;">NEW</span>';
                         } else {
-                            trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
+                            trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';  // ↔ yellow = same
                         }
                         h += '<tr>';
                         h += '<td style="text-align:center;font-weight:700;color:#6b7280;font-size:11px;">' + (rankIdx + 1) + '</td>';
-                        h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + item.desc.replace(/"/g,'&quot;') + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.curQty + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.prevQty + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:12px;">' + wtd + '</td>';
+                        h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + (item.Issue || '').replace(/"/g,'&quot;') + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.Today_Count + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.Prev_Count + '</td>';
+                        h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:12px;">' + item.Weekly_Total + '</td>';
                         h += '<td style="text-align:center;font-size:14px;font-weight:900;">' + trendHtml + '</td>';
                         h += '</tr>';
                     });
@@ -3240,7 +3059,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     h += '<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px;border:1px dashed #86efac;margin-bottom:6px;">';
                     h += '<i class="fa-solid fa-check-circle" style="color:#16a34a;font-size:20px;"></i>';
                     h += '<div style="font-size:13px;font-weight:700;color:#166534;margin-top:4px;">No Repeat LOSS Detected</div>';
-                    h += '<div style="font-size:11px;color:#4ade80;margin-top:2px;">No similar issues vs ' + prevDate + '</div>';
+                    h += '<div style="font-size:11px;color:#4ade80;margin-top:2px;">All unique issues vs ' + prevDate + '</div>';
                     h += '</div>';
                 }
                 h += '</div>';
@@ -3252,7 +3071,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             html += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
             html += '<div id="cr-c-loading" style="text-align:center;padding:20px;">';
             html += '<i class="fa-solid fa-spinner fa-spin" style="font-size:20px;color:#6366f1;"></i>';
-            html += '<div style="font-size:13px;color:#6366f1;margin-top:6px;"><span id="cr-c-model-name">' + (_getSelectedModel().split('/').pop() || 'AI') + '</span> analyzing repeat LOSS...</div>';
+            html += '<div style="font-size:13px;color:#6366f1;margin-top:6px;"><span id="cr-c-model-name">' + (_getSelectedModel().split('/').pop() || 'AI') + '</span> analyzing today vs yesterday vs weekly...</div>';
             html += '</div>';
             html += '</div>';
             
@@ -3264,16 +3083,25 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             document.getElementById('compact-report-content').innerHTML = html;
             document.getElementById('compact-report-wrap').style.display = 'flex';
 
-            // --- 纯AI分析（无Bigram），先合并相同描述，再双重AI调用确保稳定 ---
+            // --- 单次全量 AI 直出：今日 / 昨日 / 本周明细 → AI 直接输出报表 ---
             (async function() {
-                // 1. Merge same-day identical descriptions (白班+夜班同问题→1条)
-                var mergedToday = _crMergeByDesc(losses);
-                var mergedYesterday = _crMergeByDesc(_prevLosses);
+                // 计算本周起始日（周一）
+                var _wkStart = (function(dStr) {
+                    var d = new Date(dStr + 'T00:00:00');
+                    var day = d.getDay();
+                    var diff = (day === 0 ? 6 : day - 1);
+                    d.setDate(d.getDate() - diff);
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                })(end);
 
-                // 2. Pure AI analysis (double call for stability, union of both)
+                // 收集本周所有数据（周一到end）
+                var weeklyData = db.loss.filter(function(l) {
+                    return l.date >= _wkStart && l.date <= end;
+                });
+
                 var aiResult = null;
                 try {
-                    aiResult = await window._stableAnalyzeRepeat(mergedToday, mergedYesterday);
+                    aiResult = await window._aiDirectCompare(losses, _prevLosses, weeklyData);
                 } catch(e) {
                     aiResult = { success: false, error: e.message };
                 }
@@ -3282,19 +3110,14 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 if (!cSection) return;
 
                 var cHtml = '';
-                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis \u2014 ' + start + ' vs ' + _prevDate + '</div>';
+                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
 
                 if (aiResult && aiResult.success) {
                     var aiItems = aiResult.items || [];
-                    var issueDict = aiResult.dict || null;
-                    var actualRepeatCount = aiResult.repeatCount !== undefined ? aiResult.repeatCount : aiItems.length;
                     cHtml += _crRenderRepeatSection(
-                        mergedToday.length, mergedYesterday.length, _prevDate,
+                        aiResult.totalCur, aiResult.totalPrev, _prevDate,
                         aiItems,
-                        'Standardized'
-                            + (issueDict && Object.keys(issueDict).length > 0 ? ' (Dict: ' + Object.keys(issueDict).length + ' issues)' : ''),
-                        db.loss, start, end,
-                        issueDict, actualRepeatCount
+                        'AI Direct Compare (Today vs Yesterday vs Weekly)'
                     );
                 } else {
                     cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
