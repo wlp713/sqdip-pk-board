@@ -7878,9 +7878,12 @@ window.generateImprovePoster = function() {
         function calcDateFS(t) { return (t || '').length > 10 ? '9px' : '10px'; }
 
         // Sidebar dark blue gradient (low saturation, visible gradient)
-        var SIDE_A = '#1E2738', SIDE_B = '#3A4F6A';
-        var SIDE_GRAD = 'linear-gradient(180deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
-        var SIDE_GRAD_135 = 'linear-gradient(135deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
+        // Section titles = PRIMARY (Level 1: brighter, more saturated)
+        var SEC_A = '#1A2638', SEC_B = '#506F90';
+        var SEC_GRAD_135 = 'linear-gradient(135deg, ' + SEC_A + ' 0%, ' + SEC_B + ' 100%)';
+        // Dept bars = SECONDARY (Level 2: lower saturation, more muted)
+        var DEPT_A = '#1E2738', DEPT_B = '#35475E';
+        var DEPT_GRAD = 'linear-gradient(180deg, ' + DEPT_A + ' 0%, ' + DEPT_B + ' 100%)';
 
         // ==================== BUILD HTML ====================
         var h = '<div class="ip-poster">';
@@ -7906,7 +7909,7 @@ window.generateImprovePoster = function() {
 
         // ---- 2.5 STATUS ICON LEGEND ----
         h += '<div class="ip-legend">';
-        h += '<span style="font-weight:800;color:#1E2330;font-size:10px;margin-right:4px;">\uD83D\uDCD6 图例 Legend:</span>';
+        h += '<span style="font-weight:800;color:' + SEC_A + ';font-size:10px;margin-right:4px;">\uD83D\uDCD6 图例 Legend:</span>';
         h += '<span class="ip-legend-item">\u2705 已完成 Closed</span>';
         h += '<span class="ip-legend-item">\uD83D\uDFE1 进行中 In Progress</span>';
         h += '<span class="ip-legend-item" style="color:#dc2626;font-weight:800;">\u26A0\uFE0F 逾期 Overdue</span>';
@@ -7960,7 +7963,7 @@ window.generateImprovePoster = function() {
                 if (notCount > 0) sumParts.push('\u26AA未开始' + notCount);
 
                 // Dept header: sidebar blue gradient OR red for overdue
-                var hdrGrad = hasOverdue ? 'linear-gradient(180deg, #dc2626 0%, #ef4444 100%)' : SIDE_GRAD;
+                var hdrGrad = hasOverdue ? 'linear-gradient(180deg, #dc2626 0%, #ef4444 100%)' : DEPT_GRAD;
 
                 html += '<div class="ip-dept-block">';
                 html += '<div class="ip-dept-bar" style="background:' + hdrGrad + ';">';
@@ -8018,8 +8021,8 @@ window.generateImprovePoster = function() {
             '*{margin:0;padding:0;box-sizing:border-box;}' +
             '.pwrap{width:960px;background:#fff;padding:10px 16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#1e293b;}' +
             // HEADER
-            '.pwrap .ip-hdr{text-align:center;padding-bottom:6px;border-bottom:3px solid ' + SIDE_A + ';margin-bottom:8px;}' +
-            '.pwrap .ip-title{font-size:22px;font-weight:900;color:' + SIDE_A + ';letter-spacing:1px;}' +
+            '.pwrap .ip-hdr{text-align:center;padding-bottom:6px;border-bottom:3px solid ' + SEC_A + ';margin-bottom:8px;}' +
+            '.pwrap .ip-title{font-size:22px;font-weight:900;color:' + SEC_A + ';letter-spacing:1px;}' +
             '.pwrap .ip-subtitle{font-size:11px;font-weight:600;color:#64748b;margin:2px 0;}' +
             '.pwrap .ip-period{font-size:9px;color:#64748b;font-weight:600;margin-top:2px;}' +
             // SUMMARY BAR
@@ -8029,16 +8032,16 @@ window.generateImprovePoster = function() {
             '.pwrap .ip-sum-item .ip-cn{display:block;font-size:9px;font-weight:700;line-height:1.2;letter-spacing:0.5px;}' +
             '.pwrap .ip-sum-item .ip-en{display:block;font-size:8px;font-weight:500;color:#64748b;line-height:1.2;}' +
             // LEGEND (status icons)
-            '.pwrap .ip-legend{display:flex;gap:10px;justify-content:center;align-items:center;padding:3px 8px;margin-bottom:5px;background:#f1f4f9;border-radius:4px;border:1px solid #d1d9e6;}' +
+            '.pwrap .ip-legend{display:flex;gap:10px;justify-content:center;align-items:center;padding:3px 8px;margin-bottom:5px;background:#e8eef5;border-radius:4px;border:1px solid ' + SEC_A + '33;}' +
             '.pwrap .ip-legend-item{font-size:9px;font-weight:600;color:#475569;}' +
             // SECTION
             '.pwrap .ip-sec{margin-bottom:6px;}' +
-            '.pwrap .ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:' + SIDE_GRAD_135 + ';padding:3px 10px;border-radius:4px;margin-bottom:4px;}' +
+            '.pwrap .ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:' + SEC_GRAD_135 + ';padding:3px 10px;border-radius:4px;margin-bottom:4px;}' +
             // CHART
             '.pwrap .ip-chart{padding:2px 0;}' +
             '.pwrap .ip-chart-row{display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;margin-bottom:1px;}' +
             '.pwrap .ip-chart-label{font-size:10px;font-weight:700;color:#1e293b;white-space:nowrap;min-width:52px;overflow:hidden;text-overflow:ellipsis;}' +
-            '.pwrap .ip-chart-bar-wrap{flex:1;height:12px;border-radius:6px;overflow:hidden;background:#f1f5f9;}' +
+            '.pwrap .ip-chart-bar-wrap{flex:1;height:12px;border-radius:6px;overflow:hidden;background:#eaf0f7;}' +
             '.pwrap .ip-chart-bar{height:100%;border-radius:6px;min-width:3px;}' +
             '.pwrap .ip-chart-rate{font-size:10px;font-weight:800;white-space:nowrap;min-width:30px;text-align:right;}' +
             '.pwrap .ip-chart-brk{font-size:8px;white-space:nowrap;min-width:60px;text-align:right;color:#94a3b8;}' +
@@ -8049,14 +8052,14 @@ window.generateImprovePoster = function() {
             '.pwrap .ip-table-grid{display:flex;gap:8px;}' +
             '.pwrap .ip-col{flex:1;min-width:0;}' +
             // DEPT BLOCK
-            '.pwrap .ip-dept-block{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;}' +
+            '.pwrap .ip-dept-block{margin-bottom:5px;border:1px solid #d5dbe6;border-radius:6px;overflow:hidden;}' +
             // DEPT HEADER BAR (low-sat dark blue gradient, or red for overdue)
             '.pwrap .ip-dept-bar{display:flex;align-items:center;gap:8px;padding:5px 8px;color:#fff;}' +
             '.pwrap .ip-dept-bar-name{font-size:14px;font-weight:900;letter-spacing:0.5px;}' +
             '.pwrap .ip-dept-bar-count{font-size:10px;font-weight:600;opacity:0.9;}' +
             '.pwrap .ip-dept-bar-sum{font-size:9px;font-weight:500;opacity:0.85;margin-left:auto;}' +
             // SUB-HEADER
-            '.pwrap .ip-sub-hdr{display:flex;align-items:center;gap:2px;padding:2px 6px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;}' +
+            '.pwrap .ip-sub-hdr{display:flex;align-items:center;gap:2px;padding:2px 6px;background:#eaf0f7;border-bottom:1px solid #d5dbe6;}' +
             '.pwrap .ip-sub-hdr-date{font-size:9px;font-weight:700;color:#64748b;min-width:64px;}' +
             '.pwrap .ip-sub-hdr-name{flex:1;font-size:9px;font-weight:700;color:#64748b;}' +
             '.pwrap .ip-sub-hdr-status{font-size:9px;font-weight:700;color:#64748b;min-width:62px;text-align:center;}' +
@@ -8072,7 +8075,7 @@ window.generateImprovePoster = function() {
             '.pwrap .ip-item-end-over{color:#dc2626;font-weight:700;}' +
             '.pwrap .ip-badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;line-height:1.4;}' +
             // FOOTER
-            '.pwrap .ip-footer{text-align:center;font-size:9px;color:#94a3b8;margin-top:6px;padding-top:4px;border-top:1px solid #e2e8f0;}' +
+            '.pwrap .ip-footer{text-align:center;font-size:9px;color:#94a3b8;margin-top:6px;padding-top:4px;border-top:1px solid #d5dbe6;}' +
             '</style>';
 
         var posterHTML = '<div class="pwrap">' + inlineCSS + h + '</div>';
