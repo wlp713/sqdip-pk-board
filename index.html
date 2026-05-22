@@ -689,12 +689,34 @@
                     <div class="cr-toolbar">
                         <h3><i class="fa-solid fa-file-image"></i> LOSS 紧凑通报报告</h3>
                         <div class="cr-actions">
+                            <button class="btn-cr-img" onclick="window.openPasteRepeatUI()"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS</button>
                             <button class="btn-cr-img" onclick="downloadCRImage()"><i class="fa-solid fa-download"></i> 生成长图</button>
                             <button class="btn-cr-close" onclick="document.getElementById('compact-report-wrap').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
-
                         </div>
                     </div>
                     <div class="compact-report-scroll" id="compact-report-content"></div>
+                </div>
+            </div>
+            <!-- 粘贴重复LOSS分析模态框 -->
+            <div id="cr-paste-modal" class="modal-overlay" onclick="if(event.target===this)safeCloseModal('cr-paste-modal')">
+                <div class="paste-box" style="max-width:600px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h3 style="color:var(--warning);font-size:16px;font-weight:800;margin:0;"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS分析结果</h3>
+                        <button class="btn btn-danger" onclick="safeCloseModal('cr-paste-modal')"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p style="color:var(--text-muted);margin-bottom:12px;font-size:12px;line-height:1.5;">
+                        将外部AI分析的重复LOSS结果粘贴到下方文本框。<br>
+                        <b>支持格式：</b>JSON数组 / Markdown表格 / 制表符分隔 / 带|分隔的文本 / 自由文本<br>
+                        <b>示例JSON：</b><code>[{"Issue":"งานรั่ว DV","Today_Count":5,"Prev_Count":3,"Weekly_Total":15}]</code>
+                    </p>
+                    <textarea id="cr-paste-input" class="paste-area" placeholder="在此粘贴外部AI分析的重复LOSS结果..."></textarea>
+                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-ai" onclick="window.parsePastedRepeatLoss()" id="btn-parse-repeat"><i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染</button>
+                        <button class="btn" onclick="window.parsePastedRepeatLoss({forceBigram:true})" style="border:1px dashed #6366f1;color:#6366f1;"><i class="fa-solid fa-calculator"></i> 使用本地Bigram分析</button>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                        <i class="fa-solid fa-lightbulb"></i> 提示：使用外部AI分析后复制结果JSON/表格，粘贴后点击"解析并渲染"即可自动识别格式生成表格。
+                    </div>
                 </div>
             </div>
             <div id="repeatLossModal" class="loss-link-modal">

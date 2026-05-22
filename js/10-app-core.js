@@ -2666,8 +2666,222 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
 
         // ================= 紧凑报告生成(LOSS页面) =================
         window._crData = null;
-        
-        // ★ 同一天内相同描述的LOSS合并（白班+夜班同问题合并为1条）
+
+        // ★ 打开粘贴重复LOSS弹窗
+        window.openPasteRepeatUI = function() {
+            var modal = document.getElementById('cr-paste-modal');
+            if (!modal) { showToast('fa-solid fa-xmark', '弹窗DOM未找到', 'error'); return; }
+            var ta = document.getElementById('cr-paste-input');
+            if (ta) { ta.value = ''; ta.focus(); }
+            modal.style.display = 'flex';
+        };
+
+        // ★ 本地Bigram分析（一键替代AI）
+        window.runLocalBigramCr = function() {
+            var ctx = window._crPasteCtx;
+            if (!ctx || !ctx.losses || ctx.losses.length === 0) {
+                showToast('fa-solid fa-exclamation-triangle', '请先生成紧凑报告', 'error');
+                return;
+            }
+            var cSection = document.getElementById('cr-section-c');
+            if (!cSection) { showToast('fa-solid fa-exclamation-triangle', '未找到C节区域', 'error'); return; }
+
+            try {
+                var _biItems = _crCalcRepeatByBigram(ctx.losses, ctx.prevLosses);
+                var cHtml = '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + ctx.start + ' vs ' + ctx._prevDate + '</div>';
+                var _mappedItems = [];
+                var _biCurTotal = 0, _biPrevTotal = 0;
+                _biItems.forEach(function(bi) {
+                    var wt = 0;
+                    (ctx.weeklyData||[]).forEach(function(wl) {
+                        var d = String(wl.desc||'').trim();
+                        if (d && _crBigramSim(bi.desc, d) >= 0.75) wt += Math.abs(safeNum(wl.qty));
+                    });
+                    _mappedItems.push({
+                        Issue: bi.desc,
+                        Today_Count: bi.curQty,
+                        Prev_Count: bi.prevQty,
+                        Weekly_Total: wt
+                    });
+                    _biCurTotal += bi.curQty;
+                    _biPrevTotal += bi.prevQty;
+                });
+                if (_mappedItems.length > 0) {
+                    cHtml += _crRenderRepeatSection(_biCurTotal, _biPrevTotal, ctx._prevDate, _mappedItems, 'Bigram Similarity (Local Algorithm)');
+                } else {
+                    cHtml += '<div style="padding:12px;text-align:center;color:#64748b;font-size:13px;">未检测到重复LOSS（Bigram本地分析未发现重复）</div>';
+                }
+                cSection.innerHTML = cHtml;
+                showToast('fa-solid fa-check', '本地Bigram分析完成');
+            } catch(e) {
+                cSection.innerHTML = '<div class="cr-section-title">C. Repeat LOSS Analysis</div><div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">Bigram分析错误: ' + e.message + '</div>';
+            }
+        };
+
+        // ★ 核心：解析粘贴的外部AI结果并渲染C节
+        window.parsePastedRepeatLoss = function(opts) {
+            opts = opts || {};
+            if (opts.forceBigram) {
+                window.runLocalBigramCr();
+                return;
+            }
+
+            var ta = document.getElementById('cr-paste-input');
+            if (!ta || !ta.value.trim()) {
+                showToast('fa-solid fa-exclamation-triangle', '请先粘贴外部AI分析结果', 'error');
+                return;
+            }
+            var raw = ta.value.trim();
+            var ctx = window._crPasteCtx;
+            if (!ctx) { showToast('fa-solid fa-exclamation-triangle', '请先生成紧凑报告', 'error'); return; }
+
+            var cSection = document.getElementById('cr-section-c');
+            if (!cSection) { showToast('fa-solid fa-exclamation-triangle', '未找到C节区域', 'error'); return; }
+
+            var btn = document.getElementById('btn-parse-repeat');
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解析中...'; btn.disabled = true; }
+
+            try {
+                var items = _autoParseCrInput(raw);
+                if (!items || items.length === 0) {
+                    showToast('fa-solid fa-exclamation-triangle', '未能从粘贴内容中解析出数据，请检查格式', 'error');
+                    if (btn) { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染'; btn.disabled = false; }
+                    return;
+                }
+
+                var totalToday = 0, totalPrev = 0, repeatCount = 0;
+                items.forEach(function(item) {
+                    totalToday += item.Today_Count;
+                    totalPrev += item.Prev_Count;
+                    if (item.Prev_Count > 0) repeatCount++;
+                });
+
+                var cHtml = '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + ctx.start + ' vs ' + ctx._prevDate + '</div>';
+                cHtml += _crRenderRepeatSection(
+                    totalToday, totalPrev, ctx._prevDate,
+                    items,
+                    'External AI Analysis (Pasted)'
+                );
+                cSection.innerHTML = cHtml;
+
+                var modal = document.getElementById('cr-paste-modal');
+                if (modal) modal.style.display = 'none';
+
+                showToast('fa-solid fa-check', '已渲染 ' + items.length + ' 条重复LOSS分析');
+            } catch(e) {
+                showToast('fa-solid fa-xmark', '解析失败: ' + e.message, 'error');
+                if (cSection) {
+                    cSection.innerHTML = '<div class="cr-section-title">C. Repeat LOSS Analysis</div><div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">解析错误: ' + e.message + '</div>';
+                }
+            } finally {
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染'; btn.disabled = false; }
+            }
+        };
+
+        // ★ 自动识别粘贴格式并解析为 items[]
+        function _autoParseCrInput(raw) {
+            // --- 策略1: JSON 数组 ---
+            var jsonMatch = raw.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+            if (jsonMatch) {
+                try {
+                    var parsed = JSON.parse(jsonMatch[0]);
+                    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].Issue !== undefined) {
+                        return parsed.map(function(item) {
+                            return {
+                                Issue: String(item.Issue || item.issue || item.问题 || item.desc || item.description || '').trim(),
+                                Today_Count: typeof item.Today_Count === 'number' ? item.Today_Count : (typeof item.today_count === 'number' ? item.today_count : (typeof item.今日 === 'number' ? item.今日 : parseInt(item.Today_Count || item.today_count || item.今日 || 0) || 0)),
+                                Prev_Count: typeof item.Prev_Count === 'number' ? item.Prev_Count : (typeof item.prev_count === 'number' ? item.prev_count : (typeof item.昨日 === 'number' ? item.昨日 : parseInt(item.Prev_Count || item.prev_count || item.昨日 || 0) || 0)),
+                                Weekly_Total: typeof item.Weekly_Total === 'number' ? item.Weekly_Total : (typeof item.weekly_total === 'number' ? item.weekly_total : (typeof item.本周 === 'number' ? item.本周 : parseInt(item.Weekly_Total || item.weekly_total || item.本周 || 0) || 0))
+                            };
+                        });
+                    }
+                } catch(e) { /* 不是JSON，继续解析 */ }
+            }
+
+            // --- 策略2: Markdown 表格 ---
+            var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+            var pipeLines = lines.filter(function(l) { return l.indexOf('|') >= 0 && l.replace(/[-\s|]/g,'').length > 0; });
+            var dataPipeLines = pipeLines.filter(function(l) { return !/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s)*\|?\s*$/.test(l); });
+
+            if (dataPipeLines.length >= 2) {
+                for (var pi = 1; pi < dataPipeLines.length; pi++) {
+                    var cells0 = dataPipeLines[0].split('|').map(function(c) { return c.trim(); }).filter(Boolean);
+                    var cells1 = dataPipeLines[pi].split('|').map(function(c) { return c.trim(); }).filter(Boolean);
+                    if (cells1.length >= 2) {
+                        var hasNums = cells1.some(function(c) { return /\d+/.test(c); });
+                        if (hasNums) {
+                            var result = [];
+                            for (var r = pi; r < dataPipeLines.length; r++) {
+                                var row = dataPipeLines[r].split('|').map(function(c) { return c.trim(); }).filter(Boolean);
+                                if (row.length < 2) continue;
+                                var issue = '', today = 0, prev = 0, weekly = 0;
+                                var firstIsNum = /^\d+$/.test(row[0].replace(/[#.]/g,''));
+                                var startIdx = firstIsNum ? 1 : 0;
+                                if (row.length >= startIdx + 2) {
+                                    issue = row[startIdx];
+                                    var nums = [];
+                                    for (var ci = startIdx + 1; ci < row.length; ci++) {
+                                        var cv = parseFloat(row[ci].replace(/[,%\u2191\u2193\u2194NEW]/g,''));
+                                        if (!isNaN(cv)) nums.push(cv);
+                                    }
+                                    today = nums[0] || 0;
+                                    prev = nums[1] || 0;
+                                    weekly = nums[2] || 0;
+                                    if (issue && (today > 0 || prev > 0 || weekly > 0)) {
+                                        result.push({ Issue: issue, Today_Count: today, Prev_Count: prev, Weekly_Total: weekly });
+                                    }
+                                }
+                            }
+                            if (result.length > 0) return result;
+                        }
+                    }
+                }
+            }
+
+            // --- 策略3: CSV/Tab ---
+            var csvResult = [];
+            lines.forEach(function(line) {
+                var parts = line.split('\t');
+                if (parts.length < 2) parts = line.split(',');
+                if (parts.length < 2) parts = line.split(/\s{2,}/);
+                if (parts.length >= 2) {
+                    var issue = String(parts[0] || '').replace(/^[\d#.]+\s*/, '').trim();
+                    if (!issue || issue.length < 2) return;
+                    var nums = [];
+                    for (var pi2 = 1; pi2 < parts.length; pi2++) {
+                        var cv = parseFloat(String(parts[pi2]).replace(/[,%\u2191\u2193\u2194NEW]/g,''));
+                        if (!isNaN(cv)) nums.push(cv);
+                    }
+                    if (nums.length > 0 && issue.length > 1) {
+                        csvResult.push({
+                            Issue: issue,
+                            Today_Count: nums[0] || 0,
+                            Prev_Count: nums[1] || 0,
+                            Weekly_Total: nums[2] || 0
+                        });
+                    }
+                }
+            });
+            if (csvResult.length > 0) return csvResult;
+
+            // --- 策略4: 自由文本 ---
+            var freeResult = [];
+            var pattern = /([\u0E00-\u0E7Fa-zA-Z\u0E01-\u0E39\s]{3,50}?)\s*[:\uFF1A]?\s*(?:\u4ECA\u65E5|[Tt]oday)\s*[:\uFF1A=]?\s*(\d+)\s*(?:\u6628\u65E5|[Pp]rev(?:ious)?)\s*[:\uFF1A=]?\s*(\d+)(?:\s*(?:\u672C\u5468|[Ww]eekly)\s*[:\uFF1A=]?\s*(\d+))?/g;
+            var m;
+            while ((m = pattern.exec(raw)) !== null) {
+                freeResult.push({
+                    Issue: m[1].trim(),
+                    Today_Count: parseInt(m[2]) || 0,
+                    Prev_Count: parseInt(m[3]) || 0,
+                    Weekly_Total: parseInt(m[4]) || 0
+                });
+            }
+            if (freeResult.length > 0) return freeResult;
+
+            return null;
+        }
+
+        // ★ 同一天内相同描述的LOSS合并（白班+夜班同问题合并为1条）（白班+夜班同问题合并为1条）
         function _crMergeByDesc(arr) {
             var map = {}, result = [];
             arr.forEach(function(l) {
@@ -3060,97 +3274,38 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 return h;
             }
 
-            // --- 初始化：AI 加载占位 ---
-            html += '<div class="cr-section" id="cr-section-c">';
-            html += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
-            html += '<div id="cr-c-loading" style="text-align:center;padding:20px;">';
-            html += '<i class="fa-solid fa-spinner fa-spin" style="font-size:20px;color:#6366f1;"></i>';
-            html += '<div style="font-size:13px;color:#6366f1;margin-top:6px;"><span id="cr-c-model-name">' + (_getSelectedModel().split('/').pop() || 'AI') + '</span> analyzing today vs yesterday vs weekly...</div>';
-            html += '</div>';
-            html += '</div>';
-            
-            // 先显示占位
+            // --- 初始化：显示粘贴区域（替代原来的AI加载占位） ---
+            var _wkStart = (function(dStr) {
+                var d = new Date(dStr + 'T00:00:00');
+                var day = d.getDay();
+                var diff = (day === 0 ? 6 : day - 1);
+                d.setDate(d.getDate() - diff);
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+            })(end);
+            var _weeklyData = db.loss.filter(function(l) { return l.date >= _wkStart && l.date <= end; });
+
+            window._crPasteCtx = {
+                start: start, end: end, _prevDate: _prevDate,
+                totalQty: totalQty, lossesCount: losses.length,
+                losses: losses, prevLosses: _prevLosses, weeklyData: _weeklyData
+            };
+
+            var pasteCtaHtml = '<div class="cr-section" id="cr-section-c">';
+            pasteCtaHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
+            pasteCtaHtml += '<div style="padding:24px;text-align:center;background:#f8fafc;border-radius:8px;border:2px dashed #cbd5e1;margin:8px 0;">';
+            pasteCtaHtml += '<i class="fa-solid fa-paste" style="font-size:28px;color:#6366f1;"></i>';
+            pasteCtaHtml += '<div style="font-size:14px;font-weight:700;color:#1e293b;margin:8px 0 4px 0;">请粘贴外部AI分析的重复LOSS结果</div>';
+            pasteCtaHtml += '<div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">点击上方工具栏「粘贴重复LOSS」按钮，或使用本地Bigram算法自动分析</div>';
+            pasteCtaHtml += '<button class="btn btn-ai" onclick="window.runLocalBigramCr()" style="padding:10px 24px;font-size:13px !important;"><i class="fa-solid fa-calculator"></i> 使用本地Bigram自动分析重复LOSS</button>';
+            pasteCtaHtml += '</div></div>';
+
+            html += pasteCtaHtml;
             html += '</div>'; // 右栏结束
             html += '</div>'; // 双栏结束
             html += '</div>';
             window._crData = { html: html, start: start, end: end, totalQty: totalQty };
             document.getElementById('compact-report-content').innerHTML = html;
             document.getElementById('compact-report-wrap').style.display = 'flex';
-
-            // --- 单次全量 AI 直出：今日 / 昨日 / 本周明细 → AI 直接输出报表 ---
-            (async function() {
-                // 计算本周起始日（周一）
-                var _wkStart = (function(dStr) {
-                    var d = new Date(dStr + 'T00:00:00');
-                    var day = d.getDay();
-                    var diff = (day === 0 ? 6 : day - 1);
-                    d.setDate(d.getDate() - diff);
-                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                })(end);
-
-                // 收集本周所有数据（周一到end）
-                var weeklyData = db.loss.filter(function(l) {
-                    return l.date >= _wkStart && l.date <= end;
-                });
-
-                var aiResult = null;
-                try {
-                    aiResult = await window._aiDirectCompare(losses, _prevLosses, weeklyData);
-                } catch(e) {
-                    aiResult = { success: false, error: e.message };
-                }
-
-                var cSection = document.getElementById('cr-section-c');
-                if (!cSection) { return; }
-
-                try {
-                    var cHtml = '';
-                    cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
-
-                    if (aiResult && aiResult.success) {
-                        var aiItems = aiResult.items || [];
-                        cHtml += _crRenderRepeatSection(
-                            aiResult.totalCur, aiResult.totalPrev, _prevDate,
-                            aiItems,
-                            'AI Direct Compare (Today vs Yesterday vs Weekly)'
-                        );
-                    } else {
-                        // ★ AI失败 → 自动回退到Bigram本地算法 ★
-                        var _biItems = _crCalcRepeatByBigram(losses, _prevLosses);
-                        if (_biItems && _biItems.length > 0) {
-                            // 转换格式 + 计算Weekly_Total
-                            var _mappedItems = [];
-                            var _biCurTotal = 0, _biPrevTotal = 0;
-                            _biItems.forEach(function(bi) {
-                                var wt = 0;
-                                weeklyData.forEach(function(wl) {
-                                    var d = String(wl.desc||'').trim();
-                                    if (d && _crBigramSim(bi.desc, d) >= 0.75) wt += Math.abs(safeNum(wl.qty));
-                                });
-                                _mappedItems.push({
-                                    Issue: bi.desc,
-                                    Today_Count: bi.curQty,
-                                    Prev_Count: bi.prevQty,
-                                    Weekly_Total: wt
-                                });
-                                _biCurTotal += bi.curQty;
-                                _biPrevTotal += bi.prevQty;
-                            });
-                            cHtml += _crRenderRepeatSection(
-                                _biCurTotal, _biPrevTotal, _prevDate,
-                                _mappedItems,
-                                'Bigram Similarity (Fallback — AI: ' + (aiResult ? aiResult.error : 'unknown') + ')'
-                            );
-                        } else {
-                            cHtml += '<div style="padding:12px;text-align:center;color:#64748b;font-size:13px;">未检测到重复LOSS（AI暂不可用，Bigram也未发现重复）</div>';
-                        }
-                    }
-
-                    cSection.innerHTML = cHtml;
-                } catch(e) {
-                    cSection.innerHTML = '<div class="cr-section-title">C. Repeat LOSS Analysis</div><div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">渲染错误: ' + e.message + '</div>';
-                }
-            })();
         };
         window.downloadCRImage = async function() {
             if(!window._crData) { showToast('fa-solid fa-exclamation-triangle', '请先生成报告', 'error'); return; }
