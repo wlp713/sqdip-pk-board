@@ -349,6 +349,7 @@
 
         <button class="nav-link" onclick="showPage('p-sys', this)"><i class="fa-solid fa-gears"></i> <span data-i18n="menu_sys">系统运作 (事前后)</span><span id="sys-nav-badge" style="display:none;margin-left:auto;background:var(--danger);color:white;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;"></span></button>
         <button class="nav-link" onclick="showPage('p-monitor', this)"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="menu_monitor">每日生产看板</span></button>
+        <button class="nav-link" onclick="showPage('p-improve-track', this)"><i class="fa-solid fa-bullseye"></i> <span>改善项目跟踪</span></button>
         <div id="save-indicator" style="position:absolute;bottom:10px;left:10px;right:10px;font-size:10px;color:rgba(255,255,255,0.6);text-align:center;padding:4px;white-space:nowrap;overflow:hidden;">💾 <span id="save-indicator-text" data-i18n="msg_ready">就绪</span></div>
         <button class="nav-link" onclick="showPage('p-dm', this)"><i class="fa-solid fa-list-check"></i> <span data-i18n="menu_dm">异常问题闭环</span></button>
         <button class="nav-link" onclick="showPage('p-loss', this)"><i class="fa-solid fa-arrow-trend-down"></i> <span data-i18n="menu_loss">异常LOSS管控</span></button>
@@ -561,6 +562,75 @@
                     </div>
                 </div>
             </div>
+            <div id="p-improve-track" class="page">
+                <div class="card" style="margin:0; flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
+                    <div class="section-title" style="flex-shrink:0;">
+                        <h3><i class="fa-solid fa-bullseye" style="color:var(--midea-blue)"></i> <span>改善项目跟踪</span></h3>
+                        <div class="flex-row">
+                            <button class="btn" onclick="window.generateImprovePoster()" style="background:#8b5cf6;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-image"></i> 导出改善项目海报</button>
+                            <button class="btn" onclick="window.exportImproveToExcel()" style="background:var(--success);color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
+                            <button class="btn btn-primary" onclick="window.addImproveProject()"><i class="fa-solid fa-plus"></i> 新增改善项目</button>
+                        </div>
+                    </div>
+                    <div class="improve-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;font-size:12px;border-bottom:1px solid var(--border-light);margin-bottom:8px;">
+                        <span style="font-weight:900;color:var(--text-muted);"><i class="fa-solid fa-filter"></i> 筛选：</span>
+                        <span style="font-weight:700;color:var(--text-muted);">责任部门</span>
+                        <select id="improve-filter-dept" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;">
+                            <option value="">全部</option>
+                        </select>
+                        <span style="font-weight:700;color:var(--text-muted);">进度</span>
+                        <select id="improve-filter-status" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;">
+                            <option value="">全部</option>
+                            <option value="已完成">已完成</option>
+                            <option value="进行中">进行中</option>
+                            <option value="逾期">逾期</option>
+                        </select>
+                        <span style="font-weight:700;color:var(--text-muted);">立项时间</span>
+                        <input type="date" id="improve-filter-start" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;width:130px;">
+                        <span>至</span>
+                        <input type="date" id="improve-filter-end" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;width:130px;">
+                        <button class="btn" onclick="quickImproveDateRange()" style="background:#3b82f6;color:white;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">本月</button>
+                    </div>
+                    <div class="improve-summary-bar" style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+                        <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">项目总数</span>
+                            <b id="improve-total-count" style="font-size:22px;font-weight:900;color:var(--text-main);">0</b>
+                        </div>
+                        <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">已完成</span>
+                            <b id="improve-done-count" style="font-size:22px;font-weight:900;color:var(--success);">0</b>
+                        </div>
+                        <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">进行中</span>
+                            <b id="improve-prog-count" style="font-size:22px;font-weight:900;color:var(--warning);">0</b>
+                        </div>
+                        <div class="improve-summary-item" style="flex:1;text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:8px 6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--danger);display:block;">已逾期</span>
+                            <b id="improve-over-count" style="font-size:22px;font-weight:900;color:var(--danger);">0</b>
+                        </div>
+                        <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">完成率</span>
+                            <b id="improve-rate" style="font-size:22px;font-weight:900;color:var(--midea-blue);">0%</b>
+                        </div>
+                    </div>
+                    <div class="table-wrap" style="height:400px;overflow:auto;border:1px solid var(--border);border-radius:4px;position:relative;">
+                        <table class="grid" style="table-layout:fixed;">
+                            <thead style="z-index:2;position:sticky;top:0;background:white;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="width:100px;"><span>立项时间</span></th>
+                                    <th style="min-width:180px;"><span>项目名称</span></th>
+                                    <th style="width:100px;"><span>责任部门</span></th>
+                                    <th style="width:90px;"><span>进度</span></th>
+                                    <th style="min-width:200px;"><span>进度描述</span></th>
+                                    <th style="width:110px;"><span>计划完成时间</span></th>
+                                    <th style="width:40px;"><span>删</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="improve-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             <div id="p-dm" class="page">
                 <div class="card" style="margin:0; flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
                     <div class="section-title" style="flex-shrink:0;">
@@ -695,27 +765,27 @@
                         </div>
                     </div>
                     <div class="compact-report-scroll" id="compact-report-content"></div>
-                </div>
-            </div>
-            <!-- 粘贴重复LOSS分析模态框 -->
-            <div id="cr-paste-modal" class="modal-overlay" onclick="if(event.target===this)safeCloseModal('cr-paste-modal')">
-                <div class="paste-box" style="max-width:600px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <h3 style="color:var(--warning);font-size:16px;font-weight:800;margin:0;"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS分析结果</h3>
-                        <button class="btn btn-danger" onclick="safeCloseModal('cr-paste-modal')"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <p style="color:var(--text-muted);margin-bottom:12px;font-size:12px;line-height:1.5;">
-                        将外部AI分析的重复LOSS结果粘贴到下方文本框。<br>
-                        <b>支持格式：</b>JSON数组 / Markdown表格 / 制表符分隔 / 带|分隔的文本 / 自由文本<br>
-                        <b>示例JSON：</b><code>[{"Issue":"งานรั่ว DV","Today_Count":5,"Prev_Count":3,"Weekly_Total":15}]</code>
-                    </p>
-                    <textarea id="cr-paste-input" class="paste-area" placeholder="在此粘贴外部AI分析的重复LOSS结果..."></textarea>
-                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                        <button class="btn btn-ai" onclick="window.parsePastedRepeatLoss()" id="btn-parse-repeat"><i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染</button>
-                        <button class="btn" onclick="window.parsePastedRepeatLoss({forceBigram:true})" style="border:1px dashed #6366f1;color:#6366f1;"><i class="fa-solid fa-calculator"></i> 使用本地Bigram分析</button>
-                    </div>
-                    <div style="margin-top:8px;font-size:10px;color:#94a3b8;">
-                        <i class="fa-solid fa-lightbulb"></i> 提示：使用外部AI分析后复制结果JSON/表格，粘贴后点击"解析并渲染"即可自动识别格式生成表格。
+                    <!-- 粘贴重复LOSS分析弹窗（在紧凑报告框内弹出） -->
+                    <div id="cr-paste-modal" class="cr-paste-overlay" onclick="if(event.target===this)window.closePasteRepeatUI()">
+                        <div class="cr-paste-popup">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                <h3 style="color:var(--warning);font-size:16px;font-weight:800;margin:0;"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS分析结果</h3>
+                                <button class="btn btn-danger" onclick="window.closePasteRepeatUI()"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <p style="color:var(--text-muted);margin-bottom:12px;font-size:12px;line-height:1.5;">
+                                将外部AI分析的重复LOSS结果粘贴到下方文本框。<br>
+                                <b>支持格式：</b>JSON数组 / Markdown表格 / 制表符分隔 / 带|分隔的文本 / 自由文本<br>
+                                <b>示例JSON：</b><code>[{"Issue":"งานรั่ว DV","Today_Count":5,"Prev_Count":3,"Weekly_Total":15}]</code>
+                            </p>
+                            <textarea id="cr-paste-input" class="paste-area" placeholder="在此粘贴外部AI分析的重复LOSS结果..."></textarea>
+                            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                                <button class="btn btn-ai" onclick="window.parsePastedRepeatLoss()" id="btn-parse-repeat"><i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染</button>
+                                <button class="btn" onclick="window.parsePastedRepeatLoss({forceBigram:true})" style="border:1px dashed #6366f1;color:#6366f1;"><i class="fa-solid fa-calculator"></i> 使用本地Bigram分析</button>
+                            </div>
+                            <div style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                                <i class="fa-solid fa-lightbulb"></i> 提示：使用外部AI分析后复制结果JSON/表格，粘贴后点击"解析并渲染"即可自动识别格式生成表格。
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

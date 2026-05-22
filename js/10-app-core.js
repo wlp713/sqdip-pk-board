@@ -5,6 +5,7 @@
         const CLIENT_ID = window.CLIENT_ID;
         let db = { prod: {}, dm: {}, loss: [], problems: [], memo: '', dLinesConfig: { PRO1:[], PRO3:[], PRO4:[] }, sysOps: {}, sysDetail: { pre: [], mid: [] }, kaizen: [], targetMgmt: { targets: {}, dailyData: {} }, targetSettings: { workshops: {}, otherLines: {} } };
         window.db = db; // ★ 全局引用
+        window.safeNum = window.safeNum || function(val) { const n = Number(val); return isNaN(n) ? 0 : n; };
         let isAppReady = false;
         let localSaveTimeout = null;
         let cloudSaveTimeout = null;
@@ -2008,21 +2009,21 @@
                     var _postTable2 = document.querySelector('.sys-detail-table');
                     if (_postTable2) _postTable2.style.display = 'none';
                     if (_pl) {
-                        _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">LOSS重复率分析中，请稍候...</span></div>';
+                        _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">加载中，请稍候...</span></div>';
                     } else {
                         var _pw = document.querySelector('.table-wrap');
                         if (_pw) {
                             _pl = document.createElement('div');
                             _pl.id = 'sys-detail-post-layout';
                             _pl.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
-                            _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">LOSS重复率分析中，请稍候...</span></div>';
+                            _pl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:50px 20px;gap:12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i><span style="font-size:14px;color:var(--text-muted);font-weight:600;">加载中，请稍候...</span></div>';
                             _pw.appendChild(_pl);
                         }
                     }
                     setTimeout(function() { renderSysDetail(); }, 50);
                     return;
                 }
-                // 事后模块：DM每日打卡（左 2/3）+ 改善项目记录（右 1/3）
+                // 事后模块：DM每日打卡
                 if (window._perfMarks) window._perfMarks.afterKPI = performance.now();
                 
                 // ── 自动生成 DM 每日打卡数据 ──
@@ -2110,8 +2111,8 @@
                 document.getElementById('sys-detail-count').innerText = dmRows.length;
                 document.getElementById('sys-kpi-2-label').innerText = '开展率';
                 document.getElementById('sys-detail-rate').innerText = dmDoneRate + '%';
-                document.getElementById('sys-kpi-3-label').innerText = 'LOSS重复';
-                document.getElementById('sys-detail-risk').innerText = curStats.events;
+                document.getElementById('sys-kpi-3-label').innerText = '打卡天数';
+                document.getElementById('sys-detail-risk').innerText = dmChecked;
                 document.getElementById('sys-kpi-4-label').innerText = '——';
                 document.getElementById('sys-detail-impact').innerText = '—';
                 
@@ -2156,62 +2157,19 @@
                 }).join('');
                 
                 _postLayout.innerHTML = '' +
-                    // ★ LOSS重复发生率卡片（自动统计，主范围）★
-                    '<div style="display:flex;gap:10px;flex-wrap:wrap;background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:12px 16px;align-items:center;">' +
-                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:100px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">LOSS重复率</span>' +
-                            '<span style="font-size:24px;font-weight:900;color:' + (curStats.rate > 30 ? 'var(--danger)' : curStats.rate > 15 ? 'var(--warning)' : 'var(--success)') + ';">' + curStats.rate + '%</span>' +
-                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
+                    // ── 仅保留 DM 每日打卡（全宽） ──
+                    '<div style="flex:1;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
+                        '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
+                            '<i class="fa-solid fa-clipboard-check"></i> DM每日打卡（全月自动生成）' +
                         '</div>' +
-                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">异常件数</span>' +
-                            '<span style="font-size:20px;font-weight:900;">' + curStats.total + '</span>' +
-                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
-                        '</div>' +
-                        '<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);">重复事件</span>' +
-                            '<span style="font-size:20px;font-weight:900;color:var(--warning);">' + curStats.events + '件</span>' +
-                            '<span style="font-size:9px;font-weight:600;color:var(--text-muted);">' + _mainRangeLabel + '</span>' +
-                            '<span style="font-size:11px;font-weight:700;color:var(--text-muted);">共' + curStats.buckets + '种重复</span>' +
-                        '</div>' +
-                        '<div style="display:flex;flex-direction:column;min-width:200px;flex:1;">' +
-                            '<span style="font-size:11px;font-weight:800;color:var(--text-muted);margin-bottom:2px;">TOP重复LOSS（相似度≥75%）：</span>' +
-                            top5Html +
-                        '</div>' +
-                    '</div>' +
-                    // ── 双列布局 ──
-                    '<div style="display:flex;flex:1;overflow:hidden;gap:8px;">' +
-                        // ── 左：DM 每日打卡 ──
-                        '<div style="flex:1;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
-                            '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
-                                '<i class="fa-solid fa-clipboard-check"></i> DM每日打卡（全月自动生成）' +
-                            '</div>' +
-                            '<table class="grid" style="min-width:auto;">' +
-                                '<thead><tr>' +
-                                    '<th style="width:100px;">日期</th>' +
-                                    '<th style="width:60px;">打卡✓</th>' +
-                                    '<th style="width:40px;">删</th>' +
-                                '</tr></thead>' +
-                                '<tbody>' + (dmTableHtml || '<tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">暂无数据</td></tr>') + '</tbody>' +
-                            '</table>' +
-                        '</div>' +
-                        // ── 右：改善项目 ──
-                        '<div style="flex:2;overflow-y:auto;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border);">' +
-                            '<div style="position:sticky;top:0;z-index:2;font-weight:900;font-size:13px;padding:6px 10px;background:var(--midea-blue);color:#fff;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px;">' +
-                                '<i class="fa-solid fa-lightbulb" style="color:#fbbf24;"></i> 改善项目记录' +
-                                '<button class="btn btn-primary" onclick="addSysRecord()" style="margin-left:auto;padding:4px 12px;font-size:11px;"><i class="fa-solid fa-plus"></i> 新增</button>' +
-                            '</div>' +
-                            '<table class="grid" style="min-width:auto;">' +
-                                '<thead><tr>' +
-                                    '<th style="width:115px;">日期</th>' +
-                                    '<th style="min-width:150px;">项目名称</th>' +
-                                    '<th style="min-width:100px;">目标</th>' +
-                                    '<th style="width:80px;">进展</th>' +
-                                    '<th style="width:40px;">删</th>' +
-                                '</tr></thead>' +
-                                '<tbody>' + (improveTableHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">点击「新增」按钮添加改善项目</td></tr>') + '</tbody>' +
-                            '</table>' +
-                        '</div>' +
+                        '<table class="grid" style="min-width:auto;">' +
+                            '<thead><tr>' +
+                                '<th style="width:100px;">日期</th>' +
+                                '<th style="width:60px;">打卡✓</th>' +
+                                '<th style="width:40px;">删</th>' +
+                            '</tr></thead>' +
+                            '<tbody>' + (dmTableHtml || '<tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">暂无数据</td></tr>') + '</tbody>' +
+                        '</table>' +
                     '</div>';
                 // ★ 性能诊断:标记渲染结束
                 if (window._perfMarks) {
@@ -2667,13 +2625,17 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
         // ================= 紧凑报告生成(LOSS页面) =================
         window._crData = null;
 
-        // ★ 打开粘贴重复LOSS弹窗
+        // ★ 打开粘贴重复LOSS弹窗（在海报框内）
         window.openPasteRepeatUI = function() {
             var modal = document.getElementById('cr-paste-modal');
             if (!modal) { showToast('fa-solid fa-xmark', '弹窗DOM未找到', 'error'); return; }
             var ta = document.getElementById('cr-paste-input');
             if (ta) { ta.value = ''; ta.focus(); }
-            modal.style.display = 'flex';
+            modal.style.display = 'block';
+        };
+        window.closePasteRepeatUI = function() {
+            var modal = document.getElementById('cr-paste-modal');
+            if (modal) modal.style.display = 'none';
         };
 
         // ★ 本地Bigram分析（一键替代AI）
@@ -2687,7 +2649,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             if (!cSection) { showToast('fa-solid fa-exclamation-triangle', '未找到C节区域', 'error'); return; }
 
             try {
-                var _biItems = _crCalcRepeatByBigram(ctx.losses, ctx.prevLosses);
+                var _biItems = window._crCalcRepeatByBigram(ctx.losses, ctx.prevLosses);
                 var cHtml = '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + ctx.start + ' vs ' + ctx._prevDate + '</div>';
                 var _mappedItems = [];
                 var _biCurTotal = 0, _biPrevTotal = 0;
@@ -2695,7 +2657,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     var wt = 0;
                     (ctx.weeklyData||[]).forEach(function(wl) {
                         var d = String(wl.desc||'').trim();
-                        if (d && _crBigramSim(bi.desc, d) >= 0.75) wt += Math.abs(safeNum(wl.qty));
+                        if (d && window._crBigramSim(bi.desc, d) >= 0.75) wt += Math.abs(safeNum(wl.qty));
                     });
                     _mappedItems.push({
                         Issue: bi.desc,
@@ -2707,7 +2669,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     _biPrevTotal += bi.prevQty;
                 });
                 if (_mappedItems.length > 0) {
-                    cHtml += _crRenderRepeatSection(_biCurTotal, _biPrevTotal, ctx._prevDate, _mappedItems, 'Bigram Similarity (Local Algorithm)');
+                    cHtml += window._crRenderRepeatSection(_biCurTotal, _biPrevTotal, ctx._prevDate, _mappedItems, 'Bigram Similarity (Local Algorithm)');
                 } else {
                     cHtml += '<div style="padding:12px;text-align:center;color:#64748b;font-size:13px;">未检测到重复LOSS（Bigram本地分析未发现重复）</div>';
                 }
@@ -2757,7 +2719,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 });
 
                 var cHtml = '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + ctx.start + ' vs ' + ctx._prevDate + '</div>';
-                cHtml += _crRenderRepeatSection(
+                cHtml += window._crRenderRepeatSection(
                     totalToday, totalPrev, ctx._prevDate,
                     items,
                     'External AI Analysis (Pasted)'
@@ -2990,7 +2952,85 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             }
         };
 
-// ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
+        // ★ 全局Bigram相似度算法（用于紧凑报告C节）
+        window._crSafeStr = function(s) { return String(s||'').trim().toLowerCase(); };
+        window._crBigramSim = function(a, b) {
+            a = window._crSafeStr(a); b = window._crSafeStr(b);
+            if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+            var bgA = {};
+            for (var i = 0; i < a.length - 1; i++) { var bg = a.substring(i, i+2); bgA[bg] = (bgA[bg]||0) + 1; }
+            var inter = 0;
+            for (var i = 0; i < b.length - 1; i++) { var bg = b.substring(i, i+2); if (bgA[bg] > 0) { bgA[bg]--; inter++; } }
+            var union = Math.max(a.length, b.length) - 1;
+            return union > 0 ? inter / union : 0;
+        };
+        window._crCalcRepeatByBigram = function(curLosses, prevLosses) {
+            var items = [];
+            var SIM = 0.75;
+            curLosses.forEach(function(cur, idx_) {
+                if (!cur || !cur.desc) return;
+                var curDesc = String(cur.desc).trim();
+                var bestMatch = null;
+                var bestSim = 0;
+                prevLosses.forEach(function(prev) {
+                    if (!prev || !prev.desc) return;
+                    var sim = window._crBigramSim(curDesc, String(prev.desc).trim());
+                    if (sim > bestSim) { bestSim = sim; bestMatch = prev; }
+                });
+                if (bestSim >= SIM && bestMatch) {
+                    var _bQty = Math.abs(safeNum(cur.qty));
+                    var _bpQty = Math.abs(safeNum(bestMatch.qty));
+                    items.push({
+                        curIdx: idx_,
+                        desc: curDesc,
+                        prevDesc: String(bestMatch.desc).trim(),
+                        curQty: _bQty,
+                        prevQty: _bpQty,
+                        dept: cur.dept || 'Other',
+                        similarity: Math.round(bestSim * 100)
+                    });
+                }
+            });
+            return items;
+        };
+        window._crRenderRepeatSection = function(curTotal, prevTotal, prevDate, items, methodLabel) {
+            var h = '';
+            h += '<div style="padding: 2px 0;">';
+            if (items.length > 0) {
+                var sortedItems = items.slice().sort(function(a, b) { return b.Today_Count - a.Today_Count; });
+                h += '<table class="cr-table cr-table-compact" style="margin-bottom:2px;table-layout:fixed;">';
+                h += '<tr><th style="width:8%;text-align:center;padding:3px 4px;font-size:10px;">#</th><th style="width:30%;padding:3px 4px;font-size:10px;">Issue</th><th style="width:15%;text-align:right;padding:3px 4px;font-size:10px;">Today</th><th style="width:15%;text-align:right;padding:3px 4px;font-size:10px;">Prev</th><th style="width:17%;text-align:right;padding:3px 4px;font-size:10px;">Weekly</th><th style="width:15%;text-align:center;padding:3px 4px;font-size:10px;">Trend</th></tr>';
+                sortedItems.slice(0, 8).forEach(function(item, rankIdx) {
+                    var trendHtml = '';
+                    if (item.Today_Count > item.Prev_Count) trendHtml = '<span style="color:#dc2626;font-size:18px;font-weight:900;">\u2191</span>';
+                    else if (item.Today_Count < item.Prev_Count) trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';
+                    else if (item.Today_Count === 0 && item.Prev_Count === 0) trendHtml = '<span style="color:#dc2626;font-size:11px;font-weight:900;border:1px solid #dc2626;border-radius:2px;padding:0px 3px;">NEW</span>';
+                    else trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';
+                    h += '<tr>';
+                    h += '<td style="text-align:center;font-weight:700;color:#6b7280;font-size:10px;padding:1px 3px;">' + (rankIdx + 1) + '</td>';
+                    h += '<td style="font-size:10px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.2;padding:1px 3px;">' + (item.Issue || '').replace(/"/g,'&quot;') + '</td>';
+                    h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:10px;padding:1px 3px;">' + item.Today_Count + '</td>';
+                    h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:10px;padding:1px 3px;">' + item.Prev_Count + '</td>';
+                    h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:10px;padding:1px 3px;">' + item.Weekly_Total + '</td>';
+                    h += '<td style="text-align:center;font-size:12px;font-weight:900;padding:1px 3px;">' + trendHtml + '</td>';
+                    h += '</tr>';
+                });
+                if (sortedItems.length > 8) {
+                    h += '<tr><td colspan="6" style="text-align:center;color:#9ca3af;font-size:10px;padding:1px 3px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
+                }
+                h += '</table>';
+            } else {
+                h += '<div style="text-align:center;padding:6px;background:#f0fdf4;border-radius:6px;border:1px dashed #86efac;margin-bottom:2px;">';
+                h += '<i class="fa-solid fa-check-circle" style="color:#16a34a;font-size:20px;"></i>';
+                h += '<div style="font-size:11px;font-weight:700;color:#166534;margin-top:2px;">No Repeat LOSS Detected</div>';
+                h += '<div style="font-size:10px;color:#4ade80;margin-top:1px;">All unique issues vs ' + prevDate + '</div>';
+                h += '</div>';
+            }
+            h += '</div>';
+            return h;
+        };
+
+        // ★ 辅助函数：获取前一天的日期字符串 YYYY-MM-DD
         function _formatPrevDate(dateStr) {
             if (!dateStr || String(dateStr).length < 10) return '';
             var d = new Date(dateStr + 'T00:00:00');
@@ -3147,132 +3187,6 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             var _prevDate = _formatPrevDate(start);
             var _prevLosses = (db.loss || []).filter(function(l) { return l.date === _prevDate; });
 
-            // --- Bigram 回退算法（内联） ---
-            function _crSafeStr(s) { return String(s||'').trim().toLowerCase(); }
-            function _crBigramSim(a, b) {
-                a = _crSafeStr(a); b = _crSafeStr(b);
-                if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
-                var bgA = {};
-                for (var i = 0; i < a.length - 1; i++) { var bg = a.substring(i, i+2); bgA[bg] = (bgA[bg]||0) + 1; }
-                var inter = 0;
-                for (var i = 0; i < b.length - 1; i++) { var bg = b.substring(i, i+2); if (bgA[bg] > 0) { bgA[bg]--; inter++; } }
-                var union = Math.max(a.length, b.length) - 1;
-                return union > 0 ? inter / union : 0;
-            }
-            function _crCalcRepeatByBigram(curLosses, prevLosses) {
-                var items = [];
-                var SIM = 0.75;
-                curLosses.forEach(function(cur, idx_) {
-                    if (!cur || !cur.desc) return;
-                    var curDesc = String(cur.desc).trim();
-                    var bestMatch = null;
-                    var bestSim = 0;
-                    prevLosses.forEach(function(prev) {
-                        if (!prev || !prev.desc) return;
-                        var sim = _crBigramSim(curDesc, String(prev.desc).trim());
-                        if (sim > bestSim) { bestSim = sim; bestMatch = prev; }
-                    });
-                    if (bestSim >= SIM && bestMatch) {
-                        var _bQty = Math.abs(safeNum(cur.qty));
-                        var _bpQty = Math.abs(safeNum(bestMatch.qty));
-                        var _bTrend = (_bQty < _bpQty * 0.7) ? 'improved' : (_bQty > _bpQty * 1.3) ? 'worsened' : 'chronic';
-                        items.push({
-                            curIdx: idx_,
-                            desc: curDesc,
-                            prevDesc: String(bestMatch.desc).trim(),
-                            curQty: _bQty,
-                            prevQty: _bpQty,
-                            dept: cur.dept || 'Other',
-                            similarity: Math.round(bestSim * 100),
-                            trend: _bTrend,
-                            reason: (_bTrend === 'improved' ? 'Improved from ' + _bpQty + ' to ' + _bQty : _bTrend === 'worsened' ? 'Worsened from ' + _bpQty + ' to ' + _bQty : 'Chronic ~' + _bQty + ' units')
-                        });
-                    }
-                });
-                return items;
-            }
-            function _crRenderRepeatSection(curTotal, prevTotal, prevDate, items, methodLabel) {
-                var h = '';
-                var repeatCount = 0;
-                var newItemsCount = 0;
-                items.forEach(function(item) {
-                    if (item.Prev_Count > 0) repeatCount++;
-                    else newItemsCount++;
-                });
-                var totalUnique = items.length;
-                var repeatRate = totalUnique > 0 ? Math.round(repeatCount / totalUnique * 100) : 0;
-
-                h += '<div style="padding: 6px 0;">';
-
-                // KPI overview
-                h += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">';
-                h += '<div style="flex:1;min-width:70px;background:#fef2f2;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fecaca;">';
-                    h += '<div style="font-size:10px;color:#991b1b;font-weight:700;">Today Total</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#dc2626;">' + curTotal + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">occurrences</div>';
-                h += '</div>';
-                h += '<div style="flex:1;min-width:70px;background:#f0fdf4;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bbf7d0;">';
-                    h += '<div style="font-size:10px;color:#166534;font-weight:700;">Previous Day</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#16a34a;">' + prevTotal + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">' + prevDate + '</div>';
-                h += '</div>';
-                h += '<div style="flex:1;min-width:70px;background:#fffbeb;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #fde68a;">';
-                    h += '<div style="font-size:10px;color:#92400e;font-weight:700;">Repeat</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + repeatCount + '/' + totalUnique + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">Rate ' + repeatRate + '%</div>';
-                h += '</div>';
-                h += '<div style="flex:1;min-width:70px;background:#eff6ff;border-radius:6px;padding:6px 8px;text-align:center;border:1px solid #bfdbfe;">';
-                    h += '<div style="font-size:10px;color:#1e40af;font-weight:700;">New</div>';
-                    h += '<div style="font-size:18px;font-weight:900;color:#3b82f6;">' + newItemsCount + '</div>';
-                    h += '<div style="font-size:9px;color:#9ca3af;">unique issues</div>';
-                h += '</div>';
-                h += '</div>';
-
-                h += '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-style:italic;">' + methodLabel + '</div>';
-
-                if (items.length > 0) {
-                    // Sort by Today_Count DESC
-                    var sortedItems = items.slice().sort(function(a, b) {
-                        return b.Today_Count - a.Today_Count;
-                    });
-
-                    h += '<table class="cr-table" style="margin-bottom:6px;table-layout:fixed;">';
-                    h += '<tr><th style="width:8%;text-align:center;">#</th><th style="width:30%;">Issue</th><th style="width:15%;text-align:right;">Today</th><th style="width:15%;text-align:right;">Prev</th><th style="width:17%;text-align:right;line-height:1.15;padding:6px 4px;">Weekly<br>Total</th><th style="width:15%;text-align:center;">Trend</th></tr>';
-                    sortedItems.slice(0, 8).forEach(function(item, rankIdx) {
-                        // Trend: JS 判断 Today_Count vs Prev_Count
-                        var trendHtml = '';
-                        if (item.Today_Count > item.Prev_Count) {
-                            trendHtml = '<span style="color:#dc2626;font-size:18px;font-weight:900;">\u2191</span>';  // ↑ red = worsened
-                        } else if (item.Today_Count < item.Prev_Count) {
-                            trendHtml = '<span style="color:#16a34a;font-size:18px;font-weight:900;">\u2193</span>';  // ↓ green = improved
-                        } else if (item.Today_Count === 0 && item.Prev_Count === 0) {
-                            trendHtml = '<span style="color:#dc2626;font-size:11px;font-weight:900;border:1px solid #dc2626;border-radius:2px;padding:0px 3px;">NEW</span>';
-                        } else {
-                            trendHtml = '<span style="color:#d97706;font-size:16px;font-weight:900;">\u2194</span>';  // ↔ yellow = same
-                        }
-                        h += '<tr>';
-                        h += '<td style="text-align:center;font-weight:700;color:#6b7280;font-size:11px;">' + (rankIdx + 1) + '</td>';
-                        h += '<td style="font-size:11px;font-weight:600;word-break:break-word;white-space:normal;line-height:1.3;">' + (item.Issue || '').replace(/"/g,'&quot;') + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#dc2626;font-size:12px;">' + item.Today_Count + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#64748b;font-size:12px;">' + item.Prev_Count + '</td>';
-                        h += '<td style="text-align:right;font-weight:700;color:#7c3aed;font-size:12px;">' + item.Weekly_Total + '</td>';
-                        h += '<td style="text-align:center;font-size:14px;font-weight:900;">' + trendHtml + '</td>';
-                        h += '</tr>';
-                    });
-                    if (sortedItems.length > 8) {
-                        h += '<tr><td colspan="6" style="text-align:center;color:#9ca3af;font-size:11px;">... and ' + (sortedItems.length - 8) + ' more items</td></tr>';
-                    }
-                    h += '</table>';
-                } else {
-                    h += '<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px;border:1px dashed #86efac;margin-bottom:6px;">';
-                    h += '<i class="fa-solid fa-check-circle" style="color:#16a34a;font-size:20px;"></i>';
-                    h += '<div style="font-size:13px;font-weight:700;color:#166534;margin-top:4px;">No Repeat LOSS Detected</div>';
-                    h += '<div style="font-size:11px;color:#4ade80;margin-top:2px;">All unique issues vs ' + prevDate + '</div>';
-                    h += '</div>';
-                }
-                h += '</div>';
-                return h;
-            }
 
             // --- 初始化：显示粘贴区域（替代原来的AI加载占位） ---
             var _wkStart = (function(dStr) {
@@ -3575,6 +3489,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             if(!db.sysDetail.pre) db.sysDetail.pre = [];
             if(!db.sysDetail.mid) db.sysDetail.mid = [];
             if(!db.sysDetail.equipment) db.sysDetail.equipment = [];
+            if(!db.improveProjects) db.improveProjects = [];
             if(!db.kaizen) db.kaizen = [];
             if(!db.problems) db.problems = [];
             if(!db.defaultTargets) db.defaultTargets = getEmptyDefaultTargets();
@@ -5798,6 +5713,183 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
             }
         };
         // ================= 📋 PSP 导出Excel（按日期筛选范围） =================
+        // ★ PSP 问题点闭环通报（新窗口打开 + 逾期高亮 + 中英双语）
+        window.generatePSPCompactReport = function() {
+            try {
+                var startInput = document.getElementById('psp-ai-start');
+                var endInput = document.getElementById('psp-ai-end');
+                if (!startInput || !endInput) {
+                    showToast('fa-solid fa-exclamation-triangle', '找不到日期选择器', 'error');
+                    return;
+                }
+                var start = startInput.value;
+                var end = endInput.value;
+                if (!start || !end) {
+                    var today = new Date();
+                    var past7 = new Date();
+                    past7.setDate(today.getDate() - 7);
+                    start = past7.toISOString().split('T')[0];
+                    end = today.toISOString().split('T')[0];
+                    startInput.value = start;
+                    endInput.value = end;
+                }
+                var problems = (db.problems || []).filter(function(p) { return p.date >= start && p.date <= end; });
+                if (problems.length === 0) {
+                    showToast('fa-solid fa-info-circle', '所选时间段内暂无异常问题记录');
+                    return;
+                }
+
+                // 统计
+                var totalP = problems.length;
+                var solved = 0, inProg = 0, open = 0;
+                var todayStr = new Date().toISOString().split('T')[0];
+                var overdueCount = 0;
+
+                problems.forEach(function(p) {
+                    var st = p.status || '未解决';
+                    if (st === '已解决' || st === 'Closed' || st === 'แก้ไขแล้ว') solved++;
+                    else if (st === '处理中' || st === 'In Prog' || st === 'กําลังทํา') inProg++;
+                    else open++;
+                    if (p.dueDate && (st === '未解决' || st === 'Open' || st === 'ยังไม่แก้' || st === '处理中' || st === 'In Prog' || st === 'กําลังทํา')) {
+                        if (p.dueDate < todayStr) overdueCount++;
+                    }
+                });
+
+                var closeRate = totalP > 0 ? ((solved / totalP) * 100).toFixed(1) : '0.0';
+
+                // 构建海报HTML
+                var h = '<div class="psp-poster">';
+
+                // 标题
+                h += '<div class="psp-poster-hdr">';
+                h += '<div class="psp-poster-title">\uD83D\uDCE2 异常问题闭环通报<div class="bi-en-title">PSP Problem Close-Out Report</div></div>';
+                h += '<div class="psp-poster-period">\u7EDF\u8BA1\u5468\u671F: ' + start + '  ~  ' + end + '&emsp;|&emsp;生成时间: ' + new Date().toLocaleString('zh-CN', {hour12:false}) + '<br><span class="bi-en-sub">Period: ' + start + ' ~ ' + end + ' | Generated: ' + new Date().toLocaleString('en-US', {hour12:false}) + '</span></div>';
+                h += '</div>';
+
+                // 顶部概要条
+                h += '<div class="psp-poster-summary-bar">';
+                h += '<div class="psp-ps-item"><b>' + totalP + '</b><span class="bi-cn">问题总数</span><span class="bi-en">Total Problems</span></div>';
+                h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + closeRate + '%</b><span class="bi-cn">闭环率</span><span class="bi-en">Close Rate</span></div>';
+                h += '<div class="psp-ps-item"><b style="color:#dc2626;">' + open + '</b><span class="bi-cn">未解决</span><span class="bi-en">Open</span></div>';
+                h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + inProg + '</b><span class="bi-cn">处理中</span><span class="bi-en">In Progress</span></div>';
+                h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + solved + '</b><span class="bi-cn">已解决</span><span class="bi-en">Closed</span></div>';
+                h += '<div class="psp-ps-item" style="background:#fef2f2;"><b style="color:#dc2626;font-size:22px;">' + overdueCount + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
+                h += '</div>';
+
+                // 表格
+                h += '<table class="psp-poster-table">';
+                h += '<thead><tr>';
+                h += '<th style="width:85px;"><div class="bi-th-cn">日期</div><div class="bi-th-en">Date</div></th>';
+                h += '<th style="width:55px;"><div class="bi-th-cn">车间</div><div class="bi-th-en">Area</div></th>';
+                h += '<th><div class="bi-th-cn">异常问题描述</div><div class="bi-th-en">Problem Description</div></th>';
+                h += '<th style="width:72px;"><div class="bi-th-cn">责任部门</div><div class="bi-th-en">Dept</div></th>';
+                h += '<th style="width:60px;"><div class="bi-th-cn">跟进人</div><div class="bi-th-en">PIC</div></th>';
+                h += '<th style="width:85px;"><div class="bi-th-cn">纳期/完成时间</div><div class="bi-th-en">Due Date</div></th>';
+                h += '<th style="width:62px;"><div class="bi-th-cn">状态</div><div class="bi-th-en">Status</div></th>';
+                h += '<th style="width:85px;"><div class="bi-th-cn">逾期标记</div><div class="bi-th-en">Overdue Flag</div></th>';
+                h += '</tr></thead><tbody>';
+
+                // 排序: 逾期优先 → 未解决 → 处理中 → 已解决
+                problems.sort(function(a, b) {
+                    var aOv = (a.dueDate && a.dueDate < todayStr && a.status !== '已解决' && a.status !== 'Closed' && a.status !== 'แก้ไขแล้ว') ? 1 : 0;
+                    var bOv = (b.dueDate && b.dueDate < todayStr && b.status !== '已解决' && b.status !== 'Closed' && b.status !== 'แก้ไขแล้ว') ? 1 : 0;
+                    if (aOv !== bOv) return bOv - aOv;
+                    var aS = a.status === '已解决' || a.status === 'Closed' || a.status === 'แก้ไขแล้ว' ? 2 : (a.status === '处理中' || a.status === 'In Prog' || a.status === 'กําลังทํา' ? 1 : 0);
+                    var bS = b.status === '已解决' || b.status === 'Closed' || b.status === 'แก้ไขแล้ว' ? 2 : (b.status === '处理中' || b.status === 'In Prog' || b.status === 'กําลังทํา' ? 1 : 0);
+                    return aS - bS;
+                });
+
+                for (var i = 0; i < problems.length; i++) {
+                    var p = problems[i];
+                    var st = p.status || '未解决';
+                    var isSolved = (st === '已解决' || st === 'Closed' || st === 'แก้ไขแล้ว');
+                    var isOverdue = (p.dueDate && !isSolved && p.dueDate < todayStr);
+                    var rowBg = isOverdue ? 'background:#fef2f2;' : '';
+                    var statusStyle = isSolved ? 'color:#16a34a;font-weight:800;' : (st === '处理中' || st === 'In Prog' || st === 'กําลังทํา' ? 'color:#ea580c;font-weight:800;' : 'color:#dc2626;font-weight:800;');
+                    var statusGlow = isSolved ? 'text-shadow:0 0 8px rgba(22,163,74,0.6);' : (st === '处理中' || st === 'In Prog' || st === 'กําลังทํา' ? 'text-shadow:0 0 8px rgba(234,88,12,0.5);' : 'text-shadow:0 0 8px rgba(220,38,38,0.5);');
+                    var statusCN = (isSolved ? '已解决' : (st === '处理中' || st === 'In Prog' || st === 'กําลังทํา' ? '处理中' : '未解决'));
+                    var statusEN = (isSolved ? 'Closed' : (st === '处理中' || st === 'In Prog' || st === 'กําลังทํา' ? 'In Progress' : 'Open'));
+
+                    h += '<tr style="' + rowBg + '">';
+                    h += '<td>' + (p.date || '') + '</td>';
+                    h += '<td>' + (p.ws || '') + '</td>';
+                    h += '<td style="text-align:left;word-break:break-word;font-size:13px;line-height:1.5;padding:5px 8px;">' + (p.desc || '') + '</td>';
+                    h += '<td>' + (p.dept || '') + '</td>';
+                    h += '<td>' + (p.owner || '') + '</td>';
+                    h += '<td>' + (p.dueDate || '') + '</td>';
+                    h += '<td style="font-size:13px;font-weight:900;' + statusStyle + statusGlow + '"><span class="bi-cn" style="font-size:13px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:10px;font-weight:600;">' + statusEN + '</span></td>';
+                    h += '<td>' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:15px;padding:3px 8px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:10px;">Overdue</span></div>' : '') + '</td>';
+                    h += '</tr>';
+                }
+
+                h += '</tbody></table>';
+
+                // 脚注
+                h += '<div class="psp-poster-footer">';
+                h += '逾期说明:纳期已过但状态仍未关闭的问题标记为红色「已逾期」,请责任部门尽快确认并处理。<br>';
+                h += '<span class="bi-en-foot">Note: Items past due date and not yet closed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
+                h += '</div>';
+
+                h += '</div>'; // psp-poster
+
+                // 打开新窗口
+                var win = window.open('', '_blank');
+                if (!win) {
+                    showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
+                    return;
+                }
+
+                // 收集页面样式
+                var styleHTML = '';
+                var styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+                for (var si = 0; si < styles.length; si++) {
+                    styleHTML += styles[si].outerHTML;
+                }
+
+                win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PSP异常问题闭环通报 | PSP Problem Close-Out Report</title>');
+                win.document.write(styleHTML);
+                win.document.write('<style>' +
+                    'body{margin:0;padding:8px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
+                    '@page{size:A4;margin:6mm;}' +
+                    '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+                    '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;}' +
+                    '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
+                    '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
+                    '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
+                    '.bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
+                    '.bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
+                    '.bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
+                    '.bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
+                    '.bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
+                    '.bi-en-foot{font-size:10px;color:#94a3b8;}' +
+                    '.psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
+                    '.psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
+                    '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
+                    '.psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
+                    '.psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
+                    '.psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
+                    '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
+                    '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
+                    '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
+                    '.psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
+                    '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
+                    '</style></head><body>');
+                win.document.write(h);
+                win.document.write('</body></html>');
+                win.document.close();
+
+                showToast('fa-solid fa-file-image', '已生成PSP通报,可在新窗口打印/另存为PDF');
+                setTimeout(function() {
+                    win.focus();
+                    win.print();
+                }, 500);
+
+            } catch(e) {
+                console.error('[PSP海报] 生成失败:', e.message, e.stack);
+                showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
+            }
+        };
+
         window.exportPSPToExcel = function() {
             var fAStart = document.getElementById('psp-ai-start').value;
             var fAEnd = document.getElementById('psp-ai-end').value;
@@ -7520,3 +7612,348 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                 }
             };
         })(window.renderReport);
+function escapeHtml(str) {
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+
+// ================= 🎯 改善项目跟踪模块 =================
+window.renderImproveProjects = function() {
+    try {
+        if (!db.improveProjects) db.improveProjects = [];
+        var deptFilter = (document.getElementById('improve-filter-dept') || {}).value || '';
+        var statusFilter = (document.getElementById('improve-filter-status') || {}).value || '';
+        var startFilter = (document.getElementById('improve-filter-start') || {}).value || '';
+        var endFilter = (document.getElementById('improve-filter-end') || {}).value || '';
+        var todayStr = new Date().toISOString().split('T')[0];
+
+        // Auto-update overdue status
+        db.improveProjects.forEach(function(p) {
+            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+                p.progress = '逾期';
+            }
+        });
+
+        var filtered = db.improveProjects.filter(function(p) {
+            if (deptFilter && p.dept !== deptFilter) return false;
+            if (statusFilter && p.progress !== statusFilter) return false;
+            if (startFilter && p.startDate && p.startDate < startFilter) return false;
+            if (endFilter && p.startDate && p.startDate > endFilter) return false;
+            return true;
+        });
+
+        // Sort: overdue first, then in progress, then completed
+        filtered.sort(function(a, b) {
+            var aScore = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : 2);
+            var bScore = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : 2);
+            if (aScore !== bScore) return aScore - bScore;
+            return (b.startDate || '').localeCompare(a.startDate || '');
+        });
+
+        // Stats
+        var total = filtered.length;
+        var done = filtered.filter(function(p) { return p.progress === '已完成'; }).length;
+        var prog = filtered.filter(function(p) { return p.progress === '进行中'; }).length;
+        var over = filtered.filter(function(p) { return p.progress === '逾期'; }).length;
+        var rate = total > 0 ? Math.round(done / total * 100) : 0;
+        document.getElementById('improve-total-count').innerText = total;
+        document.getElementById('improve-done-count').innerText = done;
+        document.getElementById('improve-prog-count').innerText = prog;
+        document.getElementById('improve-over-count').innerText = over;
+        document.getElementById('improve-rate').innerText = rate + '%';
+
+        var body = document.getElementById('improve-table-body');
+        if (!body) return;
+
+        body.innerHTML = filtered.map(function(p) {
+            var isOverdue = p.progress === '逾期';
+            var rowBg = isOverdue ? 'style="background:#fef2f2;"' : '';
+            var statusColor = p.progress === '已完成' ? 'color:#16a34a;font-weight:800;' : (p.progress === '进行中' ? 'color:#ea580c;font-weight:800;' : 'color:#dc2626;font-weight:900;');
+            var statusBadge = p.progress === '已完成' ? '<span style="background:#16a34a;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">已完成</span>'
+                : (p.progress === '进行中' ? '<span style="background:#ea580c;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">进行中</span>'
+                    : '<span style="background:#dc2626;color:white;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">逾期 <i class="fa-solid fa-exclamation"></i></span>');
+
+            return '<tr ' + rowBg + '>' +
+                '<td style="padding:4px 8px;"><input type="date" value="' + (p.startDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'startDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;"></td>' +
+                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.projectName || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'projectName\',this.value)" placeholder="请输入项目名称" style="width:100%;border:none;font-size:13px;font-weight:700;background:transparent;"></td>' +
+                '<td style="padding:4px 8px;"><select onchange="updateImproveField(\'' + p.id + '\',\'dept\',this.value)" style="width:100%;border:none;font-size:12px;font-weight:600;background:transparent;">' +
+                    DEPTS.map(function(d) { return '<option ' + (p.dept === d ? 'selected' : '') + '>' + d + '</option>'; }).join('') +
+                    '<option ' + ((!p.dept || DEPTS.indexOf(p.dept) === -1) ? 'selected' : '') + ' value="">请选择</option>' +
+                '</select></td>' +
+                '<td style="padding:4px 8px;text-align:center;"><span style="' + statusColor + '">' + statusBadge + '</span></td>' +
+                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.progressDesc || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'progressDesc\',this.value)" placeholder="进度描述" style="width:100%;border:none;font-size:12px;background:transparent;"></td>' +
+                '<td style="padding:4px 8px;"><input type="date" value="' + (p.planEndDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'planEndDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;' + (isOverdue ? 'color:#dc2626;' : '') + '"></td>' +
+                '<td style="padding:4px 8px;text-align:center;"><i class="fa-solid fa-xmark" style="color:var(--danger);cursor:pointer;font-size:16px;" onclick="delImproveProject(\'' + p.id + '\')"></i></td>' +
+                '</tr>';
+        }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>暂无改善项目，点击「新增改善项目」开始录入</td></tr>';
+    } catch(e) { console.error('[改善项目跟踪] render error:', e.message); }
+};
+
+window.addImproveProject = function() {
+    if (!db.improveProjects) db.improveProjects = [];
+    var today = new Date().toISOString().split('T')[0];
+    db.improveProjects.unshift({
+        id: Date.now() + '-' + Math.random().toString(36).substring(2, 8),
+        startDate: today,
+        projectName: '',
+        dept: '',
+        progress: '进行中',
+        progressDesc: '',
+        planEndDate: ''
+    });
+    triggerAutoSave();
+    renderImproveProjects();
+    populateImproveDeptFilter();
+    showToast('fa-solid fa-plus-circle', '已新增改善项目，请填写详细信息');
+};
+
+window.updateImproveField = function(id, field, value) {
+    var p = (db.improveProjects || []).find(function(item) { return String(item.id) === String(id); });
+    if (!p) return console.warn('[改善项目] 未找到:', id);
+    p[field] = value;
+    // Auto-update overdue status
+    var todayStr = new Date().toISOString().split('T')[0];
+    if (field === 'planEndDate' || field === 'progress') {
+        if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+            p.progress = '逾期';
+        }
+    }
+    triggerAutoSave();
+    renderImproveProjects();
+};
+
+window.delImproveProject = function(id) {
+    if (!db.improveProjects) return;
+    if (!confirm('确认删除该改善项目？')) return;
+    db.improveProjects = db.improveProjects.filter(function(p) { return String(p.id) !== String(id); });
+    _deferredLocalStorageSave();
+    setTimeout(function() {
+        if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+    }, 0);
+    renderImproveProjects();
+    populateImproveDeptFilter();
+    showToast('fa-solid fa-check', '改善项目已删除');
+};
+
+window.quickImproveDateRange = function() {
+    var now = new Date();
+    var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    var startEl = document.getElementById('improve-filter-start');
+    var endEl = document.getElementById('improve-filter-end');
+    if (startEl) startEl.value = firstDay.toISOString().split('T')[0];
+    if (endEl) endEl.value = now.toISOString().split('T')[0];
+    renderImproveProjects();
+};
+
+function populateImproveDeptFilter() {
+    var sel = document.getElementById('improve-filter-dept');
+    if (!sel) return;
+    var currentVal = sel.value;
+    var depts = {};
+    (db.improveProjects || []).forEach(function(p) { if (p.dept) depts[p.dept] = true; });
+    sel.innerHTML = '<option value="">全部</option>' +
+        Object.keys(depts).sort().map(function(d) { return '<option ' + (currentVal === d ? 'selected' : '') + '>' + d + '</option>'; }).join('');
+    if (!Object.keys(depts).length) {
+        DEPTS.forEach(function(d) { sel.innerHTML += '<option>' + d + '</option>'; });
+    }
+    sel.value = currentVal;
+}
+
+// ================= 🎨 改善项目海报生成（类似PSP海报） =================
+window.generateImprovePoster = function() {
+    try {
+        var items = db.improveProjects || [];
+        if (items.length === 0) {
+            showToast('fa-solid fa-info-circle', '暂无改善项目记录');
+            return;
+        }
+        var todayStr = new Date().toISOString().split('T')[0];
+
+        // Recalculate overdue
+        items.forEach(function(p) {
+            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+                p.progress = '逾期';
+            }
+        });
+
+        // Sort: overdue first
+        var sorted = items.slice().sort(function(a, b) {
+            var aOv = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : 2);
+            var bOv = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : 2);
+            return aOv - bOv;
+        });
+
+        // Stats
+        var total = items.length;
+        var done = items.filter(function(p) { return p.progress === '已完成'; }).length;
+        var prog = items.filter(function(p) { return p.progress === '进行中'; }).length;
+        var over = items.filter(function(p) { return p.progress === '逾期'; }).length;
+        var rate = total > 0 ? Math.round(done / total * 100) : 0;
+
+        var h = '<div class="psp-poster">';
+        h += '<div class="psp-poster-hdr">';
+        h += '<div class="psp-poster-title">\uD83C\uDFAF 改善项目跟踪通报<div class="bi-en-title">Improvement Project Tracking Report</div></div>';
+        h += '<div class="psp-poster-period">生成时间: ' + new Date().toLocaleString('zh-CN', {hour12:false}) + '<br><span class="bi-en-sub">Generated: ' + new Date().toLocaleString('en-US', {hour12:false}) + '</span></div>';
+        h += '</div>';
+
+        // Summary bar
+        h += '<div class="psp-poster-summary-bar">';
+        h += '<div class="psp-ps-item"><b>' + total + '</b><span class="bi-cn">项目总数</span><span class="bi-en">Total Projects</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + done + '</b><span class="bi-cn">已完成</span><span class="bi-en">Completed</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + prog + '</b><span class="bi-cn">进行中</span><span class="bi-en">In Progress</span></div>';
+        h += '<div class="psp-ps-item" style="background:#fef2f2;"><b style="color:#dc2626;font-size:22px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#1e40af;">' + rate + '%</b><span class="bi-cn">完成率</span><span class="bi-en">Completion Rate</span></div>';
+        h += '</div>';
+
+        // Table
+        h += '<table class="psp-poster-table">';
+        h += '<thead><tr>';
+        h += '<th style="width:95px;"><div class="bi-th-cn">立项时间</div><div class="bi-th-en">Start Date</div></th>';
+        h += '<th style="min-width:160px;"><div class="bi-th-cn">项目名称</div><div class="bi-th-en">Project Name</div></th>';
+        h += '<th style="width:85px;"><div class="bi-th-cn">责任部门</div><div class="bi-th-en">Dept</div></th>';
+        h += '<th style="width:70px;"><div class="bi-th-cn">进度</div><div class="bi-th-en">Status</div></th>';
+        h += '<th style="min-width:140px;"><div class="bi-th-cn">进度描述</div><div class="bi-th-en">Description</div></th>';
+        h += '<th style="width:105px;"><div class="bi-th-cn">计划完成时间</div><div class="bi-th-en">Due Date</div></th>';
+        h += '<th style="width:85px;"><div class="bi-th-cn">逾期标记</div><div class="bi-th-en">Overdue Flag</div></th>';
+        h += '</tr></thead><tbody>';
+
+        for (var i = 0; i < sorted.length; i++) {
+            var p = sorted[i];
+            var isOverdue = p.progress === '逾期';
+            var rowBg = isOverdue ? 'background:#fef2f2;' : '';
+            var statusColor = p.progress === '已完成' ? 'color:#16a34a;font-weight:800;' : (p.progress === '进行中' ? 'color:#ea580c;font-weight:800;' : 'color:#dc2626;font-weight:900;');
+            var statusCN = p.progress === '已完成' ? '已完成' : (p.progress === '进行中' ? '进行中' : '逾期');
+            var statusEN = p.progress === '已完成' ? 'Completed' : (p.progress === '进行中' ? 'In Progress' : 'Overdue');
+
+            h += '<tr style="' + rowBg + '">';
+            h += '<td>' + (p.startDate || '') + '</td>';
+            h += '<td style="text-align:left;word-break:break-word;font-size:13px;font-weight:700;padding:5px 8px;">' + escapeHtml(p.projectName || '') + '</td>';
+            h += '<td>' + (p.dept || '') + '</td>';
+            h += '<td style="' + statusColor + '"><span class="bi-cn" style="font-size:13px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:10px;font-weight:600;">' + statusEN + '</span></td>';
+            h += '<td style="text-align:left;font-size:12px;padding:5px 8px;">' + escapeHtml(p.progressDesc || '') + '</td>';
+            h += '<td' + (isOverdue ? ' style="font-weight:900;color:#dc2626;"' : '') + '>' + (p.planEndDate || '') + '</td>';
+            h += '<td>' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:15px;padding:3px 8px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:10px;">Overdue</span></div>' : '') + '</td>';
+            h += '</tr>';
+        }
+
+        h += '</tbody></table>';
+
+        // Footer
+        h += '<div class="psp-poster-footer">';
+        h += '逾期说明:计划完成时间已过但未完成的项目标记为红色「已逾期」，请责任部门尽快确认并推进。<br>';
+        h += '<span class="bi-en-foot">Note: Items past due date and not completed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
+        h += '</div>';
+        h += '</div>';
+
+        // Open new window
+        var win = window.open('', '_blank');
+        if (!win) {
+            showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
+            return;
+        }
+
+        var styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        var styleHTML = '';
+        for (var si = 0; si < styles.length; si++) styleHTML += styles[si].outerHTML;
+
+        win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>改善项目跟踪通报 | Improvement Project Tracking Report</title>');
+        win.document.write(styleHTML);
+        win.document.write('<style>' +
+            'body{margin:0;padding:8px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
+            '@page{size:A4;margin:6mm;}' +
+            '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;}' +
+            '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
+            '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
+            '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
+            '.bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
+            '.bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
+            '.bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
+            '.bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
+            '.bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
+            '.bi-en-foot{font-size:10px;color:#94a3b8;}' +
+            '.psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
+            '.psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
+            '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
+            '.psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
+            '.psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
+            '.psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
+            '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
+            '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
+            '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
+            '.psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
+            '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
+            '</style></head><body>');
+        win.document.write(h);
+        win.document.write('</body></html>');
+        win.document.close();
+
+        showToast('fa-solid fa-file-image', '已生成改善项目通报,可在新窗口打印/另存为PDF');
+        setTimeout(function() {
+            win.focus();
+            win.print();
+        }, 500);
+
+    } catch(e) {
+        console.error('[改善项目海报] 生成失败:', e.message, e.stack);
+        showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
+    }
+};
+
+// ================= 📊 改善项目导出Excel =================
+window.exportImproveToExcel = function() {
+    if (!db.improveProjects || db.improveProjects.length === 0) {
+        showToast('fa-solid fa-info-circle', '暂无改善项目记录', 'warning');
+        return;
+    }
+    try {
+        var sorted = db.improveProjects.slice().sort(function(a, b) { return (b.startDate || '').localeCompare(a.startDate || ''); });
+        var xlsData = sorted.map(function(r, idx) {
+            return {
+                '序号': idx + 1,
+                '立项时间': r.startDate || '',
+                '项目名称': r.projectName || '',
+                '责任部门': r.dept || '',
+                '进度': r.progress || '',
+                '进度描述': r.progressDesc || '',
+                '计划完成时间': r.planEndDate || ''
+            };
+        });
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(xlsData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '改善项目');
+            XLSX.writeFile(wb, '改善项目跟踪_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            showToast('fa-solid fa-check', '已导出 ' + xlsData.length + ' 条改善项目数据');
+        } else {
+            showToast('fa-solid fa-warning', 'XLSX库未加载，请稍后重试', 'error');
+        }
+    } catch(e) {
+        console.error('[改善项目] 导出失败:', e.message);
+        showToast('fa-solid fa-xmark', '导出失败: ' + e.message, 'error');
+    }
+};
+
+// ================= 🔄 Hook into page switching =================
+// Patch showPage to auto-render improve projects when switching to p-improve-track
+(function() {
+    var origShowPage = window.showPage;
+    if (origShowPage) {
+        window.showPage = function(id, btn) {
+            origShowPage.call(this, id, btn);
+            if (id === 'p-improve-track') {
+                setTimeout(function() {
+                    // Recalc overdue status
+                    var todayStr = new Date().toISOString().split('T')[0];
+                    (db.improveProjects || []).forEach(function(p) {
+                        if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+                            p.progress = '逾期';
+                        }
+                    });
+                    // Populate dept filter from existing data + DEPTS
+                    populateImproveDeptFilter();
+                    renderImproveProjects();
+                }, 50);
+            }
+        };
+    }
+})();
