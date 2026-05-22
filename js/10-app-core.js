@@ -373,6 +373,12 @@
                     db.kaizen = deepMergeArrayById(db.kaizen || [], cloudDb.kaizen);
                 }
             }
+            // ★ 修复:improveProjects 未合并导致跨设备数据不可见
+            if (cloudDb.improveProjects && Array.isArray(cloudDb.improveProjects)) {
+                if (cloudDb.improveProjects.length > 0) {
+                    db.improveProjects = deepMergeArrayById(db.improveProjects || [], cloudDb.improveProjects);
+                }
+            }
             if (cloudDb.sysDetail && Object.keys(cloudDb.sysDetail).length > 0) {
                 // ★ 深度合并 sysDetail：按类型逐级合并，保留本地已有删除标记等，不直接整体替换
                 var deletedTypes = new Set();
@@ -397,6 +403,12 @@
             if (cloudDb.memo !== undefined && cloudDb.memo !== null) db.memo = cloudDb.memo;
             if (cloudDb.prod && Object.keys(cloudDb.prod).length > 0) db.prod = cloudDb.prod;
             if (cloudDb.dm && Object.keys(cloudDb.dm).length > 0) db.dm = cloudDb.dm;
+            // ★ 修复:以下对象在合并时遗漏,跨设备不同步
+            if (cloudDb.targetMgmt && Object.keys(cloudDb.targetMgmt).length > 0) db.targetMgmt = cloudDb.targetMgmt;
+            if (cloudDb.targetSettings && Object.keys(cloudDb.targetSettings).length > 0) db.targetSettings = cloudDb.targetSettings;
+            if (cloudDb.defaultTargets && Object.keys(cloudDb.defaultTargets).length > 0) db.defaultTargets = cloudDb.defaultTargets;
+            if (cloudDb.meta && Object.keys(cloudDb.meta).length > 0) db.meta = cloudDb.meta;
+            if (cloudDb.simConfig && Object.keys(cloudDb.simConfig).length > 0) db.simConfig = cloudDb.simConfig;
             if (cloudDb.sysOps && Object.keys(cloudDb.sysOps).length > 0) db.sysOps = cloudDb.sysOps;
             // ★ 保存到本地前也清理不合法 key(防止 localStorage 中也写入脏数据)
             sanitizeForFirebase(db, 'localStorageSave');
