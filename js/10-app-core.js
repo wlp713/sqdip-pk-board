@@ -316,10 +316,14 @@
         // ★ 智能深度合并:按ID合并数组,保留本地已有字段编辑
         // ★ 智能深度合并:按ID合并数组,保留本地已有字段编辑
         window.deepMergeArrayById = function(localArr, cloudArr) {
-            if (!Array.isArray(cloudArr) || cloudArr.length === 0) return [];
+            if (!Array.isArray(cloudArr) || cloudArr.length === 0) {
+                // 云端无数据时,保留本地数据(防止旧缓存清空本地新增/删除的数据)
+                return Array.isArray(localArr) ? localArr.slice() : [];
+            }
             if (!Array.isArray(localArr)) localArr = [];
-            // ★ 云端决定条目集合(cloud-authoritative),字段级深度合并保留本地编辑
-            // ★ 删除能传播:云端没有的条目→本地也不会保留
+            // ★★ 2026-05-22 修复:改为 UNION 模式 — 云端和本地的条目都保留
+            //    之前是 cloud-authoritative 模式:云端没有的条目→本地也丢失
+            //    导致:云端旧缓存(含已删项目)合并过来时,本地新项目被全部丢弃
             var cloudMap = {};
             var localMap = {};
             cloudArr.forEach(function(item) {
@@ -329,12 +333,12 @@
                 if (item.id != null) localMap[String(item.id)] = item;
             });
             var result = [];
-            // 遍历云端条目(决定存在性),有本地匹配时字段级合并
+            // 1) 遍历云端条目,有本地匹配时字段级合并
             cloudArr.forEach(function(cloudItem) {
                 var cid = String(cloudItem.id);
                 var localItem = localMap[cid];
                 if (localItem) {
-                    // 云端为基础,补充本地有而云端没有的临时字段(如_origDesc)
+                    // 云端为基础,补充本地有而云端没有的临时字段
                     var merged = {};
                     Object.keys(cloudItem).forEach(function(k) { merged[k] = cloudItem[k]; });
                     Object.keys(localItem).forEach(function(k) {
@@ -347,6 +351,13 @@
                     result.push(cloudItem);
                 }
             });
+            // 2) ★★ 新增:保留本地有而云端没有的条目(防止云端的旧数据覆盖本地新增)
+            localArr.forEach(function(localItem) {
+                var lid = String(localItem.id);
+                if (!cloudMap[lid]) {
+                    result.push(localItem);
+                }
+            });
             return result;
         };
         var deepMergeArrayById = window.deepMergeArrayById;
@@ -357,16 +368,12 @@
             // 只有当云端数据有效(非空)时才合并
             if (cloudDb.dLinesConfig && Object.keys(cloudDb.dLinesConfig).length > 0) db.dLinesConfig = cloudDb.dLinesConfig;
             if (cloudDb.problems && Array.isArray(cloudDb.problems)) {
-                if (cloudDb.problems.length > 0) {
-                    db.problems = deepMergeArrayById(db.problems || [], cloudDb.problems);
-                }
+                // 即使云端为空数组也保留本地数据(不再清空)
+                db.problems = deepMergeArrayById(db.problems || [], cloudDb.problems);
             }
             if (cloudDb.loss && Array.isArray(cloudDb.loss)) {
-                if (cloudDb.loss.length > 0) {
-                    db.loss = deepMergeArrayById(db.loss || [], cloudDb.loss);
-                } else {
-                    db.loss = [];
-                }
+                // 即使云端为空数组也保留本地数据
+                db.loss = deepMergeArrayById(db.loss || [], cloudDb.loss);
             }
             if (cloudDb.kaizen && Array.isArray(cloudDb.kaizen)) {
                 if (cloudDb.kaizen.length > 0) {
@@ -385,22 +392,18 @@
             }
             if (cloudDb.sysDetail && Object.keys(cloudDb.sysDetail).length > 0) {
                 // ★ 深度合并 sysDetail：按类型逐级合并，保留本地已有删除标记等，不直接整体替换
-                var deletedTypes = new Set();
+                if (typeof db.sysDetail !== 'object' || db.sysDetail === null) db.sysDetail = {};
                 Object.keys(cloudDb.sysDetail).forEach(function(k) {
                     if (k === '_skipDates') { db.sysDetail._skipDates = cloudDb.sysDetail._skipDates; return; }
                     if (Array.isArray(cloudDb.sysDetail[k])) {
-                        if (cloudDb.sysDetail[k].length > 0) {
-                            db.sysDetail[k] = deepMergeArrayById(db.sysDetail[k] || [], cloudDb.sysDetail[k]);
-                        } else {
-                            // 云端有且为空数组 → 本地也该为空
-                            db.sysDetail[k] = [];
-                        }
+                        // 即使云端为空数组也保留本地数据(deepMergeArrayById 已改为 UNION 模式)
+                        db.sysDetail[k] = deepMergeArrayById(db.sysDetail[k] || [], cloudDb.sysDetail[k]);
                     }
                 });
                 // 确保本地不存在的类型也从云端拿到
                 Object.keys(cloudDb.sysDetail).forEach(function(k) {
-                    if (k !== '_skipDates' && !Array.isArray(db.sysDetail[k])) {
-                        db.sysDetail[k] = Array.isArray(cloudDb.sysDetail[k]) ? cloudDb.sysDetail[k].slice() : cloudDb.sysDetail[k];
+                    if (k !== '_skipDates' && !Array.isArray(db.sysDetail[k]) && Array.isArray(cloudDb.sysDetail[k])) {
+                        db.sysDetail[k] = cloudDb.sysDetail[k].slice();
                     }
                 });
             }
