@@ -7830,7 +7830,7 @@ window.generateImprovePoster = function() {
             return b.total - a.total;
         });
 
-        // Group items by department, sorted
+        // Group items by department
         var groupedByDept = {};
         items.forEach(function(p) {
             var d = p.dept || '其他';
@@ -7851,7 +7851,7 @@ window.generateImprovePoster = function() {
             return deptStats[b].total - deptStats[a].total;
         });
 
-        // Balance into two columns
+        // Balance two columns
         var allGroups = [];
         sortedDepts.forEach(function(d) {
             allGroups.push({ dept: d, items: groupedByDept[d], stats: deptStats[d] });
@@ -7869,18 +7869,18 @@ window.generateImprovePoster = function() {
             }
         });
 
-        // Helper: auto-shrink font for name column (~260px available per col)
-        function calcNameFontSize(text) {
-            var len = (text || '').length;
-            if (len <= 14) return '12px';
-            if (len <= 20) return '11px';
-            if (len <= 28) return '10px';
-            if (len <= 36) return '9px';
-            return '8px';
+        // Auto-shrink font helpers
+        function calcNameFS(t) {
+            var len = (t || '').length;
+            if (len <= 14) return '12px'; if (len <= 20) return '11px';
+            if (len <= 28) return '10px'; if (len <= 36) return '9px'; return '8px';
         }
-        function calcDateFontSize(text) {
-            return (text || '').length > 10 ? '9px' : '10px';
-        }
+        function calcDateFS(t) { return (t || '').length > 10 ? '9px' : '10px'; }
+
+        // Sidebar dark blue gradient (low saturation #1E2330)
+        var SIDE_A = '#1E2330', SIDE_B = '#262C3C';
+        var SIDE_GRAD = 'linear-gradient(180deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
+        var SIDE_GRAD_135 = 'linear-gradient(135deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
 
         // ==================== BUILD HTML ====================
         var h = '<div class="ip-poster">';
@@ -7902,6 +7902,15 @@ window.generateImprovePoster = function() {
         h += '<div class="ip-sum-item" style="background:#fef2f2;border-color:#fecaca;"><b style="color:#dc2626;">' + over + '</b><span class="ip-cn" style="color:#dc2626;">已逾期</span><span class="ip-en" style="color:#dc2626;">Overdue</span></div>';
         h += '<div class="ip-sum-item"><b style="color:#64748b;">' + notstart + '</b><span class="ip-cn">未开始</span><span class="ip-en">Not Started</span></div>';
         h += '<div class="ip-sum-item"><b style="color:#2563eb;">' + rate + '%</b><span class="ip-cn">完成率</span><span class="ip-en">Close Rate</span></div>';
+        h += '</div>';
+
+        // ---- 2.5 STATUS ICON LEGEND ----
+        h += '<div class="ip-legend">';
+        h += '<span style="font-weight:800;color:#1E2330;font-size:10px;margin-right:4px;">\uD83D\uDCD6 图例 Legend:</span>';
+        h += '<span class="ip-legend-item">\u2705 已完成 Closed</span>';
+        h += '<span class="ip-legend-item">\uD83D\uDFE1 进行中 In Progress</span>';
+        h += '<span class="ip-legend-item" style="color:#dc2626;font-weight:800;">\u26A0\uFE0F 逾期 Overdue</span>';
+        h += '<span class="ip-legend-item">\u26AA 未开始 Not Started</span>';
         h += '</div>';
 
         // ---- 3. DEPT RANKING ----
@@ -7929,7 +7938,7 @@ window.generateImprovePoster = function() {
         });
         h += '</div></div>';
 
-        // ---- 4. PROJECT DETAILS (dept grouped, centered header, auto-shrink font) ----
+        // ---- 4. PROJECT DETAILS ----
         h += '<div class="ip-sec">';
         h += '<div class="ip-sec-title">B. 项目明细 / Project Details</div>';
         h += '<div class="ip-table-grid">';
@@ -7944,25 +7953,22 @@ window.generateImprovePoster = function() {
                 var notCount = g.stats.notstart;
                 var hasOverdue = overCount > 0;
 
-                // Build status summary
                 var sumParts = [];
                 if (doneCount > 0) sumParts.push('\u2705已完成' + doneCount);
                 if (progCount > 0) sumParts.push('\uD83D\uDFE1进行中' + progCount);
                 if (overCount > 0) sumParts.push('\u26A0\uFE0F逾期' + overCount);
                 if (notCount > 0) sumParts.push('\u26AA未开始' + notCount);
 
-                var hdrBg = hasOverdue ? '#dc2626' : '#1e40af';
-                var hdrBgGrad = hasOverdue ? '#dc2626' : '#1e40af';
+                // Dept header: sidebar blue gradient OR red for overdue
+                var hdrGrad = hasOverdue ? 'linear-gradient(180deg, #dc2626 0%, #ef4444 100%)' : SIDE_GRAD;
 
                 html += '<div class="ip-dept-block">';
-                // Department header (centered, filled background, PSP blue header style)
-                html += '<div class="ip-dept-bar" style="background:' + hdrBgGrad + ';">';
+                html += '<div class="ip-dept-bar" style="background:' + hdrGrad + ';">';
                 html += '<span class="ip-dept-bar-name">' + g.dept + '</span>';
                 html += '<span class="ip-dept-bar-count">' + g.stats.total + ' items</span>';
                 html += '<span class="ip-dept-bar-sum">' + sumParts.join(' | ') + '</span>';
                 html += '</div>';
 
-                // Column sub-header row
                 html += '<div class="ip-sub-hdr">';
                 html += '<span class="ip-sub-hdr-date">日期 Date</span>';
                 html += '<span class="ip-sub-hdr-name">项目名称 Project</span>';
@@ -7970,29 +7976,24 @@ window.generateImprovePoster = function() {
                 html += '<span class="ip-sub-hdr-end">计划完成 Plan End</span>';
                 html += '</div>';
 
-                // Item rows
                 for (var pi = 0; pi < g.items.length; pi++) {
                     var p = g.items[pi];
                     var isOv = p.progress === '逾期';
                     var isDone = p.progress === '已完成';
                     var isProg2 = p.progress === '进行中';
-
                     var rowBg = isOv ? 'background:#fef2f2;' : '';
                     var borderSide = isOv ? 'border-left:3px solid #dc2626;' : (isDone ? 'border-left:3px solid #16a34a;' : (isProg2 ? 'border-left:3px solid #ea580c;' : 'border-left:3px solid #d1d5db;'));
-
                     var badgeText = isOv ? '逾期' : (isDone ? '已完成' : (isProg2 ? '进行中' : '未开始'));
                     var badgeColor = isOv ? '#dc2626' : (isDone ? '#16a34a' : (isProg2 ? '#ea580c' : '#94a3b8'));
                     var badgeBg = isOv ? '#fef2f2' : (isDone ? '#f0fdf4' : (isProg2 ? '#fff7ed' : '#f9fafb'));
-                    var badgeBorder = isOv ? '#fecaca' : (isDone ? '#bbf7d0' : (isProg2 ? '#fed7aa' : '#e5e7eb'));
-
-                    // Auto-shrink font sizes (same font format within department)
-                    var nameFs = calcNameFontSize(p.projectName);
-                    var dateFs = calcDateFontSize(p.startDate);
+                    var badgeBd = isOv ? '#fecaca' : (isDone ? '#bbf7d0' : (isProg2 ? '#fed7aa' : '#e5e7eb'));
+                    var nameFs = calcNameFS(p.projectName);
+                    var dateFs = calcDateFS(p.startDate);
 
                     html += '<div class="ip-item-row" style="' + rowBg + borderSide + '">';
                     html += '<span class="ip-item-date" style="font-size:' + dateFs + ';white-space:nowrap;overflow:hidden;">' + (p.startDate || '') + '</span>';
                     html += '<span class="ip-item-name" style="font-size:' + nameFs + ';white-space:nowrap;overflow:hidden;">' + escapeHtml(p.projectName || '') + '</span>';
-                    html += '<span class="ip-item-status"><span class="ip-badge" style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBorder + ';">' + badgeText + '</span></span>';
+                    html += '<span class="ip-item-status"><span class="ip-badge" style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBd + ';">' + badgeText + '</span></span>';
                     html += '<span class="ip-item-end' + (isOv ? ' ip-item-end-over' : '') + '" style="white-space:nowrap;overflow:hidden;">' + (p.planEndDate || '') + '</span>';
                     html += '</div>';
                 }
@@ -8017,19 +8018,22 @@ window.generateImprovePoster = function() {
             '*{margin:0;padding:0;box-sizing:border-box;}' +
             '.pwrap{width:960px;background:#fff;padding:10px 16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#1e293b;}' +
             // HEADER
-            '.pwrap .ip-hdr{text-align:center;padding-bottom:6px;border-bottom:3px solid #1e40af;margin-bottom:8px;}' +
-            '.pwrap .ip-title{font-size:22px;font-weight:900;color:#1e3a5f;letter-spacing:1px;}' +
+            '.pwrap .ip-hdr{text-align:center;padding-bottom:6px;border-bottom:3px solid ' + SIDE_A + ';margin-bottom:8px;}' +
+            '.pwrap .ip-title{font-size:22px;font-weight:900;color:' + SIDE_A + ';letter-spacing:1px;}' +
             '.pwrap .ip-subtitle{font-size:11px;font-weight:600;color:#64748b;margin:2px 0;}' +
             '.pwrap .ip-period{font-size:9px;color:#64748b;font-weight:600;margin-top:2px;}' +
             // SUMMARY BAR
-            '.pwrap .ip-sum-bar{display:flex;gap:4px;margin-bottom:8px;}' +
+            '.pwrap .ip-sum-bar{display:flex;gap:4px;margin-bottom:5px;}' +
             '.pwrap .ip-sum-item{flex:1;text-align:center;background:#f8fafc;border-radius:5px;padding:4px 2px;border:1px solid #e2e8f0;}' +
             '.pwrap .ip-sum-item b{display:block;font-size:17px;font-weight:900;color:#1e293b;line-height:1.2;}' +
             '.pwrap .ip-sum-item .ip-cn{display:block;font-size:9px;font-weight:700;line-height:1.2;letter-spacing:0.5px;}' +
             '.pwrap .ip-sum-item .ip-en{display:block;font-size:8px;font-weight:500;color:#64748b;line-height:1.2;}' +
+            // LEGEND (status icons)
+            '.pwrap .ip-legend{display:flex;gap:10px;justify-content:center;align-items:center;padding:3px 8px;margin-bottom:5px;background:#f1f4f9;border-radius:4px;border:1px solid #d1d9e6;}' +
+            '.pwrap .ip-legend-item{font-size:9px;font-weight:600;color:#475569;}' +
             // SECTION
             '.pwrap .ip-sec{margin-bottom:6px;}' +
-            '.pwrap .ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e40af,#3b82f6);padding:3px 10px;border-radius:4px;margin-bottom:4px;}' +
+            '.pwrap .ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:' + SIDE_GRAD_135 + ';padding:3px 10px;border-radius:4px;margin-bottom:4px;}' +
             // CHART
             '.pwrap .ip-chart{padding:2px 0;}' +
             '.pwrap .ip-chart-row{display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;margin-bottom:1px;}' +
@@ -8044,14 +8048,14 @@ window.generateImprovePoster = function() {
             // TABLE GRID
             '.pwrap .ip-table-grid{display:flex;gap:8px;}' +
             '.pwrap .ip-col{flex:1;min-width:0;}' +
-            // DEPT BLOCK (replaces table)
+            // DEPT BLOCK
             '.pwrap .ip-dept-block{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;}' +
-            // DEPT HEADER BAR (filled, centered, PSP blue)
-            '.pwrap .ip-dept-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 8px;color:#fff;}' +
+            // DEPT HEADER BAR (low-sat dark blue gradient, or red for overdue)
+            '.pwrap .ip-dept-bar{display:flex;align-items:center;gap:8px;padding:5px 8px;color:#fff;}' +
             '.pwrap .ip-dept-bar-name{font-size:14px;font-weight:900;letter-spacing:0.5px;}' +
             '.pwrap .ip-dept-bar-count{font-size:10px;font-weight:600;opacity:0.9;}' +
             '.pwrap .ip-dept-bar-sum{font-size:9px;font-weight:500;opacity:0.85;margin-left:auto;}' +
-            // SUB-HEADER ROW (column labels)
+            // SUB-HEADER
             '.pwrap .ip-sub-hdr{display:flex;align-items:center;gap:2px;padding:2px 6px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;}' +
             '.pwrap .ip-sub-hdr-date{font-size:9px;font-weight:700;color:#64748b;min-width:64px;}' +
             '.pwrap .ip-sub-hdr-name{flex:1;font-size:9px;font-weight:700;color:#64748b;}' +
