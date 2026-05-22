@@ -80,8 +80,13 @@
                 try {
                     localStorage.setItem(DB_KEY, JSON.stringify(db));
                 } catch(lsErr) {
-                    console.warn('[saveToFirebase] localStorage写入失败,移除备份后重试');
-                    try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
+                    console.warn('[saveToFirebase] localStorage写入失败,清理旧备份后重试');
+                    for (var _lsi = 0; _lsi < localStorage.length; _lsi++) {
+                        var _lsk = localStorage.key(_lsi);
+                        if (_lsk && _lsk.indexOf(DB_KEY + '_backup_') === 0) {
+                            try { localStorage.removeItem(_lsk); _lsi--; } catch(ex) {}
+                        }
+                    }
                     try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {
                         console.error('[saveToFirebase] localStorage写入仍然失败', e2.message);
                     }
@@ -400,7 +405,7 @@
             if (cloudDb.sysOps && Object.keys(cloudDb.sysOps).length > 0) db.sysOps = cloudDb.sysOps;
             // ★ 保存到本地前也清理不合法 key(防止 localStorage 中也写入脏数据)
             sanitizeForFirebase(db, 'localStorageSave');
-            try { try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe){console.warn('[存储]配额满,移除备份后重试');try{localStorage.removeItem(DB_KEY+'_backup')}catch(ex){}try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe2){}} } catch(e){}
+            try { try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe){console.warn('[存储]配额满,清理后重试');for(var _qi=0;_qi<localStorage.length;_qi++){var _qk=localStorage.key(_qi);if(_qk&&_qk.indexOf(DB_KEY+'_backup_')===0){localStorage.removeItem(_qk);_qi--;}}try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe2){}} } catch(e){}
             if (isAppReady) refreshAllViews();
         }
 
@@ -425,13 +430,11 @@
         // ★ 全局triggerAutoSave:脚本块1需要在全局作用域定义此函数
         // ★ 性能优化:快速编辑时跳过 localStorage 写入(仅保存最近一次)
         var _lastAutoSaveTime = 0;
-        // ★ 内容哈希检测:数据未变化则跳过完整保存(老电脑性能优化)
-        var _lastSerialized = '';
         window.triggerAutoSave = function() {
             try {
-                // ★ 性能优化:1000ms 内触发多次时不重复执行完整保存流程
+                // ★ 性能优化:500ms 内触发多次时不重复执行完整保存流程
                 var now = Date.now();
-                var THROTTLE_MS = 1000;
+                var THROTTLE_MS = 500;
                 if (_lastAutoSaveTime > 0 && (now - _lastAutoSaveTime) < THROTTLE_MS) {
                     // 快速编辑:只更新云端防抖计时器,跳过 localStorage 写入
                     if (isFirebaseReady) {
@@ -452,31 +455,35 @@
                 try { _serialized = JSON.stringify(db); } catch(_se) { _serialized = null; }
                 if (!_serialized) return;
 
-                // ★ 内容哈希:序列化内容未变则跳过 localStorage 写入
-                if (_serialized === _lastSerialized) {
-                    // 数据无变化,仅刷新保存指示器和云端同步
-                    var _si = document.getElementById('save-indicator-text');
-                    if(_si) _si.innerText = '已保存 at ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                    if (isFirebaseReady) {
-                        clearTimeout(cloudSaveTimeout);
-                        cloudSaveTimeout = setTimeout(function() { saveToFirebase(); }, 3000);
+                // 1. 清理旧的时间戳备份(保留最近3个)
+                try {
+                    var backupKeys = [];
+                    for (var _i = 0; _i < localStorage.length; _i++) {
+                        var _key = localStorage.key(_i);
+                        if (_key && _key.startsWith(DB_KEY + '_backup_')) backupKeys.push(_key);
                     }
-                    return;
-                }
-                _lastSerialized = _serialized;
+                    if (backupKeys.length >= 3) {
+                        backupKeys.sort().slice(0, backupKeys.length - 2).forEach(function(k) { try { localStorage.removeItem(k); } catch(ex) {} });
+                    }
+                } catch(_be) {}
 
-                // 1. 保存到 localStorage(主备份)
+                // 2. 保存到 localStorage(主备份)
                 try { localStorage.setItem(DB_KEY, _serialized); } catch(_se) {
-                    // 配额不够 -> 删除唯一备份后重试
+                    // 配额不够 -> 清理旧备份
                     try {
-                        try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
+                        for (var _ci = 0; _ci < localStorage.length; _ci++) {
+                            var _ck = localStorage.key(_ci);
+                            if (_ck && _ck.startsWith(DB_KEY + '_backup_')) { try { localStorage.removeItem(_ck); } catch(ex) {} }
+                        }
                         localStorage.setItem(DB_KEY, _serialized);
                     } catch(_se2) {}
                 }
 
-                // 2. 单轮换备份(始终覆盖同一个 key,不产生新 key)
-                try { localStorage.setItem(DB_KEY + '_backup', _serialized); } catch(_be) {
-                    // 配额不够且主 key 已安全保存,忽略即可
+                // 3. 创建时间戳备份(用已经序列化好的字符串,避免二次序列化)
+                var _backupKey = DB_KEY + '_backup_' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                try { localStorage.setItem(_backupKey, _serialized); } catch(_be) {
+                    // 配额不够 -> 放弃备份,数据至少在主 key 中安全
+                    console.warn('[自动保存] 备份保存失败,数据在主key中安全');
                 }
 
                 // 4. 更新保存指示器
@@ -494,9 +501,15 @@
                 console.log('数据已保存:', new Date().toLocaleTimeString());
             } catch(e){
                 console.warn('[自动保存] 保存失败,尝试紧急清理:', e.message);
+                // 尝试清理并只保存主力备份
                 try {
-                    // 移除单轮换备份腾空间
-                    try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
+                    // 删除所有时间戳备份
+                    for (var ci = 0; ci < localStorage.length; ci++) {
+                        var ck = localStorage.key(ci);
+                        if (ck && ck.startsWith(DB_KEY + '_backup_')) {
+                            try { localStorage.removeItem(ck); } catch(ex) {}
+                        }
+                    }
                     // 再试一次主力备份(复用已序列化的 _serialized)
                     if (_serialized) { localStorage.setItem(DB_KEY, _serialized); } else { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
                     console.log('[自动保存] 紧急清理后保存成功');
@@ -526,7 +539,7 @@
         const PRO_ORDER = ['PRO1', 'PRO2', 'PRO3', 'PRO4', 'H_MOTOR', 'F_MOTOR', 'S_MOTOR', 'CRANK'];
         const NEW_MOTOR_NAMES = { 'H_MOTOR': 'H电机线产出', 'F_MOTOR': 'F电机线产出', 'S_MOTOR': 'S系列电机线产出', 'CRANK': '曲轴线产出' };
         // 按照用户历史指令:加入 IP 与 QA 作为独立部门,以及 Pro.1-Pro.6
-        const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA', 'PUR'];
+        const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA'];
         // ★ 统一AI分析系统提示词：所有分析类AI调用共享此设定
         // 不自我介绍，只做数据驱动分析，仅结尾可加一句建议
         const AI_ANALYSIS_SYSTEM = '你精通精益生产、生产管理、冰箱压缩机制造工艺，熟悉美的GMCC冰箱压缩机产品。\n\n规则：\n1. 不要自我介绍，不要提及"资深""专家""专业"等身份描述\n2. 只基于用户提供的现有数据进行分析\n3. 不得在分析过程中提任何建议或改善措施\n4. 仅在输出的最后一部分的结尾处，可以加一句话的建议\n5. 所有分析必须引用具体数字，严禁编造数据\n6. 输出专业简洁，以数据为导向';
@@ -3530,8 +3543,6 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             }
         }
         async function initApp() {
-            // ★ 一次性清理旧版时间戳备份(2026-05-22 后不再产生)
-            try { for (var _ci_ = localStorage.length - 1; _ci_ >= 0; _ci_--) { var _ck_ = localStorage.key(_ci_); if (_ck_ && _ck_.startsWith(DB_KEY + '_backup_') && _ck_ !== DB_KEY + '_backup') { localStorage.removeItem(_ck_); } } } catch(ex_1) {}
             initParticles(); const today = new Date(); const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
             setTheme(localStorage.getItem('mbs_ui_theme') || '');
             setDensity(localStorage.getItem('mbs_ui_density') || 'compact');
@@ -3553,7 +3564,12 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             sanitizeForFirebase(db, 'initLoad');
             // ★ 立即保存清理后的数据到 localStorage,防止下次加载仍读旧数据
             try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(le) {
-                try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
+                for (var _cli = 0; _cli < localStorage.length; _cli++) {
+                    var _clk = localStorage.key(_cli);
+                    if (_clk && _clk.indexOf(DB_KEY + '_backup_') === 0) {
+                        try { localStorage.removeItem(_clk); _cli--; } catch(ex) {}
+                    }
+                }
                 try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {}
             }
             if(!db.prod) injectSafeDemo();
@@ -3853,7 +3869,6 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     'p-input': [renderInput],
                     'p-sys': [renderSysOps],
                     'p-monitor': [renderMonitor],
-                    'p-improve-track': [renderImproveProjects, populateImproveDeptFilter],
                     'p-dm': [renderDM, renderPDCA],
                     'p-loss': [renderLoss],
                     'p-trend': [renderTrend, renderReport],
@@ -5617,8 +5632,13 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
             try {
                 localStorage.setItem(DB_KEY, JSON.stringify(db));
             } catch(lsErr) {
-                console.warn('[batchDelete] localStorage写入失败,移除备份后重试');
-                try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
+                console.warn('[batchDelete] localStorage写入失败,清理旧备份后重试');
+                for (var _lsi2 = 0; _lsi2 < localStorage.length; _lsi2++) {
+                    var _lsk2 = localStorage.key(_lsi2);
+                    if (_lsk2 && _lsk2.indexOf(DB_KEY + '_backup_') === 0) {
+                        try { localStorage.removeItem(_lsk2); _lsi2--; } catch(ex) {}
+                    }
+                }
                 try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {
                     console.error('[batchDelete] localStorage写入仍然失败', e2.message);
                 }
@@ -7626,14 +7646,8 @@ window.renderImproveProjects = function() {
             return true;
         });
 
-        // Sort: group by department (when ALL), then overdue first, then in progress, then completed
-        var isGrouped = !deptFilter;
+        // Sort: overdue first, then in progress, then completed
         filtered.sort(function(a, b) {
-            if (isGrouped) {
-                var deptA = a.dept || '';
-                var deptB = b.dept || '';
-                if (deptA !== deptB) return deptA.localeCompare(deptB);
-            }
             var aScore = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
             var bScore = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
             if (aScore !== bScore) return aScore - bScore;
@@ -7655,28 +7669,20 @@ window.renderImproveProjects = function() {
         var body = document.getElementById('improve-table-body');
         if (!body) return;
 
-        // Build grouped HTML with department separators when ALL filter
-        var bodyHTML = '';
-        var lastDept = null;
-        filtered.forEach(function(p) {
-            if (isGrouped) {
-                var curDept = p.dept || t('improve_opt_select');
-                if (curDept !== lastDept) {
-                    lastDept = curDept;
-                    bodyHTML += '<tr style="background:linear-gradient(90deg,#dbeafe,#eff6ff);"><td colspan="7" style="padding:4px 10px;font-weight:800;font-size:13px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;"><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i>' + curDept + '</td></tr>';
-                }
-            }
+        body.innerHTML = filtered.map(function(p) {
             var isOverdue = p.progress === '逾期';
             var rowBg = isOverdue ? 'style="background:#fef2f2;"' : '';
+            // Determine effective select value: if overdue, show the original progress (not 逾期)
             var effectiveProgress = p.progress;
             if (p.progress === '逾期') {
+                // Show the original status for the dropdown (before auto-overdue)
                 effectiveProgress = p._origProgress || '进行中';
             }
             var isOverdueCheck = p.progress === '逾期';
-            var overdueFlag = isOverdueCheck ? ' <span style="color:#dc2626;font-weight:900;font-size:10px;">\u26a0\ufe0f</span>' : '';
+            var overdueFlag = isOverdueCheck ? ' <span style="color:#dc2626;font-weight:900;font-size:10px;">⚠️</span>' : '';
             var selectStyle = isOverdueCheck ? 'border:1px solid #fecaca;background:#fef2f2;' : 'border:none;background:transparent;';
 
-            bodyHTML += '<tr ' + rowBg + '>' +
+            return '<tr ' + rowBg + '>' +
                 '<td style="padding:4px 8px;"><input type="date" value="' + (p.startDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'startDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;"></td>' +
                 '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.projectName || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'projectName\',this.value)" placeholder="' + t('improve_placeholder_name') + '" style="width:100%;border:none;font-size:13px;font-weight:700;background:transparent;"></td>' +
                 '<td style="padding:4px 8px;"><select onchange="updateImproveField(\'' + p.id + '\',\'dept\',this.value)" style="width:100%;border:none;font-size:12px;font-weight:600;background:transparent;">' +
@@ -7695,9 +7701,7 @@ window.renderImproveProjects = function() {
                 '<td style="padding:4px 8px;"><input type="date" value="' + (p.planEndDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'planEndDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;' + (isOverdue ? 'color:#dc2626;' : '') + '"></td>' +
                 '<td style="padding:4px 8px;text-align:center;"><i class="fa-solid fa-xmark" style="color:var(--danger);cursor:pointer;font-size:16px;" onclick="delImproveProject(\'' + p.id + '\')"></i></td>' +
                 '</tr>';
-        });
-        bodyHTML = bodyHTML || '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>' + t('improve_empty') + '</td></tr>';
-        body.innerHTML = bodyHTML;
+        }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>' + t('improve_empty') + '</td></tr>';
     } catch(e) { console.error('[改善项目跟踪] render error:', e.message); }
 };
 
@@ -7789,230 +7793,136 @@ window.generateImprovePoster = function() {
             return;
         }
         var todayStr = new Date().toISOString().split('T')[0];
-        var now = new Date();
 
         // Recalculate overdue
         items.forEach(function(p) {
-            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '\u5df2\u5b8c\u6210') {
-                if (p.progress !== '\u903e\u671f') {
-                    p._origProgress = p.progress || '\u8fdb\u884c\u4e2d';
+            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+                if (p.progress !== '逾期') {
+                    p._origProgress = p.progress || '进行中';
                 }
-                p.progress = '\u903e\u671f';
-            } else if (p.progress === '\u903e\u671f' && !(p.planEndDate && p.planEndDate < todayStr)) {
-                p.progress = p._origProgress || '\u8fdb\u884c\u4e2d';
+                p.progress = '逾期';
+            } else if (p.progress === '逾期' && !(p.planEndDate && p.planEndDate < todayStr)) {
+                p.progress = p._origProgress || '进行中';
             }
+        });
+
+        // Sort: overdue first
+        var sorted = items.slice().sort(function(a, b) {
+            var aOv = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
+            var bOv = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
+            return aOv - bOv;
         });
 
         // Stats
         var total = items.length;
-        var done = items.filter(function(p) { return p.progress === '\u5df2\u5b8c\u6210'; }).length;
-        var prog = items.filter(function(p) { return p.progress === '\u8fdb\u884c\u4e2d'; }).length;
-        var over = items.filter(function(p) { return p.progress === '\u903e\u671f'; }).length;
-        var notstart = items.filter(function(p) { return p.progress === '\u672a\u5f00\u59cb'; }).length;
+        var done = items.filter(function(p) { return p.progress === '已完成'; }).length;
+        var prog = items.filter(function(p) { return p.progress === '进行中'; }).length;
+        var over = items.filter(function(p) { return p.progress === '逾期'; }).length;
         var rate = total > 0 ? Math.round(done / total * 100) : 0;
 
-        // Overdue items for alert cards
-        var overdueItems = items.filter(function(p) { return p.progress === '\u903e\u671f'; }).sort(function(a, b) { return (a.planEndDate || '').localeCompare(b.planEndDate || ''); });
-
-        // Department stats for ranking
-        var deptStats = {};
-        items.forEach(function(p) {
-            var d = p.dept || '\u5176\u4ed6';
-            if (!deptStats[d]) deptStats[d] = { total:0, done:0, prog:0, over:0, notstart:0 };
-            deptStats[d].total++;
-            if (p.progress === '\u5df2\u5b8c\u6210') deptStats[d].done++;
-            else if (p.progress === '\u903e\u671f') deptStats[d].over++;
-            else if (p.progress === '\u8fdb\u884c\u4e2d') deptStats[d].prog++;
-            else deptStats[d].notstart++;
-        });
-        var deptRanking = Object.keys(deptStats).map(function(d) {
-            var s = deptStats[d];
-            return { dept: d, total: s.total, done: s.done, prog: s.prog, over: s.over, notstart: s.notstart, rate: s.total > 0 ? Math.round(s.done / s.total * 100) : 0 };
-        }).sort(function(a, b) {
-            if (a.rate !== b.rate) return b.rate - a.rate;
-            return b.total - a.total;
-        });
-
-        // Sort by dept for grouped display
-        var sorted = items.slice().sort(function(a, b) {
-            var da = a.dept || '\u5176\u4ed6';
-            var db2 = b.dept || '\u5176\u4ed6';
-            if (da !== db2) return da.localeCompare(db2);
-            var rankA = a.progress === '\u903e\u671f' ? 0 : (a.progress === '\u8fdb\u884c\u4e2d' ? 1 : (a.progress === '\u672a\u5f00\u59cb' ? 2 : 3));
-            var rankB = b.progress === '\u903e\u671f' ? 0 : (b.progress === '\u8fdb\u884c\u4e2d' ? 1 : (b.progress === '\u672a\u5f00\u59cb' ? 2 : 3));
-            return rankA - rankB;
-        });
-
-        // ==================== BUILD HTML ====================
-        var h = '';
-
-        // ===== SECTION 1: Title (bilingual, clean) =====
-        h += '<div style="text-align:center;padding:8px 0 6px;border-bottom:3px solid #1a73e8;margin-bottom:8px;">';
-        h += '<div style="font-size:20px;font-weight:900;color:#1a73e8;letter-spacing:2px;">\ud83c\udfaf \u6539\u5584\u9879\u76ee\u8ddf\u8e2a\u901a\u62a5</div>';
-        h += '<div style="font-size:11px;color:#666;font-weight:600;margin-top:2px;">Improvement Project Tracking Report</div>';
-        h += '<div style="font-size:10px;color:#999;margin-top:2px;">' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + '</div>';
+        var h = '<div class="psp-poster">';
+        h += '<div class="psp-poster-hdr">';
+        h += '<div class="psp-poster-title">\uD83C\uDFAF 改善项目跟踪通报<div class="bi-en-title">Improvement Project Tracking Report</div></div>';
+        h += '<div class="psp-poster-period">生成时间: ' + new Date().toLocaleString('zh-CN', {hour12:false}) + '<br><span class="bi-en-sub">Generated: ' + new Date().toLocaleString('en-US', {hour12:false}) + '</span></div>';
         h += '</div>';
 
-        // ===== SECTION 2: KPI Summary Bar (bilingual cards) =====
-        h += '<div style="display:flex;gap:6px;margin-bottom:8px;">';
-        h += '<div style="flex:1;text-align:center;background:#f8fafc;border-radius:8px;padding:8px 4px;border:1px solid #e2e8f0;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#1e293b;">' + total + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#64748b;font-weight:700;">\u9879\u76ee\u603b\u6570</span>';
-        h += '<span style="display:block;font-size:9px;color:#94a3b8;font-weight:500;">Total Projects</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#f0fdf4;border-radius:8px;padding:8px 4px;border:1px solid #bbf7d0;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#16a34a;">' + done + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#16a34a;font-weight:700;">\u5df2\u5b8c\u6210</span>';
-        h += '<span style="display:block;font-size:9px;color:#86efac;font-weight:500;">Completed</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#fff7ed;border-radius:8px;padding:8px 4px;border:1px solid #fed7aa;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#ea580c;">' + prog + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#ea580c;font-weight:700;">\u8fdb\u884c\u4e2d</span>';
-        h += '<span style="display:block;font-size:9px;color:#fcd34d;font-weight:500;">In Progress</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#fef2f2;border-radius:8px;padding:8px 4px;border:1px solid #fecaca;">';
-        h += '<span style="display:block;font-size:24px;font-weight:900;color:#dc2626;">' + over + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#dc2626;font-weight:700;">\u5df2\u903e\u671f</span>';
-        h += '<span style="display:block;font-size:9px;color:#fca5a5;font-weight:500;">Overdue</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#eff6ff;border-radius:8px;padding:8px 4px;border:1px solid #bfdbfe;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#2563eb;">' + rate + '%</span>';
-        h += '<span style="display:block;font-size:11px;color:#2563eb;font-weight:700;">\u5b8c\u6210\u7387</span>';
-        h += '<span style="display:block;font-size:9px;color:#93c5fd;font-weight:500;">Rate</span></div>';
+        // Summary bar
+        h += '<div class="psp-poster-summary-bar">';
+        h += '<div class="psp-ps-item"><b>' + total + '</b><span class="bi-cn">项目总数</span><span class="bi-en">Total Projects</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + done + '</b><span class="bi-cn">已完成</span><span class="bi-en">Completed</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + prog + '</b><span class="bi-cn">进行中</span><span class="bi-en">In Progress</span></div>';
+        h += '<div class="psp-ps-item" style="background:#fef2f2;"><b style="color:#dc2626;font-size:22px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
+        h += '<div class="psp-ps-item"><b style="color:#1e40af;">' + rate + '%</b><span class="bi-cn">完成率</span><span class="bi-en">Completion Rate</span></div>';
         h += '</div>';
 
-        // ===== SECTION 3: Overdue Alert Cards =====
-        if (over > 0) {
-            h += '<div style="padding:6px 8px;background:#fef2f2;border-radius:8px;margin-bottom:8px;border:1px solid #fecaca;">';
-            h += '<div style="font-size:12px;font-weight:800;color:#dc2626;margin-bottom:5px;">\u26a0\ufe0f \u5df2\u903e\u671f\u9879\u76ee / Overdue Items (' + over + ')</div>';
-            h += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
-            for (var oi = 0; oi < Math.min(overdueItems.length, 6); oi++) {
-                var o = overdueItems[oi];
-                var oName = (o.projectName || '').length > 12 ? (o.projectName || '').substring(0, 12) + '...' : (o.projectName || '');
-                h += '<div style="flex:1;min-width:120px;max-width:180px;background:#fff;border-left:3px solid #dc2626;border-radius:4px;padding:6px 8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">';
-                h += '<div style="font-size:10px;color:#dc2626;font-weight:700;margin-bottom:2px;">' + (o.dept || '') + '</div>';
-                h += '<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(oName) + '</div>';
-                h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-                h += '<span style="font-size:10px;color:#999;">' + (o.planEndDate || '') + '</span>';
-                h += '<span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 6px;border-radius:3px;font-weight:700;">\u903e\u671f</span>';
-                h += '</div></div>';
-            }
-            if (overdueItems.length > 6) {
-                h += '<div style="font-size:10px;color:#999;padding:4px;">...\u8fd8\u6709 ' + (overdueItems.length - 6) + ' \u9879</div>';
-            }
-            h += '</div></div>';
-        }
-
-        // ===== SECTION 4: Department Ranking Table (medal + progress bar) =====
-        h += '<div style="padding:8px 10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;margin-bottom:8px;">';
-        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
-        h += '<span style="font-size:16px;">\ud83c\udfc6</span>';
-        h += '<span style="font-weight:900;font-size:14px;color:#0369a1;">\u5404\u90e8\u95e8\u6539\u5584\u5b8c\u6210\u7387\u6392\u540d</span>';
-        h += '<span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">Department Completion Rate Ranking</span>';
-        h += '</div>';
-        h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        // Table
+        h += '<table class="psp-poster-table">';
         h += '<thead><tr>';
-        h += '<th style="width:30px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:12px;font-weight:800;text-align:left;">\u90e8\u95e8<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Dept</span></th>';
-        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u603b\u6570<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Total</span></th>';
-        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u2713<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Done</span></th>';
-        h += '<th style="width:34px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u26a0<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Over</span></th>';
-        h += '<th style="width:48px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u5b8c\u6210\u7387<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Rate</span></th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:left;border-radius:0 4px 0 0;">\u8fdb\u5ea6\u6761<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
+        h += '<th style="width:95px;"><div class="bi-th-cn">立项时间</div><div class="bi-th-en">Start Date</div></th>';
+        h += '<th style="min-width:160px;"><div class="bi-th-cn">项目名称</div><div class="bi-th-en">Project Name</div></th>';
+        h += '<th style="width:85px;"><div class="bi-th-cn">责任部门</div><div class="bi-th-en">Dept</div></th>';
+        h += '<th style="width:70px;"><div class="bi-th-cn">进度</div><div class="bi-th-en">Status</div></th>';
+        h += '<th style="min-width:140px;"><div class="bi-th-cn">进度描述</div><div class="bi-th-en">Description</div></th>';
+        h += '<th style="width:105px;"><div class="bi-th-cn">计划完成时间</div><div class="bi-th-en">Due Date</div></th>';
+        h += '<th style="width:85px;"><div class="bi-th-cn">逾期标记</div><div class="bi-th-en">Overdue Flag</div></th>';
         h += '</tr></thead><tbody>';
 
-        deptRanking.forEach(function(d, idx) {
-            var medal = (idx === 0 && d.rate > 0) ? '\ud83e\udd47' : (idx === 1 && d.rate > 0) ? '\ud83e\udd48' : (idx === 2 && d.rate > 0) ? '\ud83e\udd49' : '';
-            var barColor = d.rate >= 80 ? '#16a34a' : (d.rate >= 50 ? '#ea580c' : '#dc2626');
-            var barBg = d.rate >= 80 ? '#dcfce7' : (d.rate >= 50 ? '#fed7aa' : '#fecaca');
-            var barGrad = d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444');
-            var rowBg = idx % 2 === 0 ? 'background:#f0f9ff;' : 'background:#fff;';
-            h += '<tr style="' + rowBg + '">';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:800;font-size:15px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:11px;">' + (idx + 1) + '</span>') + '</td>';
-            h += '<td style="padding:4px 8px;text-align:left;font-weight:700;font-size:13px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:900;font-size:14px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
-            h += '<td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;"><div style="height:16px;background:' + barBg + ';border-radius:8px;overflow:hidden;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + barGrad + ');border-radius:8px;"></div></div></td>';
-            h += '</tr>';
-        });
-        h += '</tbody></table></div>';
-
-        // ===== SECTION 5: Project Detail List (grouped by dept, overdue highlighted) =====
-        h += '<div style="margin-bottom:4px;">';
-        h += '<div style="font-size:13px;font-weight:800;color:#333;margin-bottom:4px;">\ud83d\udccb \u9879\u76ee\u660e\u7ec6 / Project Details</div>';
-
-        var lastDept = null;
         for (var i = 0; i < sorted.length; i++) {
             var p = sorted[i];
-            var curDept = p.dept || '\u5176\u4ed6';
-            // Department separator
-            if (curDept !== lastDept) {
-                lastDept = curDept;
-                h += '<div style="padding:4px 8px;margin:2px 0;background:linear-gradient(90deg,#dbeafe,#eff6ff);border-radius:4px;font-weight:800;font-size:13px;color:#1d4ed8;border-bottom:1px solid #bfdbfe;">';
-                h += '\ud83d\udce6 ' + curDept + '</div>';
-            }
-            // Item row
-            var isOverdue = p.progress === '\u903e\u671f';
-            var bgColor = isOverdue ? '#fef2f2' : (i % 2 === 0 ? '#fafafa' : '#ffffff');
-            var statusColor = p.progress === '\u5df2\u5b8c\u6210' ? '#16a34a' : (p.progress === '\u8fdb\u884c\u4e2d' ? '#ea580c' : (p.progress === '\u672a\u5f00\u59cb' ? '#94a3b8' : '#dc2626'));
-            var statusBadge = p.progress === '\u5df2\u5b8c\u6210' ? '\u2705 ' : (p.progress === '\u903e\u671f' ? '\u26a0\ufe0f ' : (p.progress === '\u8fdb\u884c\u4e2d' ? '\ud83d\udfe1 ' : '\u26aa '));
-            var statusLabel = p.progress === '\u5df2\u5b8c\u6210' ? '\u5df2\u5b8c\u6210' : (p.progress === '\u8fdb\u884c\u4e2d' ? '\u8fdb\u884c\u4e2d' : (p.progress === '\u672a\u5f00\u59cb' ? '\u672a\u5f00\u59cb' : '\u903e\u671f'));
-            h += '<div style="display:flex;align-items:center;padding:3px 6px;background:' + bgColor + ';' + (isOverdue ? 'border-left:3px solid #dc2626;' : '') + 'border-bottom:1px solid #f0f0f0;gap:4px;">';
-            h += '<div style="flex:2;font-size:12px;font-weight:700;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.projectName || '') + '</div>';
-            h += '<div style="flex:0 0 55px;font-size:11px;color:#666;text-align:center;">' + (p.startDate || '') + '</div>';
-            h += '<div style="flex:0 0 50px;font-size:11px;font-weight:700;color:' + statusColor + ';text-align:center;">' + statusBadge + statusLabel + '</div>';
-            h += '<div style="flex:1;font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (p.progressDesc ? escapeHtml((p.progressDesc || '').substring(0, 20) + ((p.progressDesc || '').length > 20 ? '...' : '')) : '') + '</div>';
-            h += '<div style="flex:0 0 80px;font-size:11px;font-weight:600;text-align:center;' + (isOverdue ? 'color:#dc2626;' : 'color:#666;') + '">' + (p.planEndDate || '') + '</div>';
-            h += '</div>';
+            var isOverdue = p.progress === '逾期';
+            var rowBg = isOverdue ? 'background:#fef2f2;' : '';
+            var statusColor = p.progress === '已完成' ? 'color:#16a34a;font-weight:800;' : (p.progress === '进行中' ? 'color:#ea580c;font-weight:800;' : (p.progress === '未开始' ? 'color:#64748b;font-weight:800;' : 'color:#dc2626;font-weight:900;'));
+            var statusCN = p.progress === '已完成' ? '已完成' : (p.progress === '进行中' ? '进行中' : (p.progress === '未开始' ? '未开始' : '逾期'));
+            var statusEN = p.progress === '已完成' ? 'Completed' : (p.progress === '进行中' ? 'In Progress' : (p.progress === '未开始' ? 'Not Started' : 'Overdue'));
+
+            h += '<tr style="' + rowBg + '">';
+            h += '<td>' + (p.startDate || '') + '</td>';
+            h += '<td style="text-align:left;word-break:break-word;font-size:13px;font-weight:700;padding:5px 8px;">' + escapeHtml(p.projectName || '') + '</td>';
+            h += '<td>' + (p.dept || '') + '</td>';
+            h += '<td style="' + statusColor + '"><span class="bi-cn" style="font-size:13px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:10px;font-weight:600;">' + statusEN + '</span></td>';
+            h += '<td style="text-align:left;font-size:12px;padding:5px 8px;">' + escapeHtml(p.progressDesc || '') + '</td>';
+            h += '<td' + (isOverdue ? ' style="font-weight:900;color:#dc2626;"' : '') + '>' + (p.planEndDate || '') + '</td>';
+            h += '<td>' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:15px;padding:3px 8px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:10px;">Overdue</span></div>' : '') + '</td>';
+            h += '</tr>';
         }
+
+        h += '</tbody></table>';
+
+        // Footer
+        h += '<div class="psp-poster-footer">';
+        h += '逾期说明:计划完成时间已过但未完成的项目标记为红色「已逾期」，请责任部门尽快确认并推进。<br>';
+        h += '<span class="bi-en-foot">Note: Items past due date and not completed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
+        h += '</div>';
         h += '</div>';
 
-        // ===== SECTION 6: Footer =====
-        h += '<div style="text-align:center;font-size:10px;color:#94a3b8;padding:6px 0 2px;border-top:1px solid #e2e8f0;margin-top:6px;">';
-        h += '\u903e\u671f\u8bf4\u660e:\u8ba1\u5212\u5b8c\u6210\u65f6\u95f4\u5df2\u8fc7\u4f46\u672a\u5b8c\u6210\u7684\u9879\u76ee\u6807\u8bb0\u4e3a\u7ea2\u8272\u300c\u5df2\u903e\u671f\u300d\uff0c\u8bf7\u8d23\u4efb\u90e8\u95e8\u5c3d\u5feb\u786e\u8ba4\u5e76\u63a8\u8fdb\u3002<br>';
-        h += '<span style="font-size:9px;color:#b0b8c4;">Note: Items past due date and not completed are marked as \"Overdue\" in red. Please confirm and take action ASAP.</span>';
-        h += '</div>';
+        // Open new window
+        var win = window.open('', '_blank');
+        if (!win) {
+            showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
+            return;
+        }
 
-        // ✅ Generate PNG image download
-        var posterCSS = '<style>' +
-            '*{margin:0;padding:0;box-sizing:border-box;}' +
-            '.pwrap{width:800px;background:#fff;padding:10px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}' +
-            '</style>';
-        var posterHTML = '<div class="pwrap">' + posterCSS + h + '</div>';
+        var styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        var styleHTML = '';
+        for (var si = 0; si < styles.length; si++) styleHTML += styles[si].outerHTML;
 
-        var tmpDiv = document.createElement('div');
-        tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:800px;';
-        tmpDiv.innerHTML = posterHTML;
-        document.body.appendChild(tmpDiv);
+        win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>改善项目跟踪通报 | Improvement Project Tracking Report</title>');
+        win.document.write(styleHTML);
+        win.document.write('<style>' +
+            'body{margin:0;padding:8px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
+            '@page{size:A4;margin:6mm;}' +
+            '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;}' +
+            '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
+            '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
+            '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
+            '.bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
+            '.bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
+            '.bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
+            '.bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
+            '.bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
+            '.bi-en-foot{font-size:10px;color:#94a3b8;}' +
+            '.psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
+            '.psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
+            '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
+            '.psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
+            '.psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
+            '.psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
+            '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
+            '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
+            '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
+            '.psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
+            '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
+            '</style></head><body>');
+        win.document.write(h);
+        win.document.write('</body></html>');
+        win.document.close();
 
-        showToast('fa-solid fa-spinner fa-spin', '正在生成海报图片...');
-
-        requestAnimationFrame(function() {
-            setTimeout(async function() {
-                try {
-                    var posterEl = tmpDiv.querySelector('.pwrap');
-                    if (!posterEl) throw new Error('海报容器未找到');
-                    var canvas = await html2canvas(posterEl, {
-                        scale: 2,
-                        backgroundColor: '#ffffff',
-                        useCORS: true,
-                        logging: false,
-                        width: posterEl.scrollWidth,
-                        height: posterEl.scrollHeight
-                    });
-                    var link = document.createElement('a');
-                    link.download = 'Improvement_Poster_' + new Date().toISOString().split('T')[0] + '.png';
-                    link.href = canvas.toDataURL('image/png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    document.body.removeChild(tmpDiv);
-                    showToast('fa-solid fa-check', '改善项目通报图片已下载');
-                } catch(e) {
-                    console.error('[改善项目海报] 生成图片失败:', e.message, e.stack);
-                    showToast('fa-solid fa-xmark', '生成图片失败: ' + e.message, 'error');
-                    if (tmpDiv.parentNode) document.body.removeChild(tmpDiv);
-                }
-            }, 100);
-        });
+        showToast('fa-solid fa-file-image', '已生成改善项目通报,可在新窗口打印/另存为PDF');
+        setTimeout(function() {
+            win.focus();
+            win.print();
+        }, 500);
 
     } catch(e) {
         console.error('[改善项目海报] 生成失败:', e.message, e.stack);
