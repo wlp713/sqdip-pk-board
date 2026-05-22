@@ -7789,6 +7789,7 @@ window.generateImprovePoster = function() {
             return;
         }
         var todayStr = new Date().toISOString().split('T')[0];
+        var now = new Date();
 
         // Recalculate overdue
         items.forEach(function(p) {
@@ -7800,16 +7801,7 @@ window.generateImprovePoster = function() {
             } else if (p.progress === '逾期' && !(p.planEndDate && p.planEndDate < todayStr)) {
                 p.progress = p._origProgress || '进行中';
             }
-        });
-
-        // Sort: group by department, then overdue first within each group
-        var sorted = items.slice().sort(function(a, b) {
-            var deptA = a.dept || '';
-            var deptB = b.dept || '';
-            if (deptA !== deptB) return deptA.localeCompare(deptB);
-            var aOv = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
-            var bOv = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
-            return aOv - bOv;
+            p._shortName = (p.projectName || '').substring(0, 8);
         });
 
         // Stats
@@ -7819,155 +7811,134 @@ window.generateImprovePoster = function() {
         var over = items.filter(function(p) { return p.progress === '逾期'; }).length;
         var rate = total > 0 ? Math.round(done / total * 100) : 0;
 
-        var h = '<div class="psp-poster">';
-        h += '<div class="psp-poster-hdr">';
-        h += '<div class="psp-poster-title">\uD83C\uDFAF 改善项目跟踪通报<div class="bi-en-title" style="font-size:14px;">Improvement Project Tracking Report</div></div>';
-        h += '<div class="psp-poster-period">生成时间: ' + new Date().toLocaleString('zh-CN', {hour12:false}) + '<br><span class="bi-en-sub">Generated: ' + new Date().toLocaleString('en-US', {hour12:false}) + '</span></div>';
-        h += '</div>';
+        // Overdue items for card display
+        var overdueItems = items.filter(function(p) { return p.progress === '逾期'; }).sort(function(a, b) { return (a.planEndDate || '').localeCompare(b.planEndDate || ''); });
 
-        // Summary bar
-        h += '<div class="psp-poster-summary-bar">';
-        h += '<div class="psp-ps-item"><b>' + total + '</b><span class="bi-cn">项目总数</span><span class="bi-en">Total Projects</span></div>';
-        h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + done + '</b><span class="bi-cn">已完成</span><span class="bi-en">Completed</span></div>';
-        h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + prog + '</b><span class="bi-cn">进行中</span><span class="bi-en">In Progress</span></div>';
-        h += '<div class="psp-ps-item" style="background:#fee2e2;"><b style="color:#dc2626;font-size:24px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
-        h += '<div class="psp-ps-item"><b style="color:#1e40af;">' + rate + '%</b><span class="bi-cn">完成率</span><span class="bi-en">Completion Rate</span></div>';
-        h += '</div>';
-
-        // ===== 各部门完成率排名 =====
+        // Department stats for ranking
         var deptStats = {};
         items.forEach(function(p) {
             var d = p.dept || '其他';
-            if (!deptStats[d]) deptStats[d] = { total:0, done:0, prog:0, over:0, notstart:0 };
+            if (!deptStats[d]) deptStats[d] = { total:0, done:0, over:0 };
             deptStats[d].total++;
             if (p.progress === '已完成') deptStats[d].done++;
             else if (p.progress === '逾期') deptStats[d].over++;
-            else if (p.progress === '进行中') deptStats[d].prog++;
-            else deptStats[d].notstart++;
         });
         var deptRanking = Object.keys(deptStats).map(function(d) {
             var s = deptStats[d];
-            return { dept: d, total: s.total, done: s.done, prog: s.prog, over: s.over, notstart: s.notstart, rate: s.total > 0 ? Math.round(s.done / s.total * 100) : 0 };
+            return { dept: d, total: s.total, done: s.done, over: s.over, rate: s.total > 0 ? Math.round(s.done / s.total * 100) : 0 };
         }).sort(function(a, b) {
             if (a.rate !== b.rate) return b.rate - a.rate;
             return b.total - a.total;
         });
 
-        h += '<div style="margin:14px 0 10px;padding:12px 14px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;">';
-        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
-        h += '<span style="font-size:18px;">\uD83C\uDFC6</span>';
-        h += '<span style="font-weight:900;font-size:16px;color:#0369a1;">各部门改善完成率排名</span>';
-        h += '<span style="font-size:12px;color:#64748b;font-weight:400;">Department Completion Rate Ranking</span>';
-        h += '</div>';
-        h += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
-        h += '<thead><tr>';
-        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:13px;font-weight:800;text-align:left;"><span style="display:block;line-height:1.3;">\u90E8\u95E8</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Dept</span></th>';
-        h += '<th style="width:42px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;">\u603B</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Total</span></th>';
-        h += '<th style="width:42px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;color:#86efac;">\u2713</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Done</span></th>';
-        h += '<th style="width:40px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;color:#fcd34d;">\u26A0</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Over</span></th>';
-        h += '<th style="width:56px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;">\u5B8C\u6210\u7387</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Rate</span></th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:left;border-radius:0 4px 0 0;"><span style="display:block;">\u8FDB\u5EA6\u6761</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
-        h += '</tr></thead><tbody>';
+        // Group items by status for the status overview section
+        var doneItems = items.filter(function(p) { return p.progress === '已完成'; });
+        var progItems = items.filter(function(p) { return p.progress === '进行中'; });
+        var notstartItems = items.filter(function(p) { return p.progress === '未开始'; });
 
-        deptRanking.forEach(function(d, idx) {
-            var medal = '';
-            if (idx === 0 && d.rate > 0) medal = '\uD83E\uDD47';
-            else if (idx === 1 && d.rate > 0) medal = '\uD83E\uDD48';
-            else if (idx === 2 && d.rate > 0) medal = '\uD83E\uDD49';
-            var barColor = d.rate >= 80 ? '#16a34a' : (d.rate >= 50 ? '#ea580c' : '#dc2626');
-            var barBg = d.rate >= 80 ? '#dcfce7' : (d.rate >= 50 ? '#fed7aa' : '#fecaca');
-            var rowBg = idx % 2 === 0 ? 'background:#f0f9ff;' : 'background:#fff;';
-            h += '<tr style="' + rowBg + '">';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:800;font-size:15px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:12px;">' + (idx + 1) + '</span>') + '</td>';
-            h += '<td style="padding:4px 8px;text-align:left;font-weight:700;font-size:14px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:900;font-size:15px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
-            h += '<td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;"><div style="height:16px;background:' + barBg + ';border-radius:8px;overflow:hidden;position:relative;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + (d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444')) + ');border-radius:8px;transition:width 0.3s;"></div></div></td>';
-            h += '</tr>';
-        });
+        // ==================== BUILD HTML ====================
+        var h = '';
 
-        h += '</tbody></table>';
+        // ---- Layer 1: Title bar ----
+        h += '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0 4px;border-bottom:1px solid #eee;">';
+        h += '<div style="font-size:18px;font-weight:800;color:#1a73e8;">\uD83C\uDFAF 改善项目跟踪通报</div>';
+        h += '<div style="font-size:10px;color:#999;">' + now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() + ' ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '</div>';
         h += '</div>';
 
-        // Table with department separators
-        h += '<table class="psp-poster-table">';
-        h += '<thead><tr>';
-        h += '<th style="width:95px;"><div class="bi-th-cn">立项时间</div><div class="bi-th-en">Start Date</div></th>';
-        h += '<th style="min-width:160px;"><div class="bi-th-cn">项目名称</div><div class="bi-th-en">Project Name</div></th>';
-        h += '<th style="width:85px;"><div class="bi-th-cn">责任部门</div><div class="bi-th-en">Dept</div></th>';
-        h += '<th style="width:70px;"><div class="bi-th-cn">进度</div><div class="bi-th-en">Status</div></th>';
-        h += '<th style="min-width:140px;"><div class="bi-th-cn">进度描述</div><div class="bi-th-en">Description</div></th>';
-        h += '<th style="width:105px;"><div class="bi-th-cn">计划完成时间</div><div class="bi-th-en">Due Date</div></th>';
-        h += '<th style="width:85px;"><div class="bi-th-cn">逾期标记</div><div class="bi-th-en">Overdue Flag</div></th>';
-        h += '</tr></thead><tbody>';
+        // ---- Layer 2: Core KPI (compact row, no cards) ----
+        h += '<div style="display:flex;justify-content:space-around;align-items:center;padding:6px 0;border-bottom:1px solid #eee;">';
+        h += '<div style="text-align:center;"><span style="font-size:24px;font-weight:900;color:#333;">' + total + '</span><br><span style="font-size:10px;color:#999;">项目总数</span></div>';
+        h += '<div style="text-align:center;"><span style="font-size:24px;font-weight:900;color:#34a853;">' + done + '</span><br><span style="font-size:10px;color:#999;">已完成<sup style="font-size:9px;color:#aaa;">(' + prog + '进行中)</sup></span></div>';
+        h += '<div style="text-align:center;"><span style="font-size:28px;font-weight:900;color:#ea4335;">' + (over > 0 ? '\u25CF ' : '') + over + '</span><br><span style="font-size:10px;color:#ea4335;font-weight:600;">' + (over > 0 ? '\u26A0\uFE0F ' : '') + '已逾期</span></div>';
+        h += '<div style="text-align:center;"><span style="font-size:24px;font-weight:900;color:#1a73e8;">' + rate + '%</span><br><span style="font-size:10px;color:#999;">完成率</span></div>';
+        h += '</div>';
 
-        var lastDept = null;
-        for (var i = 0; i < sorted.length; i++) {
-            var p = sorted[i];
-            // Department separator
-            var curDept = p.dept || '其他';
-            if (curDept !== lastDept) {
-                lastDept = curDept;
-                h += '<tr style="background:linear-gradient(90deg,#dbeafe,#eff6ff);"><td colspan="7" style="padding:6px 10px;font-weight:800;font-size:14px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;"><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i>' + curDept + '</td></tr>';
+        // ---- Layer 3: Overdue alert zone (cards) ----
+        h += '<div style="padding:6px 0;border-bottom:1px solid #eee;">';
+        h += '<div style="font-size:12px;font-weight:800;color:#ea4335;margin-bottom:4px;">\u26A0\uFE0F 已逾期项目（' + over + '项）</div>';
+        if (overdueItems.length > 0) {
+            h += '<div style="display:flex;gap:4px;">';
+            for (var oi = 0; oi < Math.min(overdueItems.length, 6); oi++) {
+                var o = overdueItems[oi];
+                var oName = (o.projectName || '').length > 10 ? (o.projectName || '').substring(0, 10) + '...' : (o.projectName || '');
+                h += '<div style="flex:1;background:#fef2f2;border-left:3px solid #ea4335;border-radius:6px;padding:6px;min-width:0;">';
+                h += '<div style="font-size:10px;color:#ea4335;font-weight:700;">' + (o.dept || '') + '</div>';
+                h += '<div style="font-size:11px;font-weight:600;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:2px 0;">' + escapeHtml(oName) + '</div>';
+                h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+                h += '<span style="font-size:10px;color:#999;">' + (o.planEndDate || '') + '</span>';
+                h += '<span style="font-size:9px;color:#ea4335;font-weight:700;">\u26A0\uFE0F已逾期</span>';
+                h += '</div></div>';
             }
-            var isOverdue = p.progress === '逾期';
-            var rowBg = isOverdue ? 'background:#fee2e2;' : '';
-            var statusColor = p.progress === '已完成' ? 'color:#16a34a;font-weight:800;' : (p.progress === '进行中' ? 'color:#ea580c;font-weight:800;' : (p.progress === '未开始' ? 'color:#64748b;font-weight:800;' : 'color:#dc2626;font-weight:900;'));
-            var statusCN = p.progress === '已完成' ? '已完成' : (p.progress === '进行中' ? '进行中' : (p.progress === '未开始' ? '未开始' : '逾期'));
-            var statusEN = p.progress === '已完成' ? 'Completed' : (p.progress === '进行中' ? 'In Progress' : (p.progress === '未开始' ? 'Not Started' : 'Overdue'));
-
-            h += '<tr style="' + rowBg + '">';
-            h += '<td style="font-size:14px;padding:6px 8px;">' + (p.startDate || '') + '</td>';
-            h += '<td style="text-align:left;word-break:break-word;font-size:15px;font-weight:700;padding:6px 8px;">' + escapeHtml(p.projectName || '') + '</td>';
-            h += '<td style="font-size:14px;padding:6px 8px;">' + (p.dept || '') + '</td>';
-            h += '<td style="' + statusColor + 'font-size:14px;padding:6px 8px;"><span class="bi-cn" style="font-size:15px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:11px;font-weight:600;">' + statusEN + '</span></td>';
-            h += '<td style="text-align:left;font-size:14px;padding:6px 8px;">' + escapeHtml(p.progressDesc || '') + '</td>';
-            h += '<td style="font-size:14px;padding:6px 8px;' + (isOverdue ? 'font-weight:900;color:#dc2626;' : '') + '">' + (p.planEndDate || '') + '</td>';
-            h += '<td style="padding:6px 8px;">' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:16px;padding:4px 10px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:11px;">Overdue</span></div>' : '') + '</td>';
-            h += '</tr>';
+            h += '</div>';
+        } else {
+            h += '<div style="font-size:11px;color:#999;padding:4px 0;">暂无逾期项目 \u2705</div>';
         }
-
-        h += '</tbody></table>';
-
-        // Footer
-        h += '<div class="psp-poster-footer">';
-        h += '<span style="font-size:13px;">逾期说明:计划完成时间已过但未完成的项目标记为红色「已逾期」，请责任部门尽快确认并推进。</span><br>';
-        h += '<span class="bi-en-foot" style="font-size:11px;">Note: Items past due date and not completed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
-        h += '</div>';
         h += '</div>';
 
-        // ✅ 改用 html2canvas 生成图片下载（替代新窗口打印）
-        // 嵌入海报专用样式到HTML中，确保 html2canvas 正确渲染
+        // ---- Layer 4: Department ranking (mini progress bars, 3 per row) ----
+        h += '<div style="padding:6px 0;border-bottom:1px solid #eee;">';
+        h += '<div style="font-size:12px;font-weight:800;color:#333;margin-bottom:4px;">\uD83D\uDCCA 部门完成率</div>';
+        h += '<div style="display:flex;flex-wrap:wrap;">';
+        deptRanking.forEach(function(d, idx) {
+            var medal = idx === 0 ? '\uD83E\uDD47' : (idx === 1 ? '\uD83E\uDD48' : (idx === 2 ? '\uD83E\uDD49' : ''));
+            var barPct = d.rate;
+            var barColor = barPct >= 80 ? '#34a853' : (barPct >= 50 ? '#fbbc04' : '#dadce0');
+            var barFill = barPct >= 80 ? '#34a853' : (barPct >= 50 ? '#fbbc04' : '#e8eaed');
+            var dot = d.over > 0 ? '<span style="color:#ea4335;font-size:12px;">\u25CF</span>' : '';
+            h += '<div style="width:33.33%;padding:3px 4px;box-sizing:border-box;">';
+            h += '<div style="display:flex;align-items:center;gap:2px;">';
+            h += '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">' + medal + dot + d.dept + '</span>';
+            h += '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;"><div style="height:100%;width:' + barPct + '%;background:' + barFill + ';border-radius:4px;"></div></div>';
+            h += '<span style="font-size:11px;font-weight:700;color:#555;">' + barPct + '%</span>';
+            h += '</div></div>';
+        });
+        h += '</div></div>';
+
+        // ---- Layer 5: Project status overview (compact, no table) ----
+        h += '<div style="padding:6px 0;border-bottom:1px solid #eee;">';
+        h += '<div style="font-size:12px;font-weight:800;color:#333;margin-bottom:4px;">\uD83D\uDCCB 项目状态</div>';
+        // Completed
+        if (doneItems.length > 0) {
+            h += '<div style="margin-bottom:2px;"><span style="font-size:11px;font-weight:700;color:#34a853;">\u2705 已完成（' + doneItems.length + '）：</span>';
+            h += doneItems.map(function(p) {
+                return '<span style="font-size:11px;color:#555;">' + (p.dept || '') + '\u00B7' + escapeHtml(p._shortName) + ' ' + (p.planEndDate || '') + '</span>';
+            }).join(' &nbsp;|&nbsp; ');
+            h += '</div>';
+        }
+        // In progress
+        if (progItems.length > 0) {
+            h += '<div style="margin-bottom:2px;"><span style="font-size:11px;font-weight:700;color:#ea580c;">\uD83D\uDFE1 进行中（' + progItems.length + '）：</span>';
+            h += progItems.map(function(p) {
+                return '<span style="font-size:11px;color:#555;">' + (p.dept || '') + '\u00B7' + escapeHtml(p._shortName) + ' ' + (p.planEndDate || '') + '</span>';
+            }).join(' &nbsp;|&nbsp; ');
+            h += '</div>';
+        }
+        // Not started
+        if (notstartItems.length > 0) {
+            h += '<div><span style="font-size:11px;font-weight:700;color:#9aa0a6;">\u26AA 未开始（' + notstartItems.length + '）：</span>';
+            h += notstartItems.map(function(p) {
+                return '<span style="font-size:11px;color:#555;">' + (p.dept || '') + '\u00B7' + escapeHtml(p._shortName) + ' ' + (p.planEndDate || '') + '</span>';
+            }).join(' &nbsp;|&nbsp; ');
+            h += '</div>';
+        }
+        h += '</div>';
+
+        // ---- Layer 6: Footer ----
+        h += '<div style="padding:4px 0;text-align:center;">';
+        h += '<span style="font-size:10px;color:#aaa;">注：计划完成时间已过但未完成标记为红色「已逾期」，请责任部门尽快确认并推进 (Overdue in red)</span>';
+        h += '</div>';
+
+        // ✅ 生成图片下载
+        // 用固定宽800px的容器，最小字体10px保证手机可读
         var posterCSS = '<style>' +
-            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:8px;padding:20px;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:14px;}' +
-            '.psp-poster-hdr{text-align:center;padding-bottom:12px;border-bottom:3px solid #1e40af;margin-bottom:12px;}' +
-            '.psp-poster-title{font-size:24px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:3px;}' +
-            '.bi-en-title{font-size:14px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:2px;}' +
-            '.bi-en-sub{font-size:13px;color:#94a3b8;font-weight:400;}' +
-            '.bi-cn{display:block;font-size:12px;font-weight:700;line-height:1.4;}' +
-            '.bi-en{display:block;font-size:11px;font-weight:500;color:#64748b;line-height:1.4;}' +
-            '.bi-th-cn{font-size:13px;font-weight:800;line-height:1.4;}' +
-            '.bi-th-en{font-size:11px;font-weight:500;line-height:1.4;opacity:0.85;}' +
-            '.bi-en-foot{font-size:12px;color:#94a3b8;}' +
-            '.psp-poster-period{font-size:13px;color:#64748b;font-weight:600;}' +
-            '.psp-poster-summary-bar{display:flex;gap:10px;margin-bottom:14px;}' +
-            '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:8px;padding:8px 6px;border:1px solid #e2e8f0;}' +
-            '.psp-ps-item b{display:block;font-size:24px;font-weight:900;color:#1e293b;}' +
-            '.psp-ps-item span{font-size:13px;font-weight:700;display:block;margin-top:3px;}' +
-            '.psp-poster-table{width:100%;border-collapse:collapse;font-size:13px;}' +
-            '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:6px 10px;font-weight:900;font-size:15px;text-align:center;}' +
-            '.psp-poster-table tbody td{padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:14px;}' +
-            '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
-            '.psp-poster-footer{text-align:center;font-size:12px;color:#94a3b8;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0;}' +
+            '*{margin:0;padding:0;box-sizing:border-box;}' +
+            '.pwrap{width:800px;background:#fff;padding:10px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}' +
             '</style>';
-        var posterHTML = '<div style="background:#f8fafc;padding:8px;width:1000px;">' + posterCSS + h + '</div>';
+        var posterHTML = '<div class="pwrap">' + posterCSS + h + '</div>';
 
         // 创建临时容器（屏幕外，对用户不可见）
         var tmpDiv = document.createElement('div');
-        tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:1000px;';
+        tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:800px;';
         tmpDiv.innerHTML = posterHTML;
         document.body.appendChild(tmpDiv);
 
@@ -7977,7 +7948,7 @@ window.generateImprovePoster = function() {
         requestAnimationFrame(function() {
             setTimeout(async function() {
                 try {
-                    var posterEl = tmpDiv.querySelector('.psp-poster');
+                    var posterEl = tmpDiv.querySelector('.pwrap');
                     if (!posterEl) throw new Error('海报容器未找到');
                     var canvas = await html2canvas(posterEl, {
                         scale: 2,
