@@ -437,31 +437,78 @@
             return result;
         };
         var deepMergeArrayById = window.deepMergeArrayById;
+        // ★ 合并两端的删除追踪列表,返回合并后的 ID 集合
+        function _mergeDeletedIds(localIds, cloudIds) {
+            var merged = [];
+            if (Array.isArray(localIds)) {
+                localIds.forEach(function(id) { if (merged.indexOf(id) === -1) merged.push(id); });
+            }
+            if (Array.isArray(cloudIds)) {
+                cloudIds.forEach(function(id) { if (merged.indexOf(id) === -1) merged.push(id); });
+            }
+            return merged;
+        }
         function mergeCloudData(cloudDb) {
             if (!cloudDb || typeof cloudDb !== 'object') return;
             // ★ 深度清理云端数据中所有不合法 key,防止污染本地 db
             sanitizeForFirebase(cloudDb, 'mergeCloudData');
+
+            // ★★★ 关键修复:合并删除追踪列表,防止已删除数据通过 UNION 模式恢复
+            if (!db._deletedIds) db._deletedIds = {};
+            ['improveProjects', 'loss', 'problems', 'kaizen'].forEach(function(k) {
+                if (!Array.isArray(db._deletedIds[k])) db._deletedIds[k] = [];
+            });
+            var localDeletedIds = {};
+            var cloudDeletedIds = cloudDb._deletedIds || {};
+            // 从本地和云端合并所有已删ID
+            Object.keys(cloudDeletedIds).forEach(function(k) {
+                if (Array.isArray(cloudDeletedIds[k]) && cloudDeletedIds[k].length > 0) {
+                    localDeletedIds[k] = _mergeDeletedIds(db._deletedIds[k], cloudDeletedIds[k]);
+                    // 同步到本地持久化列表
+                    db._deletedIds[k] = localDeletedIds[k].slice();
+                }
+            });
+            // 本地独有的删除ID也保留
+            Object.keys(db._deletedIds).forEach(function(k) {
+                if (!localDeletedIds[k]) localDeletedIds[k] = db._deletedIds[k].slice();
+            });
+
+            // ★ 对每个数组类型:合并前先用删除列表过滤掉两端数据中的已删条目
+            function _filterDeleted(arr, deletedIdList) {
+                if (!Array.isArray(arr) || arr.length === 0) return arr;
+                if (!Array.isArray(deletedIdList) || deletedIdList.length === 0) return arr;
+                return arr.filter(function(item) { return deletedIdList.indexOf(String(item.id)) === -1; });
+            }
+
             // 只有当云端数据有效(非空)时才合并
             if (cloudDb.dLinesConfig && Object.keys(cloudDb.dLinesConfig).length > 0) db.dLinesConfig = cloudDb.dLinesConfig;
             if (cloudDb.problems && Array.isArray(cloudDb.problems)) {
-                // 即使云端为空数组也保留本地数据(不再清空)
-                db.problems = deepMergeArrayById(db.problems || [], cloudDb.problems);
+                var probDelIds = localDeletedIds.problems || [];
+                db.problems = deepMergeArrayById(_filterDeleted(db.problems, probDelIds), _filterDeleted(cloudDb.problems, probDelIds));
             }
             if (cloudDb.loss && Array.isArray(cloudDb.loss)) {
-                // 即使云端为空数组也保留本地数据
-                db.loss = deepMergeArrayById(db.loss || [], cloudDb.loss);
+                var lossDelIds = localDeletedIds.loss || [];
+                db.loss = deepMergeArrayById(_filterDeleted(db.loss, lossDelIds), _filterDeleted(cloudDb.loss, lossDelIds));
             }
             if (cloudDb.kaizen && Array.isArray(cloudDb.kaizen)) {
+                var kzDelIds = localDeletedIds.kaizen || [];
                 if (cloudDb.kaizen.length > 0) {
-                    db.kaizen = deepMergeArrayById(db.kaizen || [], cloudDb.kaizen);
+                    db.kaizen = deepMergeArrayById(_filterDeleted(db.kaizen, kzDelIds), _filterDeleted(cloudDb.kaizen, kzDelIds));
                 }
             }
             // ★ 修复:improveProjects 未合并导致跨设备数据不可见
             if (cloudDb.improveProjects && Array.isArray(cloudDb.improveProjects)) {
                 console.log('[merge] 云端 improveProjects: ' + cloudDb.improveProjects.length + ' 条');
-                if (cloudDb.improveProjects.length > 0) {
-                    db.improveProjects = deepMergeArrayById(db.improveProjects || [], cloudDb.improveProjects);
-                    console.log('[merge] 合并后 improveProjects: ' + (db.improveProjects||[]).length + ' 条, 第一条: ' + JSON.stringify(db.improveProjects[0]||{}).substring(0, 120));
+                var impDelIds = localDeletedIds.improveProjects || [];
+                var cleanLocal = _filterDeleted(db.improveProjects || [], impDelIds);
+                var cleanCloud = _filterDeleted(cloudDb.improveProjects, impDelIds);
+                console.log('[merge] 过滤删除后: 本地=' + cleanLocal.length + ' 条, 云端=' + cleanCloud.length + ' 条');
+                if (cleanCloud.length > 0) {
+                    db.improveProjects = deepMergeArrayById(cleanLocal, cleanCloud);
+                    console.log('[merge] 合并后 improveProjects: ' + (db.improveProjects||[]).length + ' 条');
+                } else {
+                    db.improveProjects = cleanLocal;
+                    console.log('[merge] 云端过滤后为空,保留本地: ' + cleanLocal.length + ' 条');
                 }
             } else {
                 console.log('[merge] 云端无 improveProjects (undefined 或非数组)');
@@ -3579,6 +3626,11 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             if(!db.problems) db.problems = [];
             if(!db.defaultTargets) db.defaultTargets = getEmptyDefaultTargets();
             if(!db.targetSettings) db.targetSettings = { workshops: {}, otherLines: {} };
+            // ★ 全局删除追踪:记录所有已删除的ID,防止跨标签页/跨设备回滚
+            if(!db._deletedIds) db._deletedIds = {};
+            ['improveProjects', 'loss', 'problems', 'kaizen'].forEach(function(k) {
+                if(!Array.isArray(db._deletedIds[k])) db._deletedIds[k] = [];
+            });
 
             // 确保每个车间都有dLinesConfig
             ['PRO1', 'PRO3', 'PRO4'].forEach(ws => {
@@ -5536,7 +5588,22 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
         }
         window.addProblem = function() { db.problems.unshift({ id:Date.now(), date:window.safeDOM.val("globalDate"), ws:'PRO1', desc:'', loc:'', owner:'', dept:'PE', dueDate:'', status: (currentLang==='zh'?'未解决':(currentLang==='en'?'Open':'ยังไม่แก้')) }); triggerAutoSave(); renderPDCA(); renderSysOps(); };
         window.updateProb = function(id, f, v) { let p = db.problems.find(x=>x.id==id); if(p) { p[f]=v; } triggerAutoSave(); renderSysOps(); };
-        window.delProb = function(id) { db.problems = db.problems.filter(x=>x.id!=id); _deferredLocalStorageSave(); setTimeout(function(){ if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); } }, 0); renderPDCA(); renderSysOps(); };
+        window.delProb = function(id) {
+    var delIdStr = String(id);
+    // ★ 追踪已删除的ID
+    if (!db._deletedIds) db._deletedIds = {};
+    if (!Array.isArray(db._deletedIds.problems)) db._deletedIds.problems = [];
+    if (db._deletedIds.problems.indexOf(delIdStr) === -1) {
+        db._deletedIds.problems.push(delIdStr);
+    }
+    db.problems = db.problems.filter(function(x) { return String(x.id) !== delIdStr; });
+    _deferredLocalStorageSave();
+    setTimeout(function(){
+        if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
+    }, 0);
+    renderPDCA();
+    renderSysOps();
+};
         // ★ 性能优化：防抖版 filter render，避免快速输入时频繁重绘
         var _renderLossTimer = null;
         window._debouncedRenderLoss = function() {
@@ -5569,7 +5636,14 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         window.updateLoss = function(id, f, v) { let p = db.loss.find(x=>x.id==id); if(p) { p[f] = f==='qty'?safeNum(v):v; } triggerAutoSave(); renderSysOps(); }
         // ★ 修复:delLoss 必须 await forceSaveToFirebase,否则保存失败时用户不知情,数据在几秒后从云端恢复
         window.delLoss = function(id) {
-            db.loss = db.loss.filter(x=>x.id!=id);
+            var delIdStr = String(id);
+            // ★ 追踪已删除的ID
+            if (!db._deletedIds) db._deletedIds = {};
+            if (!Array.isArray(db._deletedIds.loss)) db._deletedIds.loss = [];
+            if (db._deletedIds.loss.indexOf(delIdStr) === -1) {
+                db._deletedIds.loss.push(delIdStr);
+            }
+            db.loss = db.loss.filter(function(x) { return String(x.id) !== delIdStr; });
             // ★ 性能优化:延迟保存 localStorage,不阻塞 UI 渲染
             _deferredLocalStorageSave();
             // ★ 性能优化:延迟 forceSaveToFirebase 到下一 macrotask,避免 repairData+sanitize 阻塞 UI
@@ -6432,6 +6506,13 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         };
         window.delKaizen = function(id) {
             if(!confirm('确定删除该项目?')) return;
+            var delIdStr = String(id);
+            // ★ 追踪已删除的ID
+            if (!db._deletedIds) db._deletedIds = {};
+            if (!Array.isArray(db._deletedIds.kaizen)) db._deletedIds.kaizen = [];
+            if (db._deletedIds.kaizen.indexOf(delIdStr) === -1) {
+                db._deletedIds.kaizen.push(delIdStr);
+            }
             db.kaizen = (db.kaizen||[]).filter(function(x){ return x.id!=id; });
             _deferredLocalStorageSave();
             setTimeout(function(){
@@ -7848,7 +7929,14 @@ window.updateImproveField = function(id, field, value) {
 window.delImproveProject = function(id) {
     if (!db.improveProjects) return;
     if (!confirm(t('improve_confirm_del'))) return;
-    db.improveProjects = db.improveProjects.filter(function(p) { return String(p.id) !== String(id); });
+    var delIdStr = String(id);
+    // ★ 追踪已删除的ID到全局删除列表,防止跨标签页恢复
+    if (!db._deletedIds) db._deletedIds = {};
+    if (!Array.isArray(db._deletedIds.improveProjects)) db._deletedIds.improveProjects = [];
+    if (db._deletedIds.improveProjects.indexOf(delIdStr) === -1) {
+        db._deletedIds.improveProjects.push(delIdStr);
+    }
+    db.improveProjects = db.improveProjects.filter(function(p) { return String(p.id) !== delIdStr; });
     _deferredLocalStorageSave();
     setTimeout(function() {
         if (typeof forceSaveToFirebase === 'function') { forceSaveToFirebase().catch(function(){}); } else { triggerAutoSave(); }
