@@ -7793,36 +7793,38 @@ window.generateImprovePoster = function() {
 
         // Recalculate overdue
         items.forEach(function(p) {
-            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '\u5df2\u5b8c\u6210') {
-                if (p.progress !== '\u903e\u671f') {
-                    p._origProgress = p.progress || '\u8fdb\u884c\u4e2d';
+            if (p.planEndDate && p.planEndDate < todayStr && p.progress !== '已完成') {
+                if (p.progress !== '逾期') {
+                    p._origProgress = p.progress || '进行中';
                 }
-                p.progress = '\u903e\u671f';
-            } else if (p.progress === '\u903e\u671f' && !(p.planEndDate && p.planEndDate < todayStr)) {
-                p.progress = p._origProgress || '\u8fdb\u884c\u4e2d';
+                p.progress = '逾期';
+            } else if (p.progress === '逾期' && !(p.planEndDate && p.planEndDate < todayStr)) {
+                p.progress = p._origProgress || '进行中';
             }
         });
 
         // Stats
         var total = items.length;
-        var done = items.filter(function(p) { return p.progress === '\u5df2\u5b8c\u6210'; }).length;
-        var prog = items.filter(function(p) { return p.progress === '\u8fdb\u884c\u4e2d'; }).length;
-        var over = items.filter(function(p) { return p.progress === '\u903e\u671f'; }).length;
-        var notstart = items.filter(function(p) { return p.progress === '\u672a\u5f00\u59cb'; }).length;
+        var done = items.filter(function(p) { return p.progress === '已完成'; }).length;
+        var prog = items.filter(function(p) { return p.progress === '进行中'; }).length;
+        var over = items.filter(function(p) { return p.progress === '逾期'; }).length;
+        var notstart = items.filter(function(p) { return p.progress === '未开始'; }).length;
         var rate = total > 0 ? Math.round(done / total * 100) : 0;
 
-        // Overdue items for alert cards
-        var overdueItems = items.filter(function(p) { return p.progress === '\u903e\u671f'; }).sort(function(a, b) { return (a.planEndDate || '').localeCompare(b.planEndDate || ''); });
+        // Overdue items
+        var overdueItems = items.filter(function(p) { return p.progress === '逾期'; }).sort(function(a, b) {
+            return (a.planEndDate || '').localeCompare(b.planEndDate || '');
+        });
 
-        // Department stats for ranking
+        // Department stats
         var deptStats = {};
         items.forEach(function(p) {
-            var d = p.dept || '\u5176\u4ed6';
+            var d = p.dept || '其他';
             if (!deptStats[d]) deptStats[d] = { total:0, done:0, prog:0, over:0, notstart:0 };
             deptStats[d].total++;
-            if (p.progress === '\u5df2\u5b8c\u6210') deptStats[d].done++;
-            else if (p.progress === '\u903e\u671f') deptStats[d].over++;
-            else if (p.progress === '\u8fdb\u884c\u4e2d') deptStats[d].prog++;
+            if (p.progress === '已完成') deptStats[d].done++;
+            else if (p.progress === '逾期') deptStats[d].over++;
+            else if (p.progress === '进行中') deptStats[d].prog++;
             else deptStats[d].notstart++;
         });
         var deptRanking = Object.keys(deptStats).map(function(d) {
@@ -7833,193 +7835,180 @@ window.generateImprovePoster = function() {
             return b.total - a.total;
         });
 
-        // Sort by dept for grouped display
-        var sorted = items.slice().sort(function(a, b) {
-            var da = a.dept || '\u5176\u4ed6';
-            var db2 = b.dept || '\u5176\u4ed6';
-            if (da !== db2) return da.localeCompare(db2);
-            var rankA = a.progress === '\u903e\u671f' ? 0 : (a.progress === '\u8fdb\u884c\u4e2d' ? 1 : (a.progress === '\u672a\u5f00\u59cb' ? 2 : 3));
-            var rankB = b.progress === '\u903e\u671f' ? 0 : (b.progress === '\u8fdb\u884c\u4e2d' ? 1 : (b.progress === '\u672a\u5f00\u59cb' ? 2 : 3));
-            return rankA - rankB;
-        });
+        // ==================== BUILD HTML (PSP Poster Style, Compact) ====================
+        var h = '<div class="ip-poster">';
 
-        // ==================== BUILD HTML ====================
-        var h = '';
+        // ---- 1. HEADER: Title + bilingual + period ----
+        h += '<div class="ip-header">';
+        h += '<div class="ip-title">\uD83C\uDFAF 改善项目跟踪通报</div>';
+        h += '<div class="ip-subtitle">Improvement Project Tracking Report</div>';
+        h += '<div class="ip-period">统计周期: ' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '&emsp;|&emsp;';
+        h += '生成时间: ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0') + '<br>';
+        h += '<span style="font-size:10px;color:#94a3b8;">Period: ' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' | Generated: ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + '</span>';
+        h += '</div></div>';
 
-        // ===== SECTION 1: Title (bilingual, clean) =====
-        h += '<div style="text-align:center;padding:8px 0 6px;border-bottom:3px solid #1a73e8;margin-bottom:8px;">';
-        h += '<div style="font-size:20px;font-weight:900;color:#1a73e8;letter-spacing:2px;">\ud83c\udfaf \u6539\u5584\u9879\u76ee\u8ddf\u8e2a\u901a\u62a5</div>';
-        h += '<div style="font-size:11px;color:#666;font-weight:600;margin-top:2px;">Improvement Project Tracking Report</div>';
-        h += '<div style="font-size:10px;color:#999;margin-top:2px;">' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + '</div>';
+        // ---- 2. SUMMARY BAR (like PSP, but compact) ----
+        h += '<div class="ip-summary-bar">';
+        h += '<div class="ip-sum-item"><b>' + total + '</b><span class="ip-cn">项目总数</span><span class="ip-en">Total</span></div>';
+        h += '<div class="ip-sum-item"><b style="color:#16a34a;">' + done + '</b><span class="ip-cn">已完成</span><span class="ip-en">Closed</span></div>';
+        h += '<div class="ip-sum-item"><b style="color:#ea580c;">' + prog + '</b><span class="ip-cn">进行中</span><span class="ip-en">In Progress</span></div>';
+        h += '<div class="ip-sum-item" style="background:#fef2f2;"><b style="color:#dc2626;">' + over + '</b><span class="ip-cn" style="color:#dc2626;">已逾期</span><span class="ip-en" style="color:#dc2626;">Overdue</span></div>';
+        h += '<div class="ip-sum-item"><b style="color:#64748b;">' + notstart + '</b><span class="ip-cn">未开始</span><span class="ip-en">Not Started</span></div>';
+        h += '<div class="ip-sum-item"><b style="color:#2563eb;">' + rate + '%</b><span class="ip-cn">完成率</span><span class="ip-en">Rate</span></div>';
         h += '</div>';
 
-        // ===== SECTION 2: KPI Summary Bar (bilingual cards) =====
-        h += '<div style="display:flex;gap:6px;margin-bottom:8px;">';
-        h += '<div style="flex:1;text-align:center;background:#f8fafc;border-radius:8px;padding:8px 4px;border:1px solid #e2e8f0;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#1e293b;">' + total + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#64748b;font-weight:700;">\u9879\u76ee\u603b\u6570</span>';
-        h += '<span style="display:block;font-size:9px;color:#94a3b8;font-weight:500;">Total Projects</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#f0fdf4;border-radius:8px;padding:8px 4px;border:1px solid #bbf7d0;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#16a34a;">' + done + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#16a34a;font-weight:700;">\u5df2\u5b8c\u6210</span>';
-        h += '<span style="display:block;font-size:9px;color:#86efac;font-weight:500;">Completed</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#fff7ed;border-radius:8px;padding:8px 4px;border:1px solid #fed7aa;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#ea580c;">' + prog + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#ea580c;font-weight:700;">\u8fdb\u884c\u4e2d</span>';
-        h += '<span style="display:block;font-size:9px;color:#fcd34d;font-weight:500;">In Progress</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#fef2f2;border-radius:8px;padding:8px 4px;border:1px solid #fecaca;">';
-        h += '<span style="display:block;font-size:24px;font-weight:900;color:#dc2626;">' + over + '</span>';
-        h += '<span style="display:block;font-size:11px;color:#dc2626;font-weight:700;">\u5df2\u903e\u671f</span>';
-        h += '<span style="display:block;font-size:9px;color:#fca5a5;font-weight:500;">Overdue</span></div>';
-        h += '<div style="flex:1;text-align:center;background:#eff6ff;border-radius:8px;padding:8px 4px;border:1px solid #bfdbfe;">';
-        h += '<span style="display:block;font-size:22px;font-weight:900;color:#2563eb;">' + rate + '%</span>';
-        h += '<span style="display:block;font-size:11px;color:#2563eb;font-weight:700;">\u5b8c\u6210\u7387</span>';
-        h += '<span style="display:block;font-size:9px;color:#93c5fd;font-weight:500;">Rate</span></div>';
-        h += '</div>';
-
-        // ===== SECTION 3: Overdue Alert Cards =====
+        // ---- 3. OVERDUE ALERT STRIP (compact strip, not cards) ----
         if (over > 0) {
-            h += '<div style="padding:6px 8px;background:#fef2f2;border-radius:8px;margin-bottom:8px;border:1px solid #fecaca;">';
-            h += '<div style="font-size:12px;font-weight:800;color:#dc2626;margin-bottom:5px;">\u26a0\ufe0f \u5df2\u903e\u671f\u9879\u76ee / Overdue Items (' + over + ')</div>';
-            h += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
-            for (var oi = 0; oi < Math.min(overdueItems.length, 6); oi++) {
+            h += '<div class="ip-overdue-strip">';
+            h += '<span class="ip-overdue-title">\u26A0\uFE0F 已逾期项目 (' + over + '项):</span>';
+            var stripMax = Math.min(overdueItems.length, 6);
+            for (var oi = 0; oi < stripMax; oi++) {
                 var o = overdueItems[oi];
-                var oName = (o.projectName || '').length > 12 ? (o.projectName || '').substring(0, 12) + '...' : (o.projectName || '');
-                h += '<div style="flex:1;min-width:120px;max-width:180px;background:#fff;border-left:3px solid #dc2626;border-radius:4px;padding:6px 8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">';
-                h += '<div style="font-size:10px;color:#dc2626;font-weight:700;margin-bottom:2px;">' + (o.dept || '') + '</div>';
-                h += '<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(oName) + '</div>';
-                h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-                h += '<span style="font-size:10px;color:#999;">' + (o.planEndDate || '') + '</span>';
-                h += '<span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 6px;border-radius:3px;font-weight:700;">\u903e\u671f</span>';
-                h += '</div></div>';
+                var oName = (o.projectName || '').length > 12 ? (o.projectName || '').substring(0, 12) + '..' : (o.projectName || '');
+                h += '<span class="ip-overdue-tag">' + (o.dept || '') + '·' + escapeHtml(oName) + ' (' + (o.planEndDate || '') + ')</span>';
             }
             if (overdueItems.length > 6) {
-                h += '<div style="font-size:10px;color:#999;padding:4px;">...\u8fd8\u6709 ' + (overdueItems.length - 6) + ' \u9879</div>';
+                h += '<span class="ip-overdue-more">+ ' + (overdueItems.length - 6) + '项</span>';
             }
-            h += '</div></div>';
-        }
-
-        // ===== SECTION 4: Department Ranking Table (medal + progress bar) =====
-        h += '<div style="padding:8px 10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;margin-bottom:8px;">';
-        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
-        h += '<span style="font-size:16px;">\ud83c\udfc6</span>';
-        h += '<span style="font-weight:900;font-size:14px;color:#0369a1;">\u5404\u90e8\u95e8\u6539\u5584\u5b8c\u6210\u7387\u6392\u540d</span>';
-        h += '<span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">Department Completion Rate Ranking</span>';
-        h += '</div>';
-        h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-        h += '<thead><tr>';
-        h += '<th style="width:30px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:12px;font-weight:800;text-align:left;">\u90e8\u95e8<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Dept</span></th>';
-        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u603b\u6570<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Total</span></th>';
-        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u2713<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Done</span></th>';
-        h += '<th style="width:34px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u26a0<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Over</span></th>';
-        h += '<th style="width:48px;padding:4px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:center;">\u5b8c\u6210\u7387<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Rate</span></th>';
-        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:11px;font-weight:700;text-align:left;border-radius:0 4px 0 0;">\u8fdb\u5ea6\u6761<br><span style="font-size:9px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
-        h += '</tr></thead><tbody>';
-
-        deptRanking.forEach(function(d, idx) {
-            var medal = (idx === 0 && d.rate > 0) ? '\ud83e\udd47' : (idx === 1 && d.rate > 0) ? '\ud83e\udd48' : (idx === 2 && d.rate > 0) ? '\ud83e\udd49' : '';
-            var barColor = d.rate >= 80 ? '#16a34a' : (d.rate >= 50 ? '#ea580c' : '#dc2626');
-            var barBg = d.rate >= 80 ? '#dcfce7' : (d.rate >= 50 ? '#fed7aa' : '#fecaca');
-            var barGrad = d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444');
-            var rowBg = idx % 2 === 0 ? 'background:#f0f9ff;' : 'background:#fff;';
-            h += '<tr style="' + rowBg + '">';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:800;font-size:15px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:11px;">' + (idx + 1) + '</span>') + '</td>';
-            h += '<td style="padding:4px 8px;text-align:left;font-weight:700;font-size:13px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
-            h += '<td style="padding:4px 6px;text-align:center;font-weight:900;font-size:14px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
-            h += '<td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;"><div style="height:16px;background:' + barBg + ';border-radius:8px;overflow:hidden;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + barGrad + ');border-radius:8px;"></div></div></td>';
-            h += '</tr>';
-        });
-        h += '</tbody></table></div>';
-
-        // ===== SECTION 5: Project Detail List (grouped by dept, overdue highlighted) =====
-        h += '<div style="margin-bottom:4px;">';
-        h += '<div style="font-size:13px;font-weight:800;color:#333;margin-bottom:4px;">\ud83d\udccb \u9879\u76ee\u660e\u7ec6 / Project Details</div>';
-
-        var lastDept = null;
-        for (var i = 0; i < sorted.length; i++) {
-            var p = sorted[i];
-            var curDept = p.dept || '\u5176\u4ed6';
-            // Department separator
-            if (curDept !== lastDept) {
-                lastDept = curDept;
-                h += '<div style="padding:4px 8px;margin:2px 0;background:linear-gradient(90deg,#dbeafe,#eff6ff);border-radius:4px;font-weight:800;font-size:13px;color:#1d4ed8;border-bottom:1px solid #bfdbfe;">';
-                h += '\ud83d\udce6 ' + curDept + '</div>';
-            }
-            // Item row
-            var isOverdue = p.progress === '\u903e\u671f';
-            var bgColor = isOverdue ? '#fef2f2' : (i % 2 === 0 ? '#fafafa' : '#ffffff');
-            var statusColor = p.progress === '\u5df2\u5b8c\u6210' ? '#16a34a' : (p.progress === '\u8fdb\u884c\u4e2d' ? '#ea580c' : (p.progress === '\u672a\u5f00\u59cb' ? '#94a3b8' : '#dc2626'));
-            var statusBadge = p.progress === '\u5df2\u5b8c\u6210' ? '\u2705 ' : (p.progress === '\u903e\u671f' ? '\u26a0\ufe0f ' : (p.progress === '\u8fdb\u884c\u4e2d' ? '\ud83d\udfe1 ' : '\u26aa '));
-            var statusLabel = p.progress === '\u5df2\u5b8c\u6210' ? '\u5df2\u5b8c\u6210' : (p.progress === '\u8fdb\u884c\u4e2d' ? '\u8fdb\u884c\u4e2d' : (p.progress === '\u672a\u5f00\u59cb' ? '\u672a\u5f00\u59cb' : '\u903e\u671f'));
-            h += '<div style="display:flex;align-items:center;padding:3px 6px;background:' + bgColor + ';' + (isOverdue ? 'border-left:3px solid #dc2626;' : '') + 'border-bottom:1px solid #f0f0f0;gap:4px;">';
-            h += '<div style="flex:2;font-size:12px;font-weight:700;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.projectName || '') + '</div>';
-            h += '<div style="flex:0 0 55px;font-size:11px;color:#666;text-align:center;">' + (p.startDate || '') + '</div>';
-            h += '<div style="flex:0 0 50px;font-size:11px;font-weight:700;color:' + statusColor + ';text-align:center;">' + statusBadge + statusLabel + '</div>';
-            h += '<div style="flex:1;font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (p.progressDesc ? escapeHtml((p.progressDesc || '').substring(0, 20) + ((p.progressDesc || '').length > 20 ? '...' : '')) : '') + '</div>';
-            h += '<div style="flex:0 0 80px;font-size:11px;font-weight:600;text-align:center;' + (isOverdue ? 'color:#dc2626;' : 'color:#666;') + '">' + (p.planEndDate || '') + '</div>';
             h += '</div>';
         }
-        h += '</div>';
 
-        // ===== SECTION 6: Footer =====
-        h += '<div style="text-align:center;font-size:10px;color:#94a3b8;padding:6px 0 2px;border-top:1px solid #e2e8f0;margin-top:6px;">';
-        h += '\u903e\u671f\u8bf4\u660e:\u8ba1\u5212\u5b8c\u6210\u65f6\u95f4\u5df2\u8fc7\u4f46\u672a\u5b8c\u6210\u7684\u9879\u76ee\u6807\u8bb0\u4e3a\u7ea2\u8272\u300c\u5df2\u903e\u671f\u300d\uff0c\u8bf7\u8d23\u4efb\u90e8\u95e8\u5c3d\u5feb\u786e\u8ba4\u5e76\u63a8\u8fdb\u3002<br>';
-        h += '<span style="font-size:9px;color:#b0b8c4;">Note: Items past due date and not completed are marked as \"Overdue\" in red. Please confirm and take action ASAP.</span>';
-        h += '</div>';
-
-        // ✅ Generate PNG image download
-        var posterCSS = '<style>' +
-            '*{margin:0;padding:0;box-sizing:border-box;}' +
-            '.pwrap{width:800px;background:#fff;padding:10px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}' +
-            '</style>';
-        var posterHTML = '<div class="pwrap">' + posterCSS + h + '</div>';
-
-        var tmpDiv = document.createElement('div');
-        tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:800px;';
-        tmpDiv.innerHTML = posterHTML;
-        document.body.appendChild(tmpDiv);
-
-        showToast('fa-solid fa-spinner fa-spin', '正在生成海报图片...');
-
-        requestAnimationFrame(function() {
-            setTimeout(async function() {
-                try {
-                    var posterEl = tmpDiv.querySelector('.pwrap');
-                    if (!posterEl) throw new Error('海报容器未找到');
-                    var canvas = await html2canvas(posterEl, {
-                        scale: 2,
-                        backgroundColor: '#ffffff',
-                        useCORS: true,
-                        logging: false,
-                        width: posterEl.scrollWidth,
-                        height: posterEl.scrollHeight
-                    });
-                    var link = document.createElement('a');
-                    link.download = 'Improvement_Poster_' + new Date().toISOString().split('T')[0] + '.png';
-                    link.href = canvas.toDataURL('image/png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    document.body.removeChild(tmpDiv);
-                    showToast('fa-solid fa-check', '改善项目通报图片已下载');
-                } catch(e) {
-                    console.error('[改善项目海报] 生成图片失败:', e.message, e.stack);
-                    showToast('fa-solid fa-xmark', '生成图片失败: ' + e.message, 'error');
-                    if (tmpDiv.parentNode) document.body.removeChild(tmpDiv);
-                }
-            }, 100);
+        // ---- 4. DEPT RANKING (compact progress bars, 4 per row) ----
+        h += '<div class="ip-section">';
+        h += '<div class="ip-sec-title">A. 部门完成率排名 / Dept Completion Rate</div>';
+        h += '<div class="ip-dept-grid">';
+        deptRanking.forEach(function(d, idx) {
+            var medal = (idx === 0 && d.rate > 0) ? '\uD83E\uDD47' : (idx === 1 && d.rate > 0) ? '\uD83E\uDD48' : (idx === 2 && d.rate > 0) ? '\uD83E\uDD49' : '';
+            var barPct = Math.max(2, d.rate);
+            var barColor = d.rate >= 80 ? '#16a34a' : (d.rate >= 50 ? '#f97316' : '#dc2626');
+            var dot = d.over > 0 ? '<span style="color:#dc2626;">\u25CF</span>' : '';
+            h += '<div class="ip-dept-item">';
+            h += '<div class="ip-dept-label">' + medal + ' ' + dot + d.dept + '</div>';
+            h += '<div class="ip-dept-bar-wrap"><div class="ip-dept-bar" style="width:' + barPct + '%;background:' + barColor + ';"></div></div>';
+            h += '<div class="ip-dept-pct" style="color:' + barColor + ';">' + d.rate + '%</div>';
+            h += '<div class="ip-dept-nums">' + d.done + '/' + d.total + '</div>';
+            h += '</div>';
         });
+        h += '</div></div>';
+
+        // ---- 5. PROJECT TABLE (compact, single column, PSP table style) ----
+        h += '<div class="ip-section">';
+        h += '<div class="ip-sec-title">B. 项目明细 / Project Details</div>';
+        h += '<table class="ip-table">';
+        h += '<thead><tr>';
+        h += '<th style="width:70px;"><span class="ip-th-cn">日期</span><span class="ip-th-en">Date</span></th>';
+        h += '<th><span class="ip-th-cn">项目名称</span><span class="ip-th-en">Project Name</span></th>';
+        h += '<th style="width:55px;"><span class="ip-th-cn">部门</span><span class="ip-th-en">Dept</span></th>';
+        h += '<th style="width:65px;"><span class="ip-th-cn">进度</span><span class="ip-th-en">Status</span></th>';
+        h += '<th style="width:78px;"><span class="ip-th-cn">计划完成</span><span class="ip-th-en">Plan End</span></th>';
+        h += '</tr></thead><tbody>';
+
+        var sortedByStatus = items.slice().sort(function(a, b) {
+            var rankA = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
+            var rankB = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
+            if (rankA !== rankB) return rankA - rankB;
+            return (a.dept || '').localeCompare(b.dept || '');
+        });
+
+        for (var i = 0; i < sortedByStatus.length; i++) {
+            var p = sortedByStatus[i];
+            var isOv = p.progress === '逾期';
+            var isDone = p.progress === '已完成';
+            var isProg = p.progress === '进行中';
+            var rowBg = isOv ? 'background:#fef2f2;' : '';
+            var statusDisplay = isOv ? '<span style="color:#dc2626;font-weight:900;font-size:12px;">逾期 Overdue</span>' :
+                (isDone ? '<span style="color:#16a34a;font-weight:900;font-size:12px;">已完成 Closed</span>' :
+                (isProg ? '<span style="color:#ea580c;font-weight:900;font-size:12px;">进行中 In Prog</span>' :
+                '<span style="color:#64748b;font-size:12px;">未开始 N/A</span>'));
+            h += '<tr style="' + rowBg + '">';
+            h += '<td>' + (p.startDate || '') + '</td>';
+            h += '<td style="text-align:left;font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.projectName || '') + '</td>';
+            h += '<td>' + (p.dept || '') + '</td>';
+            h += '<td>' + statusDisplay + '</td>';
+            h += '<td' + (isOv ? ' style="color:#dc2626;font-weight:700;"' : '') + '>' + (p.planEndDate || '') +
+                (isOv ? '<br><span style="font-size:9px;color:#dc2626;">\u26A0\uFE0F逾期</span>' : '') + '</td>';
+            h += '</tr>';
+        }
+
+        h += '</tbody></table></div>';
+
+        // ---- 6. FOOTER ----
+        h += '<div class="ip-footer">';
+        h += '逾期说明: 计划完成时间已过但未完成标记为红色「已逾期」，请责任部门尽快确认并推进。<br>';
+        h += '<span style="font-size:9px;color:#94a3b8;">Note: Items past plan end date and not completed are marked red as "Overdue". Please confirm and take action ASAP.</span>';
+        h += '</div>';
+
+        h += '</div>'; // ip-poster
+
+        // ==================== OPEN IN NEW WINDOW (Like PSP) ====================
+        var win = window.open('', '_blank');
+        if (!win) {
+            showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
+            return;
+        }
+
+        var inlineCSS = '<style>' +
+            'body{margin:0;padding:6px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:10px;color:#1e293b;}' +
+            '@page{size:A4 landscape;margin:5mm;}' +
+            '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+            '.ip-poster{width:900px;margin:0 auto;background:#fff;border-radius:6px;padding:10px 14px;}' +
+            // HEADER
+            '.ip-header{text-align:center;padding-bottom:6px;border-bottom:2.5px solid #1e40af;margin-bottom:6px;}' +
+            '.ip-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;line-height:1.2;}' +
+            '.ip-subtitle{font-size:11px;font-weight:600;color:#64748b;margin:1px 0;}' +
+            '.ip-period{font-size:10px;color:#64748b;font-weight:600;margin-top:2px;}' +
+            // SUMMARY BAR (PSP style, compact)
+            '.ip-summary-bar{display:flex;gap:4px;margin-bottom:5px;}' +
+            '.ip-sum-item{flex:1;text-align:center;background:#f8fafc;border-radius:4px;padding:4px 2px;border:1px solid #e2e8f0;}' +
+            '.ip-sum-item b{display:block;font-size:18px;font-weight:900;color:#1e293b;}' +
+            '.ip-sum-item .ip-cn{display:block;font-size:9px;font-weight:700;line-height:1.2;}' +
+            '.ip-sum-item .ip-en{display:block;font-size:8px;font-weight:500;color:#64748b;line-height:1.2;}' +
+            // OVERDUE STRIP (compact)
+            '.ip-overdue-strip{background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:4px 6px;margin-bottom:5px;font-size:10px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;}' +
+            '.ip-overdue-title{font-weight:800;color:#dc2626;white-space:nowrap;}' +
+            '.ip-overdue-tag{background:#fff;border:1px solid #fca5a5;border-radius:3px;padding:1px 5px;color:#b91c1c;font-weight:600;font-size:9px;white-space:nowrap;}' +
+            '.ip-overdue-more{color:#dc2626;font-weight:700;font-size:9px;font-style:italic;padding:1px 4px;}' +
+            // SECTION
+            '.ip-section{margin-bottom:4px;}' +
+            '.ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e40af,#3b82f6);padding:3px 8px;border-radius:4px;margin-bottom:3px;}' +
+            // DEPT GRID (4 per row with progress bars)
+            '.ip-dept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px;margin-bottom:2px;}' +
+            '.ip-dept-item{display:flex;align-items:center;gap:3px;padding:1px 2px;}' +
+            '.ip-dept-label{font-size:9px;font-weight:700;color:#1e293b;white-space:nowrap;min-width:38px;overflow:hidden;text-overflow:ellipsis;}' +
+            '.ip-dept-bar-wrap{flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;min-width:15px;}' +
+            '.ip-dept-bar{height:100%;min-width:2px;border-radius:4px;}' +
+            '.ip-dept-pct{font-size:9px;font-weight:800;white-space:nowrap;min-width:24px;text-align:right;}' +
+            '.ip-dept-nums{font-size:8px;color:#94a3b8;white-space:nowrap;min-width:18px;text-align:right;}' +
+            // TABLE (PSP style compact)
+            '.ip-table{width:100%;border-collapse:collapse;}' +
+            '.ip-table thead th{background:#1e40af;color:#fff;padding:3px 6px;font-weight:900;font-size:11px;text-align:center;}' +
+            '.ip-table thead th .ip-th-cn{display:block;font-size:10px;font-weight:800;line-height:1.2;}' +
+            '.ip-table thead th .ip-th-en{display:block;font-size:8px;font-weight:500;line-height:1.2;opacity:0.85;}' +
+            '.ip-table tbody td{padding:2px 5px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;}' +
+            '.ip-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
+            '.ip-table tbody tr:hover td{background:#e8f0fe;}' +
+            // FOOTER
+            '.ip-footer{text-align:center;font-size:9px;color:#94a3b8;margin-top:5px;padding-top:4px;border-top:1px solid #e2e8f0;}' +
+            '</style>';
+
+        win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>改善项目跟踪通报 | Improvement Project Tracking Report</title>');
+        win.document.write(inlineCSS);
+        win.document.write('</head><body>');
+        win.document.write(h);
+        win.document.write('</body></html>');
+        win.document.close();
+
+        showToast('fa-solid fa-file-image', '已生成改善项目通报, 可在新窗口打印/另存为PDF');
+        setTimeout(function() {
+            win.focus();
+            win.print();
+        }, 500);
 
     } catch(e) {
         console.error('[改善项目海报] 生成失败:', e.message, e.stack);
         showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
     }
 };
-
 // ================= 📊 改善项目导出Excel =================
 window.exportImproveToExcel = function() {
     if (!db.improveProjects || db.improveProjects.length === 0) {
