@@ -2711,33 +2711,40 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 if (d && !seenWk[d]) { seenWk[d] = true; weeklyList.push(d); }
             });
 
-            var prompt = '你是一个泰语工厂的精益生产分析系统。你不需要做复杂的推理，你只需要绝对服从以下的「死命令」，以今天的数据为基准，对比昨天和本周的异常数据，直接输出合并后的 LOSS 统计表。\n\n';
-            prompt += '【输入数据】\n\n';
-            prompt += 'Today_List: ' + JSON.stringify(todayList) + '\n\n';
-            prompt += 'Yesterday_List: ' + JSON.stringify(yesterdayList) + '\n\n';
-            prompt += 'Weekly_List: ' + JSON.stringify(weeklyList) + '\n\n';
-            prompt += '【死命令：什么叫重复（相同事件）】\n';
-            prompt += '必须遵循以下绝对铁律判定：\n\n';
-            prompt += '漏气类铁律：只要都是在 DV 工位的漏气（例如：งานรั่ว DV, พบรอยรั่วที่จุด DV），必须算作同一个事件！但如果是 DV漏气 和 管子漏气，绝对不许合并！\n\n';
-            prompt += '设备报警类铁律：只要都是同一台设备的同一类报警（例如：เครื่องความต้านทาน Alarm บ่อย 和 เครื่องต้านทานร้อง 都是电阻机报警），必须算作同一个事件！\n\n';
-            prompt += '文字变体铁律：忽略所有的泰语语序颠倒、空格、口语化。只要指向同一个工位的同一个故障，就是同一个事件！\n\n';
-            prompt += '【你的任务】\n\n';
-            prompt += '1. 以 Today_List 中的事件为基础进行合并归类，生成标准描述（使用泰语）。\n\n';
-            prompt += '2. 拿着这些归类好的事件，去 Yesterday_List 中数一遍昨天出现了多少次。\n\n';
-            prompt += '3. 再拿着这些事件，去 Weekly_List 中数一遍本周总共出现了多少次。\n\n';
-            prompt += '【强制输出格式（只输出纯JSON）】\n';
-            prompt += '严格输出以下 JSON 数组格式，不要包含任何其他说明文字：\n';
-            prompt += '[{\"Issue\":\"标准的泰语描述(如 งานรั่ว DV)\",\"Today_Count\":今天出现的次数,\"Prev_Count\":昨天出现的次数,\"Weekly_Total\":本周总计出现的次数}, ...]';
+            var prompt = '【指令】根据今日(Today_List)、昨日(Yesterday_List)、本周(Weekly_List)的异常事件描述，输出重复LOSS分析JSON。\n';
+            prompt += '合并规则：描述相似即视为同一事件（如泰语变体、同一设备同一报警、同一工位同一故障）。\n';
+            prompt += '\n';
+            prompt += 'Today_List: ' + JSON.stringify(todayList) + '\n';
+            prompt += 'Yesterday_List: ' + JSON.stringify(yesterdayList) + '\n';
+            prompt += 'Weekly_List: ' + JSON.stringify(weeklyList) + '\n';
+            prompt += '\n';
+            prompt += '【输出格式】严格JSON数组，每项: {\"Issue\":\"问题标准描述(泰语)\",\"Today_Count\":N,\"Prev_Count\":N,\"Weekly_Total\":N}';
 
             try {
-                var _sysPrompt = '你是泰语工厂精益生产分析系统。绝对服从死命令。直接输出JSON数组。不输出任何其他文字。';
+                var _sysPrompt = '你是一个数据格式化工具。你的唯一任务是将输入数据整理输出为严格JSON数组格式。绝对不要输出任何其他文字、解释、代码块标记或Markdown。';
                 var content = await callAI_API(prompt, 0, _sysPrompt, 4096);
                 if (!content) return { success: false, error: 'AI API call failed (null response)' };
-                // 提取 JSON 数组
-                var jsonMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-                if (!jsonMatch) return { success: false, error: 'No JSON array in response' };
-                var parsed = JSON.parse(jsonMatch[0]);
-                if (!Array.isArray(parsed)) return { success: false, error: 'Response is not an array' };
+                // 多策略提取 JSON 数组
+                function _extractJSONArray(str) {
+                    // 策略1: 尝试直接 JSON.parse
+                    try { var p = JSON.parse(str); if (Array.isArray(p)) return p; } catch(e) {}
+                    // 策略2: 尝试提取 ```json ... ``` 或 ``` ... ``` 代码块
+                    var cb = str.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+                    if (cb) { try { var p = JSON.parse(cb[1].trim()); if (Array.isArray(p)) return p; } catch(e) {} }
+                    // 策略3: 查找 [ 到最后一个 ] 之间的所有内容
+                    var firstBracket = str.indexOf('[');
+                    var lastBracket = str.lastIndexOf(']');
+                    if (firstBracket !== -1 && lastBracket > firstBracket) {
+                        var candidate = str.substring(firstBracket, lastBracket + 1);
+                        try { var p = JSON.parse(candidate); if (Array.isArray(p)) return p; } catch(e) {}
+                    }
+                    // 策略4: (原版) 匹配 [{...}] 模式
+                    var m = str.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+                    if (m) { try { var p = JSON.parse(m[0]); if (Array.isArray(p)) return p; } catch(e) {} }
+                    return null;
+                }
+                var parsed = _extractJSONArray(content);
+                if (!parsed) return { success: false, error: 'No JSON array in response' };
                 // 验证每个条目有必填字段
                 var validItems = [];
                 parsed.forEach(function(item) {
@@ -3108,7 +3115,35 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                             'AI Direct Compare (Today vs Yesterday vs Weekly)'
                         );
                     } else {
-                        cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
+                        // ★ AI失败 → 自动回退到Bigram本地算法 ★
+                        var _biItems = _crCalcRepeatByBigram(losses, _prevLosses);
+                        if (_biItems && _biItems.length > 0) {
+                            // 转换格式 + 计算Weekly_Total
+                            var _mappedItems = [];
+                            var _biCurTotal = 0, _biPrevTotal = 0;
+                            _biItems.forEach(function(bi) {
+                                var wt = 0;
+                                weeklyData.forEach(function(wl) {
+                                    var d = String(wl.desc||'').trim();
+                                    if (d && _crBigramSim(bi.desc, d) >= 0.75) wt += Math.abs(safeNum(wl.qty));
+                                });
+                                _mappedItems.push({
+                                    Issue: bi.desc,
+                                    Today_Count: bi.curQty,
+                                    Prev_Count: bi.prevQty,
+                                    Weekly_Total: wt
+                                });
+                                _biCurTotal += bi.curQty;
+                                _biPrevTotal += bi.prevQty;
+                            });
+                            cHtml += _crRenderRepeatSection(
+                                _biCurTotal, _biPrevTotal, _prevDate,
+                                _mappedItems,
+                                'Bigram Similarity (Fallback — AI: ' + (aiResult ? aiResult.error : 'unknown') + ')'
+                            );
+                        } else {
+                            cHtml += '<div style="padding:12px;text-align:center;color:#64748b;font-size:13px;">未检测到重复LOSS（AI暂不可用，Bigram也未发现重复）</div>';
+                        }
                     }
 
                     cSection.innerHTML = cHtml;
