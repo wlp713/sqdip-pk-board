@@ -5,6 +5,38 @@
         const CLIENT_ID = window.CLIENT_ID;
         let db = { prod: {}, dm: {}, loss: [], problems: [], memo: '', dLinesConfig: { PRO1:[], PRO3:[], PRO4:[] }, sysOps: {}, sysDetail: { pre: [], mid: [] }, kaizen: [], targetMgmt: { targets: {}, dailyData: {} }, targetSettings: { workshops: {}, otherLines: {} } };
         window.db = db; // ★ 全局引用
+
+        // ★ 增量同步支持:跟踪各顶层key的JSON哈希,仅上传变动的部分,显著降低上传数据量
+        var _keyHashesReady = false;
+        var _keyHashes = {};
+        function _buildKeyHashes() {
+            Object.keys(db).forEach(function(k) {
+                try { _keyHashes[k] = JSON.stringify(db[k]); } catch(e) { _keyHashes[k] = null; }
+            });
+        }
+        function _updateKeyHashes() { _buildKeyHashes(); }
+        function _getDirtyTopKeys() {
+            if (!_keyHashesReady) {
+                // 首次调用:全量同步(所有key都脏)
+                _keyHashesReady = true;
+                _buildKeyHashes();
+                return Object.keys(db);
+            }
+            var dirty = [];
+            var currentKeys = Object.keys(db);
+            // 检查被删除的key(在哈希表中但当前db中不存在)
+            Object.keys(_keyHashes).forEach(function(k) {
+                if (currentKeys.indexOf(k) === -1) dirty.push(k);
+            });
+            // 检查改变或新增的key
+            currentKeys.forEach(function(k) {
+                var hash;
+                try { hash = JSON.stringify(db[k]); } catch(e) { hash = null; }
+                if (hash !== _keyHashes[k]) dirty.push(k);
+            });
+            return dirty;
+        }
+
         window.safeNum = window.safeNum || function(val) { const n = Number(val); return isNaN(n) ? 0 : n; };
         let isAppReady = false;
         let localSaveTimeout = null;
@@ -62,13 +94,36 @@
                 _dataChangedSinceLastIntegrityCheck = true;
                 // ★ 深度清理所有不合法 key,确保 Firebase 保存永不失败
                 sanitizeForFirebase(db, 'saveToFirebase');
-                await window.firebaseSet(window.firebaseDbRef, {
-                    db: db,
-                    clientId: CLIENT_ID,
-                    writeCounter: _localWriteCounter,
-                    updatedAt: Date.now()
-                });
-                console.log('[Firebase] 云端保存成功 (counter=' + _localWriteCounter + ')');
+
+                // ★ 增量同步:检测变动的顶层key,通过update()仅上传变动部分,大幅降低上传数据量
+                var dirtyKeys = _getDirtyTopKeys();
+                if (dirtyKeys.length > 0) {
+                    var updatePayload = {};
+                    dirtyKeys.forEach(function(k) {
+                        // 删除的key设为null(Firebase会移除该路径),新增/修改的key设为当前值
+                        if (db[k] !== undefined && db[k] !== null) {
+                            updatePayload['db/' + k] = db[k];
+                        } else {
+                            updatePayload['db/' + k] = null;
+                        }
+                    });
+                    updatePayload['clientId'] = CLIENT_ID;
+                    updatePayload['writeCounter'] = _localWriteCounter;
+                    updatePayload['updatedAt'] = Date.now();
+                    await window.firebaseDbRef.update(updatePayload);
+                } else {
+                    // 无数据变动,仅刷新元数据(clientId等,确保on('value')能正确识别)
+                    await window.firebaseDbRef.update({
+                        clientId: CLIENT_ID,
+                        writeCounter: _localWriteCounter,
+                        updatedAt: Date.now()
+                    });
+                }
+                // ★ 更新本地最后写入时间戳(用于过滤远程旧数据)
+                _updateLocalWriteTS();
+                // ★ 更新哈希表,使下次保存只上传真正变动的key
+                _updateKeyHashes();
+                console.log('[Firebase] 云端保存成功 (counter=' + _localWriteCounter + ', dirtyKeys=' + dirtyKeys.join(',') + ')');
                 // ★ 方案4:保存成功Toast(3秒内不重复,避免自动保存刷屏)
                 try {
                     if (Date.now() - (window._lastSaveToastTime || 0) > 3000) {
@@ -127,6 +182,14 @@
         var _localWriteCounter = parseInt(localStorage.getItem('_firebaseWriteSeq') || '0');
         // ★ 诊断:记录计数器初始值
         console.log('[Firebase] 计数器初始化: ' + _localWriteCounter + ' (来自 localStorage)');
+
+        // ★ 跨客户端保护:记录本端最后成功写入 Firestore 的时间戳,用于过滤远程旧数据
+        var _lastLocalWriteTS = parseInt(localStorage.getItem('_firebaseLastWriteTS') || '0');
+        console.log('[Firebase] 最后写入时间戳: ' + _lastLocalWriteTS + ' (来自 localStorage)');
+        function _updateLocalWriteTS() {
+            _lastLocalWriteTS = Date.now();
+            try { localStorage.setItem('_firebaseLastWriteTS', String(_lastLocalWriteTS)); } catch(e) {}
+        }
 
         // ★ 性能优化:延迟的 localStorage 写入,不阻塞 UI(JSON.stringify 大型 db 可能耗时>500ms)
         //   用于删除函数,让 UI 先渲染再同步到 localStorage
@@ -275,6 +338,12 @@
             if (!isFirebaseReady) return;
             var _mergeDebounceTimer = null;
             window.firebaseOnValue(window.firebaseDbRef, (snapshot) => {
+                // ★ 关键修复:应用未就绪时忽略 on('value'),防止在 initApp 加载数据前
+                //   混入旧云端缓存数据(导致已删除的数据被 mergeCloudData 恢复)
+                if (!isAppReady) {
+                    console.log('[Firebase] 应用未就绪,忽略实时更新(counter=' + (snapshot.val()?.writeCounter||0) + ')');
+                    return;
+                }
                 const data = snapshot.val();
                 if (!data || !data.db || Object.keys(data.db).length === 0) {
                     console.log('[Firebase] 收到空数据或无db字段');
@@ -300,6 +369,13 @@
                     console.log('[Firebase] 同客户端但计数器更新 (counter=' + incomingCounter + ' > local=' + _localWriteCounter + '),执行合并');
                 } else {
                     console.log('[Firebase] 收到远程更新 (不同客户端, counter=' + incomingCounter + ')');
+                    // ★ 时间戳保护:远程数据的更新时刻必须比本地最后写入新,否则忽略
+                    //   防止另一个标签页/设备的旧数据(含已删除项目)覆盖本端的新删除
+                    var incomingTS = data.updatedAt || 0;
+                    if (_lastLocalWriteTS > 0 && incomingTS <= _lastLocalWriteTS) {
+                        console.log('[Firebase] 远程数据不是最新 (updatedAt=' + incomingTS + ' <= localTS=' + _lastLocalWriteTS + '),忽略');
+                        return;
+                    }
                 }
 
                 // ★ 性能优化:防抖合并,防止连续 on('value') 事件触发多次全量渲染
@@ -421,6 +497,8 @@
             // ★ 保存到本地前也清理不合法 key(防止 localStorage 中也写入脏数据)
             sanitizeForFirebase(db, 'localStorageSave');
             try { try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe){console.warn('[存储]配额满,移除备份后重试');try{localStorage.removeItem(DB_KEY+'_backup')}catch(ex){}try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe2){}} } catch(e){}
+            // ★ 增量同步:云端合并后更新哈希表,使下次保存只上传真正的本地变动
+            _updateKeyHashes();
             if (isAppReady) refreshAllViews();
         }
 
@@ -3586,11 +3664,15 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         var cloudCounter = cloudData.writeCounter || 0;
                         console.log('[Firebase] 初始加载对比: 本地计数器=' + _localWriteCounter + ', 云端计数器=' + cloudCounter);
 
-                        // ★ 关键修复:只有云端计数器大于本地计数器时才合并
-                        //   如果本地计数器 >= 云端计数器,说明本地数据与云端至少一样新
-                        //   直接合并会覆盖本地的删除操作(云端旧数据中的已删条目会恢复)
-                        if (cloudCounter > _localWriteCounter) {
-                            console.log('[Firebase] 云端数据更新,执行合并');
+                        // ★ 关键修复:云端数据由不同客户端写入时,即使计数器=本地也要合并(跨标签页共享localStorage)
+                        //   当 cloudCounter > _localWriteCounter → 云端更新 → 合并
+                        //   当 cloudCounter == _localWriteCounter 且不同客户端 → 云端数据是另一标签写的,应合并
+                        //   当 cloudCounter < _localWriteCounter → 本地上新 → 推送本地
+                        var cloudClientId = cloudData.clientId || 'unknown';
+                        var isDifferentClient = (cloudClientId !== CLIENT_ID);
+                        console.log('[Firebase] 初始加载: local=' + _localWriteCounter + ', cloud=' + cloudCounter + ', cloudClient=' + cloudClientId + ', myClient=' + CLIENT_ID);
+                        if (cloudCounter > _localWriteCounter || (cloudCounter === _localWriteCounter && isDifferentClient)) {
+                            console.log('[Firebase] 云端数据更新,执行合并 (isDiff=' + isDifferentClient + ')');
                             mergeCloudData(cloudData.db);
                             // 更新本地计数器为云端值
                             _localWriteCounter = cloudCounter;
