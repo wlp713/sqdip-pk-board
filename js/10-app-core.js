@@ -526,7 +526,7 @@
         const PRO_ORDER = ['PRO1', 'PRO2', 'PRO3', 'PRO4', 'H_MOTOR', 'F_MOTOR', 'S_MOTOR', 'CRANK'];
         const NEW_MOTOR_NAMES = { 'H_MOTOR': 'H电机线产出', 'F_MOTOR': 'F电机线产出', 'S_MOTOR': 'S系列电机线产出', 'CRANK': '曲轴线产出' };
         // 按照用户历史指令:加入 IP 与 QA 作为独立部门,以及 Pro.1-Pro.6
-        const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA'];
+        const DEPTS = ['Pro.1', 'Pro.2', 'Pro.3', 'Pro.4', 'Pro.5', 'Pro.6', 'PE', 'HR', 'R&D', 'PC', 'IP', 'QA', 'PUR'];
         // ★ 统一AI分析系统提示词：所有分析类AI调用共享此设定
         // 不自我介绍，只做数据驱动分析，仅结尾可加一句建议
         const AI_ANALYSIS_SYSTEM = '你精通精益生产、生产管理、冰箱压缩机制造工艺，熟悉美的GMCC冰箱压缩机产品。\n\n规则：\n1. 不要自我介绍，不要提及"资深""专家""专业"等身份描述\n2. 只基于用户提供的现有数据进行分析\n3. 不得在分析过程中提任何建议或改善措施\n4. 仅在输出的最后一部分的结尾处，可以加一句话的建议\n5. 所有分析必须引用具体数字，严禁编造数据\n6. 输出专业简洁，以数据为导向';
