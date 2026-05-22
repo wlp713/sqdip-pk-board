@@ -7830,7 +7830,7 @@ window.generateImprovePoster = function() {
             return b.total - a.total;
         });
 
-        // Group items by department for detail table (sorted: overdue depts first)
+        // Group items by department, sorted
         var groupedByDept = {};
         items.forEach(function(p) {
             var d = p.dept || '其他';
@@ -7851,7 +7851,7 @@ window.generateImprovePoster = function() {
             return deptStats[b].total - deptStats[a].total;
         });
 
-        // Split dept groups balanced across two columns
+        // Balance into two columns
         var allGroups = [];
         sortedDepts.forEach(function(d) {
             allGroups.push({ dept: d, items: groupedByDept[d], stats: deptStats[d] });
@@ -7869,10 +7869,23 @@ window.generateImprovePoster = function() {
             }
         });
 
+        // Helper: auto-shrink font for name column (~260px available per col)
+        function calcNameFontSize(text) {
+            var len = (text || '').length;
+            if (len <= 14) return '12px';
+            if (len <= 20) return '11px';
+            if (len <= 28) return '10px';
+            if (len <= 36) return '9px';
+            return '8px';
+        }
+        function calcDateFontSize(text) {
+            return (text || '').length > 10 ? '9px' : '10px';
+        }
+
         // ==================== BUILD HTML ====================
         var h = '<div class="ip-poster">';
 
-        // ---- 1. HEADER (PSP style) ----
+        // ---- 1. HEADER ----
         h += '<div class="ip-hdr">';
         h += '<div class="ip-title">\uD83C\uDFAF 改善项目跟踪通报</div>';
         h += '<div class="ip-subtitle">Improvement Project Tracking Report</div>';
@@ -7881,7 +7894,7 @@ window.generateImprovePoster = function() {
             ' &nbsp;|&nbsp; ' + total + ' Projects</div>';
         h += '</div>';
 
-        // ---- 2. SUMMARY BAR (PSP style cards) ----
+        // ---- 2. SUMMARY BAR ----
         h += '<div class="ip-sum-bar">';
         h += '<div class="ip-sum-item"><b>' + total + '</b><span class="ip-cn">项目总数</span><span class="ip-en">Total Projects</span></div>';
         h += '<div class="ip-sum-item"><b style="color:#16a34a;">' + done + '</b><span class="ip-cn">已完成</span><span class="ip-en">Closed</span></div>';
@@ -7891,7 +7904,7 @@ window.generateImprovePoster = function() {
         h += '<div class="ip-sum-item"><b style="color:#2563eb;">' + rate + '%</b><span class="ip-cn">完成率</span><span class="ip-en">Close Rate</span></div>';
         h += '</div>';
 
-        // ---- 3. DEPT RANKING (simple progress bars, sorted by rate, PSP-aligned) ----
+        // ---- 3. DEPT RANKING ----
         h += '<div class="ip-sec">';
         h += '<div class="ip-sec-title">A. 部门完成率排名 / Dept Completion Rate Ranking</div>';
         h += '<div class="ip-chart">';
@@ -7902,17 +7915,10 @@ window.generateImprovePoster = function() {
             var hasOver = d.over > 0;
             var rowBg = hasOver ? 'style="background:#fef2f2;"' : '';
             h += '<div class="ip-chart-row" ' + rowBg + '>';
-            // Label with medal + dept name
             h += '<div class="ip-chart-label">' + medal + (hasOver ? ' <span style="color:#dc2626;font-size:11px;">\u25CF</span>' : '') + ' ' + d.dept + '</div>';
-            // Progress bar
-            h += '<div class="ip-chart-bar-wrap">';
-            h += '<div class="ip-chart-bar" style="width:' + barPct + '%;background:' + barColor + ';"></div>';
-            h += '<div class="ip-chart-bar-bg"></div>';
-            h += '</div>';
-            // Rate number
-            h += '<div class="ip-chart-rate" style="color:' + barColor + ';font-weight:800;">' + d.rate + '%</div>';
-            // Mini breakdown (compact)
-            h += '<div class="ip-chart-breakdown">';
+            h += '<div class="ip-chart-bar-wrap"><div class="ip-chart-bar" style="width:' + barPct + '%;background:' + barColor + ';"></div></div>';
+            h += '<div class="ip-chart-rate" style="color:' + barColor + ';">' + d.rate + '%</div>';
+            h += '<div class="ip-chart-brk">';
             if (d.done > 0) h += '<span class="ip-brk-done">\u2705' + d.done + '</span> ';
             if (d.prog > 0) h += '<span class="ip-brk-prog">\uD83D\uDFE1' + d.prog + '</span> ';
             if (d.over > 0) h += '<span class="ip-brk-over">\u26A0\uFE0F' + d.over + '</span> ';
@@ -7923,12 +7929,11 @@ window.generateImprovePoster = function() {
         });
         h += '</div></div>';
 
-        // ---- 4. PROJECT DETAILS (table style, PSP-aligned, spacious) ----
+        // ---- 4. PROJECT DETAILS (dept grouped, centered header, auto-shrink font) ----
         h += '<div class="ip-sec">';
         h += '<div class="ip-sec-title">B. 项目明细 / Project Details</div>';
         h += '<div class="ip-table-grid">';
 
-        // Render one column's dept groups as proper tables
         function renderDeptGroups(groups) {
             var html = '';
             for (var gi = 0; gi < groups.length; gi++) {
@@ -7937,34 +7942,41 @@ window.generateImprovePoster = function() {
                 var doneCount = g.stats.done;
                 var progCount = g.stats.prog;
                 var notCount = g.stats.notstart;
-                var parts = [];
-                if (doneCount > 0) parts.push('\u2705\u5DF2\u5B8C\u6210' + doneCount);
-                if (progCount > 0) parts.push('\uD83D\uDFE1\u8FDB\u884C\u4E2D' + progCount);
-                if (overCount > 0) parts.push('\u26A0\uFE0F\u903E\u671F' + overCount);
-                if (notCount > 0) parts.push('\u26AA\u672A\u5F00\u59CB' + notCount);
+                var hasOverdue = overCount > 0;
 
-                html += '<table class="ip-dept-tb">';
-                // Dept header row (spans all columns)
-                var hdrBg = overCount > 0 ? 'background:#fef2f2;border-bottom:2px solid #fecaca;' : 'background:#f8fafc;border-bottom:2px solid #e2e8f0;';
-                var hdrColor = overCount > 0 ? '#dc2626' : '#1e40af';
-                html += '<tr class="ip-dept-hdr"><td colspan="4" style="' + hdrBg + '">';
-                html += '<span style="font-size:12px;font-weight:900;color:' + hdrColor + ';">' + g.dept + '</span>';
-                html += '<span style="font-size:10px;color:#64748b;margin-left:8px;">' + g.stats.total + ' items</span>';
-                html += '<span style="font-size:9px;color:#94a3b8;margin-left:auto;float:right;">' + parts.join(' | ') + '</span>';
-                html += '</td></tr>';
-                // Column headers
-                html += '<tr class="ip-th-row">';
-                html += '<th style="width:64px;"><span class="ip-th-cn">日期</span><span class="ip-th-en">Date</span></th>';
-                html += '<th><span class="ip-th-cn">项目名称</span><span class="ip-th-en">Project</span></th>';
-                html += '<th style="width:62px;"><span class="ip-th-cn">进度</span><span class="ip-th-en">Status</span></th>';
-                html += '<th style="width:72px;"><span class="ip-th-cn">计划完成</span><span class="ip-th-en">Plan End</span></th>';
-                html += '</tr>';
+                // Build status summary
+                var sumParts = [];
+                if (doneCount > 0) sumParts.push('\u2705已完成' + doneCount);
+                if (progCount > 0) sumParts.push('\uD83D\uDFE1进行中' + progCount);
+                if (overCount > 0) sumParts.push('\u26A0\uFE0F逾期' + overCount);
+                if (notCount > 0) sumParts.push('\u26AA未开始' + notCount);
+
+                var hdrBg = hasOverdue ? '#dc2626' : '#1e40af';
+                var hdrBgGrad = hasOverdue ? '#dc2626' : '#1e40af';
+
+                html += '<div class="ip-dept-block">';
+                // Department header (centered, filled background, PSP blue header style)
+                html += '<div class="ip-dept-bar" style="background:' + hdrBgGrad + ';">';
+                html += '<span class="ip-dept-bar-name">' + g.dept + '</span>';
+                html += '<span class="ip-dept-bar-count">' + g.stats.total + ' items</span>';
+                html += '<span class="ip-dept-bar-sum">' + sumParts.join(' | ') + '</span>';
+                html += '</div>';
+
+                // Column sub-header row
+                html += '<div class="ip-sub-hdr">';
+                html += '<span class="ip-sub-hdr-date">日期 Date</span>';
+                html += '<span class="ip-sub-hdr-name">项目名称 Project</span>';
+                html += '<span class="ip-sub-hdr-status">进度 Status</span>';
+                html += '<span class="ip-sub-hdr-end">计划完成 Plan End</span>';
+                html += '</div>';
+
                 // Item rows
                 for (var pi = 0; pi < g.items.length; pi++) {
                     var p = g.items[pi];
                     var isOv = p.progress === '逾期';
                     var isDone = p.progress === '已完成';
                     var isProg2 = p.progress === '进行中';
+
                     var rowBg = isOv ? 'background:#fef2f2;' : '';
                     var borderSide = isOv ? 'border-left:3px solid #dc2626;' : (isDone ? 'border-left:3px solid #16a34a;' : (isProg2 ? 'border-left:3px solid #ea580c;' : 'border-left:3px solid #d1d5db;'));
 
@@ -7973,14 +7985,18 @@ window.generateImprovePoster = function() {
                     var badgeBg = isOv ? '#fef2f2' : (isDone ? '#f0fdf4' : (isProg2 ? '#fff7ed' : '#f9fafb'));
                     var badgeBorder = isOv ? '#fecaca' : (isDone ? '#bbf7d0' : (isProg2 ? '#fed7aa' : '#e5e7eb'));
 
-                    html += '<tr class="ip-item-tr" style="' + rowBg + borderSide + '">';
-                    html += '<td class="ip-td-date">' + (p.startDate || '') + '</td>';
-                    html += '<td class="ip-td-name' + (isOv ? ' ip-td-name-over' : '') + '">' + escapeHtml(p.projectName || '') + '</td>';
-                    html += '<td class="ip-td-status"><span class="ip-badge" style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBorder + ';">' + badgeText + '</span></td>';
-                    html += '<td class="ip-td-end' + (isOv ? ' ip-td-end-over' : '') + '">' + (p.planEndDate || '') + '</td>';
-                    html += '</tr>';
+                    // Auto-shrink font sizes (same font format within department)
+                    var nameFs = calcNameFontSize(p.projectName);
+                    var dateFs = calcDateFontSize(p.startDate);
+
+                    html += '<div class="ip-item-row" style="' + rowBg + borderSide + '">';
+                    html += '<span class="ip-item-date" style="font-size:' + dateFs + ';white-space:nowrap;overflow:hidden;">' + (p.startDate || '') + '</span>';
+                    html += '<span class="ip-item-name" style="font-size:' + nameFs + ';white-space:nowrap;overflow:hidden;">' + escapeHtml(p.projectName || '') + '</span>';
+                    html += '<span class="ip-item-status"><span class="ip-badge" style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBorder + ';">' + badgeText + '</span></span>';
+                    html += '<span class="ip-item-end' + (isOv ? ' ip-item-end-over' : '') + '" style="white-space:nowrap;overflow:hidden;">' + (p.planEndDate || '') + '</span>';
+                    html += '</div>';
                 }
-                html += '</table>';
+                html += '</div>'; // ip-dept-block
             }
             return html;
         }
@@ -7996,55 +8012,60 @@ window.generateImprovePoster = function() {
 
         h += '</div>'; // ip-poster
 
-        // ==================== PNG GENERATION (html2canvas) ====================
+        // ==================== PNG GENERATION ====================
         var inlineCSS = '<style>' +
             '*{margin:0;padding:0;box-sizing:border-box;}' +
             '.pwrap{width:960px;background:#fff;padding:10px 16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#1e293b;}' +
-            // HEADER (PSP blue)
+            // HEADER
             '.pwrap .ip-hdr{text-align:center;padding-bottom:6px;border-bottom:3px solid #1e40af;margin-bottom:8px;}' +
             '.pwrap .ip-title{font-size:22px;font-weight:900;color:#1e3a5f;letter-spacing:1px;}' +
             '.pwrap .ip-subtitle{font-size:11px;font-weight:600;color:#64748b;margin:2px 0;}' +
             '.pwrap .ip-period{font-size:9px;color:#64748b;font-weight:600;margin-top:2px;}' +
-            // SUMMARY BAR (PSP cards, slightly taller)
+            // SUMMARY BAR
             '.pwrap .ip-sum-bar{display:flex;gap:4px;margin-bottom:8px;}' +
             '.pwrap .ip-sum-item{flex:1;text-align:center;background:#f8fafc;border-radius:5px;padding:4px 2px;border:1px solid #e2e8f0;}' +
             '.pwrap .ip-sum-item b{display:block;font-size:17px;font-weight:900;color:#1e293b;line-height:1.2;}' +
             '.pwrap .ip-sum-item .ip-cn{display:block;font-size:9px;font-weight:700;line-height:1.2;letter-spacing:0.5px;}' +
             '.pwrap .ip-sum-item .ip-en{display:block;font-size:8px;font-weight:500;color:#64748b;line-height:1.2;}' +
-            // SECTION TITLE (PSP blue gradient)
+            // SECTION
             '.pwrap .ip-sec{margin-bottom:6px;}' +
             '.pwrap .ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e40af,#3b82f6);padding:3px 10px;border-radius:4px;margin-bottom:4px;}' +
-            // CHART (simple bars)
+            // CHART
             '.pwrap .ip-chart{padding:2px 0;}' +
             '.pwrap .ip-chart-row{display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;margin-bottom:1px;}' +
             '.pwrap .ip-chart-label{font-size:10px;font-weight:700;color:#1e293b;white-space:nowrap;min-width:52px;overflow:hidden;text-overflow:ellipsis;}' +
-            '.pwrap .ip-chart-bar-wrap{flex:1;height:10px;position:relative;border-radius:5px;overflow:hidden;}' +
-            '.pwrap .ip-chart-bar{height:100%;border-radius:5px;position:relative;z-index:1;min-width:3px;}' +
-            '.pwrap .ip-chart-bar-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:#f1f5f9;border-radius:5px;}' +
-            '.pwrap .ip-chart-rate{font-size:10px;white-space:nowrap;min-width:30px;text-align:right;}' +
-            '.pwrap .ip-chart-breakdown{font-size:8px;white-space:nowrap;min-width:60px;text-align:right;color:#94a3b8;}' +
+            '.pwrap .ip-chart-bar-wrap{flex:1;height:12px;border-radius:6px;overflow:hidden;background:#f1f5f9;}' +
+            '.pwrap .ip-chart-bar{height:100%;border-radius:6px;min-width:3px;}' +
+            '.pwrap .ip-chart-rate{font-size:10px;font-weight:800;white-space:nowrap;min-width:30px;text-align:right;}' +
+            '.pwrap .ip-chart-brk{font-size:8px;white-space:nowrap;min-width:60px;text-align:right;color:#94a3b8;}' +
             '.pwrap .ip-chart-total{font-size:9px;color:#94a3b8;min-width:16px;text-align:right;}' +
-            '.pwrap .ip-brk-done{color:#16a34a;}' +
-            '.pwrap .ip-brk-prog{color:#f97316;}' +
-            '.pwrap .ip-brk-over{color:#dc2626;}' +
-            '.pwrap .ip-brk-not{color:#94a3b8;}' +
-            // TABLE GRID (two columns)
+            '.pwrap .ip-brk-done{color:#16a34a;}.pwrap .ip-brk-prog{color:#f97316;}' +
+            '.pwrap .ip-brk-over{color:#dc2626;}.pwrap .ip-brk-not{color:#94a3b8;}' +
+            // TABLE GRID
             '.pwrap .ip-table-grid{display:flex;gap:8px;}' +
             '.pwrap .ip-col{flex:1;min-width:0;}' +
-            // DEPT TABLE
-            '.pwrap .ip-dept-tb{width:100%;border-collapse:collapse;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;}' +
-            '.pwrap .ip-dept-hdr td{padding:5px 8px;font-weight:700;}' +
-            '.pwrap .ip-th-row{background:#f1f5f9;}' +
-            '.pwrap .ip-th-row th{padding:3px 6px;font-size:10px;font-weight:700;color:#475569;text-align:center;border-bottom:1px solid #e2e8f0;}' +
-            '.pwrap .ip-th-row th .ip-th-cn{display:block;font-size:10px;font-weight:800;}' +
-            '.pwrap .ip-th-row th .ip-th-en{display:block;font-size:8px;font-weight:500;color:#94a3b8;}' +
-            '.pwrap .ip-item-tr td{padding:3px 6px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:11px;}' +
-            '.pwrap .ip-item-tr:nth-child(even) td{background:#fafbfc;}' +
-            '.pwrap .ip-td-date{font-size:10px;color:#64748b;}' +
-            '.pwrap .ip-td-name{text-align:left;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1e293b;}' +
-            '.pwrap .ip-td-name-over{color:#b91c1c;}' +
-            '.pwrap .ip-td-end{font-size:10px;color:#64748b;}' +
-            '.pwrap .ip-td-end-over{color:#dc2626;font-weight:700;}' +
+            // DEPT BLOCK (replaces table)
+            '.pwrap .ip-dept-block{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;}' +
+            // DEPT HEADER BAR (filled, centered, PSP blue)
+            '.pwrap .ip-dept-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 8px;color:#fff;}' +
+            '.pwrap .ip-dept-bar-name{font-size:14px;font-weight:900;letter-spacing:0.5px;}' +
+            '.pwrap .ip-dept-bar-count{font-size:10px;font-weight:600;opacity:0.9;}' +
+            '.pwrap .ip-dept-bar-sum{font-size:9px;font-weight:500;opacity:0.85;margin-left:auto;}' +
+            // SUB-HEADER ROW (column labels)
+            '.pwrap .ip-sub-hdr{display:flex;align-items:center;gap:2px;padding:2px 6px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;}' +
+            '.pwrap .ip-sub-hdr-date{font-size:9px;font-weight:700;color:#64748b;min-width:64px;}' +
+            '.pwrap .ip-sub-hdr-name{flex:1;font-size:9px;font-weight:700;color:#64748b;}' +
+            '.pwrap .ip-sub-hdr-status{font-size:9px;font-weight:700;color:#64748b;min-width:62px;text-align:center;}' +
+            '.pwrap .ip-sub-hdr-end{font-size:9px;font-weight:700;color:#64748b;min-width:70px;text-align:right;}' +
+            // ITEM ROW
+            '.pwrap .ip-item-row{display:flex;align-items:center;gap:2px;padding:2px 6px;border-bottom:1px solid #f1f5f9;}' +
+            '.pwrap .ip-item-row:last-child{border-bottom:none;}' +
+            '.pwrap .ip-item-row:nth-child(even){background:#fafbfc;}' +
+            '.pwrap .ip-item-date{min-width:64px;font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;}' +
+            '.pwrap .ip-item-name{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;color:#1e293b;}' +
+            '.pwrap .ip-item-status{min-width:62px;text-align:center;}' +
+            '.pwrap .ip-item-end{min-width:70px;text-align:right;font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;}' +
+            '.pwrap .ip-item-end-over{color:#dc2626;font-weight:700;}' +
             '.pwrap .ip-badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;line-height:1.4;}' +
             // FOOTER
             '.pwrap .ip-footer{text-align:center;font-size:9px;color:#94a3b8;margin-top:6px;padding-top:4px;border-top:1px solid #e2e8f0;}' +
@@ -8056,13 +8077,13 @@ window.generateImprovePoster = function() {
         tmpDiv.innerHTML = posterHTML;
         document.body.appendChild(tmpDiv);
 
-        showToast('fa-solid fa-spinner fa-spin', '\u6B63\u5728\u751F\u6210\u6D77\u62A5\u56FE\u7247...');
+        showToast('fa-solid fa-spinner fa-spin', '正在生成海报图片...');
 
         requestAnimationFrame(function() {
             setTimeout(async function() {
                 try {
                     var posterEl = tmpDiv.querySelector('.pwrap');
-                    if (!posterEl) throw new Error('\u6D77\u62A5\u5BB9\u5668\u672A\u627E\u5230');
+                    if (!posterEl) throw new Error('海报容器未找到');
                     var canvas = await html2canvas(posterEl, {
                         scale: 2,
                         backgroundColor: '#ffffff',
@@ -8078,18 +8099,18 @@ window.generateImprovePoster = function() {
                     link.click();
                     document.body.removeChild(link);
                     document.body.removeChild(tmpDiv);
-                    showToast('fa-solid fa-check', '\u6539\u5584\u9879\u76EE\u901A\u62A5\u56FE\u7247\u5DF2\u4E0B\u8F7D');
+                    showToast('fa-solid fa-check', '改善项目通报图片已下载');
                 } catch(e) {
-                    console.error('[\u6539\u5584\u9879\u76EE\u6D77\u62A5] \u751F\u6210\u56FE\u7247\u5931\u8D25:', e.message, e.stack);
-                    showToast('fa-solid fa-xmark', '\u751F\u6210\u56FE\u7247\u5931\u8D25: ' + e.message, 'error');
+                    console.error('[改善项目海报] 生成图片失败:', e.message, e.stack);
+                    showToast('fa-solid fa-xmark', '生成图片失败: ' + e.message, 'error');
                     if (tmpDiv.parentNode) document.body.removeChild(tmpDiv);
                 }
             }, 100);
         });
 
     } catch(e) {
-        console.error('[\u6539\u5584\u9879\u76EE\u6D77\u62A5] \u751F\u6210\u5931\u8D25:', e.message, e.stack);
-        showToast('fa-solid fa-xmark', '\u6D77\u62A5\u751F\u6210\u5931\u8D25: ' + e.message, 'error');
+        console.error('[改善项目海报] 生成失败:', e.message, e.stack);
+        showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
     }
 };// ================= 📊 改善项目导出Excel =================
 window.exportImproveToExcel = function() {
