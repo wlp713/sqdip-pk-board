@@ -375,9 +375,13 @@
             }
             // ★ 修复:improveProjects 未合并导致跨设备数据不可见
             if (cloudDb.improveProjects && Array.isArray(cloudDb.improveProjects)) {
+                console.log('[merge] 云端 improveProjects: ' + cloudDb.improveProjects.length + ' 条');
                 if (cloudDb.improveProjects.length > 0) {
                     db.improveProjects = deepMergeArrayById(db.improveProjects || [], cloudDb.improveProjects);
+                    console.log('[merge] 合并后 improveProjects: ' + (db.improveProjects||[]).length + ' 条, 第一条: ' + JSON.stringify(db.improveProjects[0]||{}).substring(0, 120));
                 }
+            } else {
+                console.log('[merge] 云端无 improveProjects (undefined 或非数组)');
             }
             if (cloudDb.sysDetail && Object.keys(cloudDb.sysDetail).length > 0) {
                 // ★ 深度合并 sysDetail：按类型逐级合并，保留本地已有删除标记等，不直接整体替换
@@ -401,6 +405,7 @@
                 });
             }
             if (cloudDb.memo !== undefined && cloudDb.memo !== null) db.memo = cloudDb.memo;
+            console.log('[merge] 云端 db keys: ' + Object.keys(cloudDb).join(', ') + ', has improveProjects=' + ('improveProjects' in cloudDb) + ', typeof=' + typeof cloudDb.improveProjects);
             if (cloudDb.prod && Object.keys(cloudDb.prod).length > 0) db.prod = cloudDb.prod;
             if (cloudDb.dm && Object.keys(cloudDb.dm).length > 0) db.dm = cloudDb.dm;
             // ★ 修复:以下对象在合并时遗漏,跨设备不同步
