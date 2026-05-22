@@ -7802,8 +7802,11 @@ window.generateImprovePoster = function() {
             }
         });
 
-        // Sort: overdue first
+        // Sort: group by department, then overdue first within each group
         var sorted = items.slice().sort(function(a, b) {
+            var deptA = a.dept || '';
+            var deptB = b.dept || '';
+            if (deptA !== deptB) return deptA.localeCompare(deptB);
             var aOv = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
             var bOv = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
             return aOv - bOv;
@@ -7818,7 +7821,7 @@ window.generateImprovePoster = function() {
 
         var h = '<div class="psp-poster">';
         h += '<div class="psp-poster-hdr">';
-        h += '<div class="psp-poster-title">\uD83C\uDFAF 改善项目跟踪通报<div class="bi-en-title">Improvement Project Tracking Report</div></div>';
+        h += '<div class="psp-poster-title">\uD83C\uDFAF 改善项目跟踪通报<div class="bi-en-title" style="font-size:14px;">Improvement Project Tracking Report</div></div>';
         h += '<div class="psp-poster-period">生成时间: ' + new Date().toLocaleString('zh-CN', {hour12:false}) + '<br><span class="bi-en-sub">Generated: ' + new Date().toLocaleString('en-US', {hour12:false}) + '</span></div>';
         h += '</div>';
 
@@ -7827,7 +7830,7 @@ window.generateImprovePoster = function() {
         h += '<div class="psp-ps-item"><b>' + total + '</b><span class="bi-cn">项目总数</span><span class="bi-en">Total Projects</span></div>';
         h += '<div class="psp-ps-item"><b style="color:#16a34a;">' + done + '</b><span class="bi-cn">已完成</span><span class="bi-en">Completed</span></div>';
         h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + prog + '</b><span class="bi-cn">进行中</span><span class="bi-en">In Progress</span></div>';
-        h += '<div class="psp-ps-item" style="background:#fef2f2;"><b style="color:#dc2626;font-size:22px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
+        h += '<div class="psp-ps-item" style="background:#fee2e2;"><b style="color:#dc2626;font-size:24px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
         h += '<div class="psp-ps-item"><b style="color:#1e40af;">' + rate + '%</b><span class="bi-cn">完成率</span><span class="bi-en">Completion Rate</span></div>';
         h += '</div>';
 
@@ -7850,21 +7853,21 @@ window.generateImprovePoster = function() {
             return b.total - a.total;
         });
 
-        h += '<div style="margin:12px 0 8px;padding:10px 12px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;">';
-        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
-        h += '<span style="font-size:16px;">\uD83C\uDFC6</span>';
-        h += '<span style="font-weight:900;font-size:14px;color:#0369a1;">各部门改善完成率排名</span>';
-        h += '<span style="font-size:10px;color:#64748b;font-weight:400;">Department Completion Rate Ranking</span>';
+        h += '<div style="margin:14px 0 10px;padding:12px 14px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;">';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+        h += '<span style="font-size:18px;">\uD83C\uDFC6</span>';
+        h += '<span style="font-weight:900;font-size:16px;color:#0369a1;">各部门改善完成率排名</span>';
+        h += '<span style="font-size:12px;color:#64748b;font-weight:400;">Department Completion Rate Ranking</span>';
         h += '</div>';
-        h += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+        h += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
         h += '<thead><tr>';
-        h += '<th style="width:32px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
-        h += '<th style="padding:3px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:800;text-align:left;"><span style="display:block;line-height:1.2;">\u90E8\u95E8</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Dept</span></th>';
-        h += '<th style="width:38px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;">\u603B</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Total</span></th>';
-        h += '<th style="width:38px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;color:#86efac;">\u2713</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Done</span></th>';
-        h += '<th style="width:36px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;color:#fcd34d;">\u26A0</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Over</span></th>';
-        h += '<th style="width:50px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;">\u5B8C\u6210\u7387</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Rate</span></th>';
-        h += '<th style="padding:3px 6px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:left;border-radius:0 4px 0 0;"><span style="display:block;">\u8FDB\u5EA6\u6761</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
+        h += '<th style="width:36px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
+        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:13px;font-weight:800;text-align:left;"><span style="display:block;line-height:1.3;">\u90E8\u95E8</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Dept</span></th>';
+        h += '<th style="width:42px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;">\u603B</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Total</span></th>';
+        h += '<th style="width:42px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;color:#86efac;">\u2713</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Done</span></th>';
+        h += '<th style="width:40px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;color:#fcd34d;">\u26A0</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Over</span></th>';
+        h += '<th style="width:56px;padding:4px 6px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:center;"><span style="display:block;">\u5B8C\u6210\u7387</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Rate</span></th>';
+        h += '<th style="padding:4px 8px;background:#0284c7;color:#fff;font-size:12px;font-weight:700;text-align:left;border-radius:0 4px 0 0;"><span style="display:block;">\u8FDB\u5EA6\u6761</span><span style="display:block;font-size:10px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
         h += '</tr></thead><tbody>';
 
         deptRanking.forEach(function(d, idx) {
@@ -7876,20 +7879,20 @@ window.generateImprovePoster = function() {
             var barBg = d.rate >= 80 ? '#dcfce7' : (d.rate >= 50 ? '#fed7aa' : '#fecaca');
             var rowBg = idx % 2 === 0 ? 'background:#f0f9ff;' : 'background:#fff;';
             h += '<tr style="' + rowBg + '">';
-            h += '<td style="padding:3px 4px;text-align:center;font-weight:800;font-size:13px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:10px;">' + (idx + 1) + '</span>') + '</td>';
-            h += '<td style="padding:3px 6px;text-align:left;font-weight:700;font-size:12px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
-            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
-            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
-            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
-            h += '<td style="padding:3px 4px;text-align:center;font-weight:900;font-size:13px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
-            h += '<td style="padding:3px 6px;border-bottom:1px solid #e2e8f0;"><div style="height:14px;background:' + barBg + ';border-radius:7px;overflow:hidden;position:relative;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + (d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444')) + ');border-radius:7px;transition:width 0.3s;"></div></div></td>';
+            h += '<td style="padding:4px 6px;text-align:center;font-weight:800;font-size:15px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:12px;">' + (idx + 1) + '</span>') + '</td>';
+            h += '<td style="padding:4px 8px;text-align:left;font-weight:700;font-size:14px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
+            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
+            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
+            h += '<td style="padding:4px 6px;text-align:center;font-weight:700;font-size:14px;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
+            h += '<td style="padding:4px 6px;text-align:center;font-weight:900;font-size:15px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
+            h += '<td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;"><div style="height:16px;background:' + barBg + ';border-radius:8px;overflow:hidden;position:relative;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + (d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444')) + ');border-radius:8px;transition:width 0.3s;"></div></div></td>';
             h += '</tr>';
         });
 
         h += '</tbody></table>';
         h += '</div>';
 
-        // Table
+        // Table with department separators
         h += '<table class="psp-poster-table">';
         h += '<thead><tr>';
         h += '<th style="width:95px;"><div class="bi-th-cn">立项时间</div><div class="bi-th-en">Start Date</div></th>';
@@ -7901,22 +7904,29 @@ window.generateImprovePoster = function() {
         h += '<th style="width:85px;"><div class="bi-th-cn">逾期标记</div><div class="bi-th-en">Overdue Flag</div></th>';
         h += '</tr></thead><tbody>';
 
+        var lastDept = null;
         for (var i = 0; i < sorted.length; i++) {
             var p = sorted[i];
+            // Department separator
+            var curDept = p.dept || '其他';
+            if (curDept !== lastDept) {
+                lastDept = curDept;
+                h += '<tr style="background:linear-gradient(90deg,#dbeafe,#eff6ff);"><td colspan="7" style="padding:6px 10px;font-weight:800;font-size:14px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;"><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i>' + curDept + '</td></tr>';
+            }
             var isOverdue = p.progress === '逾期';
-            var rowBg = isOverdue ? 'background:#fef2f2;' : '';
+            var rowBg = isOverdue ? 'background:#fee2e2;' : '';
             var statusColor = p.progress === '已完成' ? 'color:#16a34a;font-weight:800;' : (p.progress === '进行中' ? 'color:#ea580c;font-weight:800;' : (p.progress === '未开始' ? 'color:#64748b;font-weight:800;' : 'color:#dc2626;font-weight:900;'));
             var statusCN = p.progress === '已完成' ? '已完成' : (p.progress === '进行中' ? '进行中' : (p.progress === '未开始' ? '未开始' : '逾期'));
             var statusEN = p.progress === '已完成' ? 'Completed' : (p.progress === '进行中' ? 'In Progress' : (p.progress === '未开始' ? 'Not Started' : 'Overdue'));
 
             h += '<tr style="' + rowBg + '">';
-            h += '<td>' + (p.startDate || '') + '</td>';
-            h += '<td style="text-align:left;word-break:break-word;font-size:13px;font-weight:700;padding:5px 8px;">' + escapeHtml(p.projectName || '') + '</td>';
-            h += '<td>' + (p.dept || '') + '</td>';
-            h += '<td style="' + statusColor + '"><span class="bi-cn" style="font-size:13px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:10px;font-weight:600;">' + statusEN + '</span></td>';
-            h += '<td style="text-align:left;font-size:12px;padding:5px 8px;">' + escapeHtml(p.progressDesc || '') + '</td>';
-            h += '<td' + (isOverdue ? ' style="font-weight:900;color:#dc2626;"' : '') + '>' + (p.planEndDate || '') + '</td>';
-            h += '<td>' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:15px;padding:3px 8px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:10px;">Overdue</span></div>' : '') + '</td>';
+            h += '<td style="font-size:14px;padding:6px 8px;">' + (p.startDate || '') + '</td>';
+            h += '<td style="text-align:left;word-break:break-word;font-size:15px;font-weight:700;padding:6px 8px;">' + escapeHtml(p.projectName || '') + '</td>';
+            h += '<td style="font-size:14px;padding:6px 8px;">' + (p.dept || '') + '</td>';
+            h += '<td style="' + statusColor + 'font-size:14px;padding:6px 8px;"><span class="bi-cn" style="font-size:15px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:11px;font-weight:600;">' + statusEN + '</span></td>';
+            h += '<td style="text-align:left;font-size:14px;padding:6px 8px;">' + escapeHtml(p.progressDesc || '') + '</td>';
+            h += '<td style="font-size:14px;padding:6px 8px;' + (isOverdue ? 'font-weight:900;color:#dc2626;' : '') + '">' + (p.planEndDate || '') + '</td>';
+            h += '<td style="padding:6px 8px;">' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:16px;padding:4px 10px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:11px;">Overdue</span></div>' : '') + '</td>';
             h += '</tr>';
         }
 
@@ -7924,34 +7934,34 @@ window.generateImprovePoster = function() {
 
         // Footer
         h += '<div class="psp-poster-footer">';
-        h += '逾期说明:计划完成时间已过但未完成的项目标记为红色「已逾期」，请责任部门尽快确认并推进。<br>';
-        h += '<span class="bi-en-foot">Note: Items past due date and not completed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
+        h += '<span style="font-size:13px;">逾期说明:计划完成时间已过但未完成的项目标记为红色「已逾期」，请责任部门尽快确认并推进。</span><br>';
+        h += '<span class="bi-en-foot" style="font-size:11px;">Note: Items past due date and not completed are marked in red as "Overdue". Please confirm and take action ASAP.</span>';
         h += '</div>';
         h += '</div>';
 
         // ✅ 改用 html2canvas 生成图片下载（替代新窗口打印）
         // 嵌入海报专用样式到HTML中，确保 html2canvas 正确渲染
         var posterCSS = '<style>' +
-            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
-            '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
-            '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
-            '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
-            '.bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
-            '.bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
-            '.bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
-            '.bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
-            '.bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
-            '.bi-en-foot{font-size:10px;color:#94a3b8;}' +
-            '.psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
-            '.psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
-            '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
-            '.psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
-            '.psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
-            '.psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
-            '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
-            '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
+            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:8px;padding:20px;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:14px;}' +
+            '.psp-poster-hdr{text-align:center;padding-bottom:12px;border-bottom:3px solid #1e40af;margin-bottom:12px;}' +
+            '.psp-poster-title{font-size:24px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:3px;}' +
+            '.bi-en-title{font-size:14px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:2px;}' +
+            '.bi-en-sub{font-size:13px;color:#94a3b8;font-weight:400;}' +
+            '.bi-cn{display:block;font-size:12px;font-weight:700;line-height:1.4;}' +
+            '.bi-en{display:block;font-size:11px;font-weight:500;color:#64748b;line-height:1.4;}' +
+            '.bi-th-cn{font-size:13px;font-weight:800;line-height:1.4;}' +
+            '.bi-th-en{font-size:11px;font-weight:500;line-height:1.4;opacity:0.85;}' +
+            '.bi-en-foot{font-size:12px;color:#94a3b8;}' +
+            '.psp-poster-period{font-size:13px;color:#64748b;font-weight:600;}' +
+            '.psp-poster-summary-bar{display:flex;gap:10px;margin-bottom:14px;}' +
+            '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:8px;padding:8px 6px;border:1px solid #e2e8f0;}' +
+            '.psp-ps-item b{display:block;font-size:24px;font-weight:900;color:#1e293b;}' +
+            '.psp-ps-item span{font-size:13px;font-weight:700;display:block;margin-top:3px;}' +
+            '.psp-poster-table{width:100%;border-collapse:collapse;font-size:13px;}' +
+            '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:6px 10px;font-weight:900;font-size:15px;text-align:center;}' +
+            '.psp-poster-table tbody td{padding:6px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:14px;}' +
             '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
-            '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
+            '.psp-poster-footer{text-align:center;font-size:12px;color:#94a3b8;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0;}' +
             '</style>';
         var posterHTML = '<div style="background:#f8fafc;padding:8px;width:1000px;">' + posterCSS + h + '</div>';
 
