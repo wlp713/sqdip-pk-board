@@ -7929,24 +7929,10 @@ window.generateImprovePoster = function() {
         h += '</div>';
         h += '</div>';
 
-        // Open new window
-        var win = window.open('', '_blank');
-        if (!win) {
-            showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
-            return;
-        }
-
-        var styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-        var styleHTML = '';
-        for (var si = 0; si < styles.length; si++) styleHTML += styles[si].outerHTML;
-
-        win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>改善项目跟踪通报 | Improvement Project Tracking Report</title>');
-        win.document.write(styleHTML);
-        win.document.write('<style>' +
-            'body{margin:0;padding:8px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
-            '@page{size:A4;margin:6mm;}' +
-            '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
-            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;}' +
+        // ✅ 改用 html2canvas 生成图片下载（替代新窗口打印）
+        // 嵌入海报专用样式到HTML中，确保 html2canvas 正确渲染
+        var posterCSS = '<style>' +
+            '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
             '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
             '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
             '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
@@ -7965,18 +7951,47 @@ window.generateImprovePoster = function() {
             '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
             '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
             '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
-            '.psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
             '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
-            '</style></head><body>');
-        win.document.write(h);
-        win.document.write('</body></html>');
-        win.document.close();
+            '</style>';
+        var posterHTML = '<div style="background:#f8fafc;padding:8px;width:1000px;">' + posterCSS + h + '</div>';
 
-        showToast('fa-solid fa-file-image', '已生成改善项目通报,可在新窗口打印/另存为PDF');
-        setTimeout(function() {
-            win.focus();
-            win.print();
-        }, 500);
+        // 创建临时容器（屏幕外，对用户不可见）
+        var tmpDiv = document.createElement('div');
+        tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:1000px;';
+        tmpDiv.innerHTML = posterHTML;
+        document.body.appendChild(tmpDiv);
+
+        showToast('fa-solid fa-spinner fa-spin', '正在生成海报图片...');
+
+        // 使用 requestAnimationFrame 确保 DOM 更新后再渲染
+        requestAnimationFrame(function() {
+            setTimeout(async function() {
+                try {
+                    var posterEl = tmpDiv.querySelector('.psp-poster');
+                    if (!posterEl) throw new Error('海报容器未找到');
+                    var canvas = await html2canvas(posterEl, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        useCORS: true,
+                        logging: false,
+                        width: posterEl.scrollWidth,
+                        height: posterEl.scrollHeight
+                    });
+                    var link = document.createElement('a');
+                    link.download = 'Improvement_Poster_' + new Date().toISOString().split('T')[0] + '.png';
+                    link.href = canvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    document.body.removeChild(tmpDiv);
+                    showToast('fa-solid fa-check', '改善项目通报图片已下载');
+                } catch(e) {
+                    console.error('[改善项目海报] 生成图片失败:', e.message, e.stack);
+                    showToast('fa-solid fa-xmark', '生成图片失败: ' + e.message, 'error');
+                    if (tmpDiv.parentNode) document.body.removeChild(tmpDiv);
+                }
+            }, 100);
+        });
 
     } catch(e) {
         console.error('[改善项目海报] 生成失败:', e.message, e.stack);
