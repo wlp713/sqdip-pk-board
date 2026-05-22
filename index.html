@@ -580,11 +580,11 @@
                         </select>
                         <span style="font-weight:700;color:var(--text-muted);" data-i18n="improve_filter_status">进度</span>
                         <select id="improve-filter-status" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;">
-                            <option value="">全部</option>
-                            <option value="未开始">未开始</option>
-                            <option value="进行中">进行中</option>
-                            <option value="已完成">已完成</option>
-                            <option value="逾期">逾期</option>
+                            <option value="" data-i18n="improve_opt_all">全部</option>
+                            <option value="未开始" data-i18n="improve_status_notstart">未开始</option>
+                            <option value="进行中" data-i18n="improve_status_prog">进行中</option>
+                            <option value="已完成" data-i18n="improve_status_done">已完成</option>
+                            <option value="逾期" data-i18n="improve_status_over">逾期</option>
                         </select>
                         <span style="font-weight:700;color:var(--text-muted);" data-i18n="improve_filter_date">立项时间</span>
                         <input type="date" id="improve-filter-start" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;width:130px;">
@@ -618,7 +618,7 @@
                         <table class="grid" style="table-layout:fixed;">
                             <thead style="z-index:2;position:sticky;top:0;background:white;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                                 <tr>
-                                    <th style="width:112px;"><span data-i18n="improve_thead_date">立项时间</span></th>
+                                    <th style="width:120px;"><span data-i18n="improve_thead_date">立项时间</span></th>
                                     <th style="min-width:180px;"><span data-i18n="improve_thead_name">项目名称</span></th>
                                     <th style="width:100px;"><span data-i18n="improve_thead_dept">责任部门</span></th>
                                     <th style="width:90px;"><span data-i18n="improve_thead_status">进度</span></th>

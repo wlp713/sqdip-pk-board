@@ -80,13 +80,8 @@
                 try {
                     localStorage.setItem(DB_KEY, JSON.stringify(db));
                 } catch(lsErr) {
-                    console.warn('[saveToFirebase] localStorage写入失败,清理旧备份后重试');
-                    for (var _lsi = 0; _lsi < localStorage.length; _lsi++) {
-                        var _lsk = localStorage.key(_lsi);
-                        if (_lsk && _lsk.indexOf(DB_KEY + '_backup_') === 0) {
-                            try { localStorage.removeItem(_lsk); _lsi--; } catch(ex) {}
-                        }
-                    }
+                    console.warn('[saveToFirebase] localStorage写入失败,移除备份后重试');
+                    try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
                     try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {
                         console.error('[saveToFirebase] localStorage写入仍然失败', e2.message);
                     }
@@ -405,7 +400,7 @@
             if (cloudDb.sysOps && Object.keys(cloudDb.sysOps).length > 0) db.sysOps = cloudDb.sysOps;
             // ★ 保存到本地前也清理不合法 key(防止 localStorage 中也写入脏数据)
             sanitizeForFirebase(db, 'localStorageSave');
-            try { try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe){console.warn('[存储]配额满,清理后重试');for(var _qi=0;_qi<localStorage.length;_qi++){var _qk=localStorage.key(_qi);if(_qk&&_qk.indexOf(DB_KEY+'_backup_')===0){localStorage.removeItem(_qk);_qi--;}}try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe2){}} } catch(e){}
+            try { try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe){console.warn('[存储]配额满,移除备份后重试');try{localStorage.removeItem(DB_KEY+'_backup')}catch(ex){}try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(qe2){}} } catch(e){}
             if (isAppReady) refreshAllViews();
         }
 
@@ -430,11 +425,13 @@
         // ★ 全局triggerAutoSave:脚本块1需要在全局作用域定义此函数
         // ★ 性能优化:快速编辑时跳过 localStorage 写入(仅保存最近一次)
         var _lastAutoSaveTime = 0;
+        // ★ 内容哈希检测:数据未变化则跳过完整保存(老电脑性能优化)
+        var _lastSerialized = '';
         window.triggerAutoSave = function() {
             try {
-                // ★ 性能优化:500ms 内触发多次时不重复执行完整保存流程
+                // ★ 性能优化:1000ms 内触发多次时不重复执行完整保存流程
                 var now = Date.now();
-                var THROTTLE_MS = 500;
+                var THROTTLE_MS = 1000;
                 if (_lastAutoSaveTime > 0 && (now - _lastAutoSaveTime) < THROTTLE_MS) {
                     // 快速编辑:只更新云端防抖计时器,跳过 localStorage 写入
                     if (isFirebaseReady) {
@@ -455,35 +452,31 @@
                 try { _serialized = JSON.stringify(db); } catch(_se) { _serialized = null; }
                 if (!_serialized) return;
 
-                // 1. 清理旧的时间戳备份(保留最近3个)
-                try {
-                    var backupKeys = [];
-                    for (var _i = 0; _i < localStorage.length; _i++) {
-                        var _key = localStorage.key(_i);
-                        if (_key && _key.startsWith(DB_KEY + '_backup_')) backupKeys.push(_key);
+                // ★ 内容哈希:序列化内容未变则跳过 localStorage 写入
+                if (_serialized === _lastSerialized) {
+                    // 数据无变化,仅刷新保存指示器和云端同步
+                    var _si = document.getElementById('save-indicator-text');
+                    if(_si) _si.innerText = '已保存 at ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    if (isFirebaseReady) {
+                        clearTimeout(cloudSaveTimeout);
+                        cloudSaveTimeout = setTimeout(function() { saveToFirebase(); }, 3000);
                     }
-                    if (backupKeys.length >= 3) {
-                        backupKeys.sort().slice(0, backupKeys.length - 2).forEach(function(k) { try { localStorage.removeItem(k); } catch(ex) {} });
-                    }
-                } catch(_be) {}
+                    return;
+                }
+                _lastSerialized = _serialized;
 
-                // 2. 保存到 localStorage(主备份)
+                // 1. 保存到 localStorage(主备份)
                 try { localStorage.setItem(DB_KEY, _serialized); } catch(_se) {
-                    // 配额不够 -> 清理旧备份
+                    // 配额不够 -> 删除唯一备份后重试
                     try {
-                        for (var _ci = 0; _ci < localStorage.length; _ci++) {
-                            var _ck = localStorage.key(_ci);
-                            if (_ck && _ck.startsWith(DB_KEY + '_backup_')) { try { localStorage.removeItem(_ck); } catch(ex) {} }
-                        }
+                        try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
                         localStorage.setItem(DB_KEY, _serialized);
                     } catch(_se2) {}
                 }
 
-                // 3. 创建时间戳备份(用已经序列化好的字符串,避免二次序列化)
-                var _backupKey = DB_KEY + '_backup_' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                try { localStorage.setItem(_backupKey, _serialized); } catch(_be) {
-                    // 配额不够 -> 放弃备份,数据至少在主 key 中安全
-                    console.warn('[自动保存] 备份保存失败,数据在主key中安全');
+                // 2. 单轮换备份(始终覆盖同一个 key,不产生新 key)
+                try { localStorage.setItem(DB_KEY + '_backup', _serialized); } catch(_be) {
+                    // 配额不够且主 key 已安全保存,忽略即可
                 }
 
                 // 4. 更新保存指示器
@@ -501,15 +494,9 @@
                 console.log('数据已保存:', new Date().toLocaleTimeString());
             } catch(e){
                 console.warn('[自动保存] 保存失败,尝试紧急清理:', e.message);
-                // 尝试清理并只保存主力备份
                 try {
-                    // 删除所有时间戳备份
-                    for (var ci = 0; ci < localStorage.length; ci++) {
-                        var ck = localStorage.key(ci);
-                        if (ck && ck.startsWith(DB_KEY + '_backup_')) {
-                            try { localStorage.removeItem(ck); } catch(ex) {}
-                        }
-                    }
+                    // 移除单轮换备份腾空间
+                    try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
                     // 再试一次主力备份(复用已序列化的 _serialized)
                     if (_serialized) { localStorage.setItem(DB_KEY, _serialized); } else { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
                     console.log('[自动保存] 紧急清理后保存成功');
@@ -3543,6 +3530,8 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             }
         }
         async function initApp() {
+            // ★ 一次性清理旧版时间戳备份(2026-05-22 后不再产生)
+            try { for (var _ci_ = localStorage.length - 1; _ci_ >= 0; _ci_--) { var _ck_ = localStorage.key(_ci_); if (_ck_ && _ck_.startsWith(DB_KEY + '_backup_') && _ck_ !== DB_KEY + '_backup') { localStorage.removeItem(_ck_); } } } catch(ex_1) {}
             initParticles(); const today = new Date(); const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
             setTheme(localStorage.getItem('mbs_ui_theme') || '');
             setDensity(localStorage.getItem('mbs_ui_density') || 'compact');
@@ -3564,12 +3553,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             sanitizeForFirebase(db, 'initLoad');
             // ★ 立即保存清理后的数据到 localStorage,防止下次加载仍读旧数据
             try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(le) {
-                for (var _cli = 0; _cli < localStorage.length; _cli++) {
-                    var _clk = localStorage.key(_cli);
-                    if (_clk && _clk.indexOf(DB_KEY + '_backup_') === 0) {
-                        try { localStorage.removeItem(_clk); _cli--; } catch(ex) {}
-                    }
-                }
+                try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
                 try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {}
             }
             if(!db.prod) injectSafeDemo();
@@ -3869,6 +3853,7 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                     'p-input': [renderInput],
                     'p-sys': [renderSysOps],
                     'p-monitor': [renderMonitor],
+                    'p-improve-track': [renderImproveProjects, populateImproveDeptFilter],
                     'p-dm': [renderDM, renderPDCA],
                     'p-loss': [renderLoss],
                     'p-trend': [renderTrend, renderReport],
@@ -5632,13 +5617,8 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
             try {
                 localStorage.setItem(DB_KEY, JSON.stringify(db));
             } catch(lsErr) {
-                console.warn('[batchDelete] localStorage写入失败,清理旧备份后重试');
-                for (var _lsi2 = 0; _lsi2 < localStorage.length; _lsi2++) {
-                    var _lsk2 = localStorage.key(_lsi2);
-                    if (_lsk2 && _lsk2.indexOf(DB_KEY + '_backup_') === 0) {
-                        try { localStorage.removeItem(_lsk2); _lsi2--; } catch(ex) {}
-                    }
-                }
+                console.warn('[batchDelete] localStorage写入失败,移除备份后重试');
+                try { localStorage.removeItem(DB_KEY + '_backup'); } catch(ex) {}
                 try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e2) {
                     console.error('[batchDelete] localStorage写入仍然失败', e2.message);
                 }
@@ -6784,9 +6764,9 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
         document.addEventListener('focusin', (e) => { if(e.target.tagName === 'INPUT' && (e.target.type === 'number' || e.target.closest('.grid'))) { try{e.target.select();}catch(err){} } });
         // 多语言字典
         const i18n = {
-            zh: { sys_name: "日常管理", menu_input: "实况数据录入", menu_sys: "事前事中事后", menu_monitor: "每日生产看板", menu_dm: "异常问题闭环", menu_loss: "异常LOSS管控", menu_trend: "全景趋势分析", menu_target: "目标管理", menu_sim: "工时&人员推演", menu_report: "经营全景报告", date_today: "今天", date_yesterday: "昨天", date_this_month: "本月", status_checking: "引擎自检中...", status_online: "云端协同在线", status_offline: "单机防丢模式", global_date: "全局业务日期:", drop_hint: "松开鼠标 释放生产与出勤数据进行AI解析", input_title: "生产与人力底账录入", btn_import_prod: "选择文件导入", btn_paste: "极速/AI导入", paste_title: "数据极速/AI导入引擎", paste_sub: "直接在 Excel 或 CSV 中按 Ctrl+A 全选复制,然后粘贴。若表头规整请点【极速解析】;若散乱请点【AI排版】。", btn_ai_parse: "AI 智能排版解析", th_ws: "制造单元/线体", th_target: "计划排产", th_output: "实际产出", th_hrs: "投入工时(H)", th_att: "出勤人数", th_head: "绝对人数", dash_title: "产出效率达成情况", kpi_pro2_out: "PRO2 当日产出", kpi_pro2_loss: "PRO2 当日 LOSS", rank_title: "LOSS 排名", chart_title: "产出达成对比", dm_title1: "DM 会议打卡", dm_title2: "开展率排位", dm_th_am: "AM 会议", dm_th_pm: "PM 会议", dm_th_rank: "名次", dm_th_should: "应开", dm_th_actual: "实开", dm_th_rate: "达成率", prob_title: "异常问题点闭环 (PSP)", btn_add: "新增异常", prob_th_date: "日期", prob_th_ws: "车间", prob_th_desc: "问题详细描述", prob_th_loc: "线体/班次", prob_th_owner: "责任人", prob_th_dept: "责任部门", prob_th_status: "状态", prob_th_del: "删", btn_ai_trans: "智能翻译", loss_title: "生产过程异常LOSS管控 (仅限 PRO2)", btn_add_loss: "新增LOSS记录", btn_ai_import: "无格式AI识别导入", loss_th_date: "日期", loss_th_line: "线体", loss_th_shift: "班次", loss_th_desc: "异常问题点描述", loss_th_qty: "损失数量", loss_ai_title: "AI 智能识别 LOSS", loss_ai_sub: "粘贴文本即可自动抓取", trend_title: "全景趋势分析", trend_memo: "人工复盘备忘录", opt_upph: "UPPH 达成趋势", opt_o: "实际产出 趋势", opt_loss: "LOSS 欠产套数趋势", opt_h: "投入工时(H) 趋势", opt_attrate: "出勤率 趋势", opt_head: "绝对人数 趋势", btn_ai_trend: "AI 智能洞察数据", opt_7d: "近 7 天", opt_15d: "近 15 天", opt_30d: "近 30 天", opt_month: "本月", opt_all: "全", opt_rep_day: "日报", opt_rep_week: "周报", opt_rep_month: "月报", btn_print: "打印报告", rep_title: "GAT 生产经营全景总结报告", rep_period: "统计范围:", r_out: "总产出 (PRO2)", r_upph: "平均 UPPH (PRO2)", r_loss: "总损失 LOSS (PRO2)", r_att: "全厂出勤率", r_dm: "DM 开展率", r_prob: "全局闭环率", r_prob_depts: "各责任部门异常闭环率明细", r_chart1: "各车间产出达成对比", r_chart2: "异常责任部门分布", ai_summary_title: "AI 智能管理复盘总结", btn_gen_ai: "生成专业复盘报告", r_loss_rank: "各责任部门 LOSS 排名与改善监控", ws_label: "车间", act_label: "实际", tgt_label: "计划", status_unres: "未解决", status_prog: "处理中", status_res: "已解决", normal: "正常", add_line: "新增线体", prod_upph_title: "UPPH Achievement", prod_shift_title: "Output Achievement of Each Shift PRO2", prod_pic: "PIC", prod_baseline: "2025 Baseline", prod_daily: "Daily", prod_monthly: "Monthly Total", prod_output: "Output", prod_working_hr: "Working Hour", prod_upph: "UPPH", prod_imp_rate: "Improvement Rate", prod_line: "LINE", prod_shift: "Shift", prod_target: "Target", prod_actual: "Actual", prod_rate: "Rate", prod_rank_d: "Rank (日)", prod_rank_m: "Rank (月)", prod_del: "删", prod_ttl: "TTL", prod_notes_title: "重点异常影响 (Notes)", prod_add_row: "Add Row", prod_date: "日期筛选", loss_filter_period: "LOSS周期筛选:", loss_to: "至", btn_ai_summary: "AI智能总结", btn_generate_report: "生成LOSS通报", btn_psp_report: "问题点闭环通报", btn_undo_translate: "撤回翻译", btn_batch_delete: "批量删除选中", btn_export_excel: "导出Excel", btn_fast_parse: "极速标准解析 (1秒内)", btn_ai_messy_parse: "AI 杂乱排版提取 (备用)", btn_cancel: "取消", btn_force_close: "强制关闭", btn_ai_extract: "无格式智能提取", btn_quick_import: "极速解析导入", btn_add_record: "新增记录", btn_confirm_save: "确认保存", btn_close: "关闭", btn_compact: "紧凑", btn_comfortable: "舒适", btn_save_continue: "知道了，继续保存", btn_target_set: "目标设定", btn_setting_theme: "主题", btn_setting_density: "密度", label_month: "月份", label_dept: "车间/部门", label_record_count: "记录数量", label_completion_rate: "达成率/关闭率", label_risk_pending: "待跟进风险", label_image_preview: "图片预览", label_original_size: "原始大小", label_compressed: "压缩后", label_quality: "压缩质量", label_paste_ctrl_v: "Ctrl+V 粘贴图片", label_paste_hint: "截图或复制图片后按 Ctrl+V 即可粘贴", label_select_file: "选择文件", label_theme_color: "主题颜色", label_display_density: "显示密度", modal_title_ai_report: "专家级 AI 智能分析报告", modal_title_kaizen_import: "少人化项目极速导入", modal_title_equip_photo: "设备点检图片", modal_title_sys_detail: "事前事中事后明细", modal_title_settings: "页面设置", msg_system_prompt: "系统提示", msg_ready: "就绪", hint_settings_save: "设置会保存在本机浏览器，不影响云端业务数据。主题用于改善长时间管理复盘时的可读性。", improve_title: "改善项目跟踪", improve_btn_poster: "导出改善项目海报", improve_btn_excel: "导出Excel", improve_btn_add: "新增改善项目", improve_filter_label: "筛选：", improve_filter_dept: "责任部门", improve_filter_status: "进度", improve_filter_date: "立项时间", improve_filter_to: "至", improve_opt_all: "全部", improve_btn_month: "本月", improve_total: "项目总数", improve_done: "已完成", improve_prog: "进行中", improve_over: "已逾期", improve_rate: "完成率", improve_thead_date: "立项时间", improve_thead_name: "项目名称", improve_thead_dept: "责任部门", improve_thead_status: "进度", improve_thead_desc: "进度描述", improve_thead_plan: "计划完成时间", improve_thead_del: "删" },
-            en: { sys_name: "Daily Management", menu_input: "Input Data", menu_sys: "System Ops", menu_monitor: "Daily Dashboard", menu_dm: "PSP Loop", menu_loss: "Loss Control", menu_trend: "Trend Analysis", menu_target: "Target Mgmt", menu_sim: "Manpower Sim", menu_report: "Summary Report", date_today: "Today", date_yesterday: "Yesterday", date_this_month: "This Month", status_checking: "Checking...", status_online: "Cloud Online", status_offline: "Local Mode", global_date: "Global Date:", drop_hint: "Drop file", input_title: "Production & HR Input", btn_import_prod: "Import File", btn_paste: "Smart Paste", paste_title: "Smart Import Engine", paste_sub: "Paste Excel/CSV.", btn_ai_parse: "AI Smart Parse", th_ws: "Area / Line", th_target: "Target", th_output: "Output", th_hrs: "Hours (H)", th_att: "Attendance", th_head: "Headcount", dash_title: "Efficiency Dashboard", kpi_pro2_out: "PRO2 Output", kpi_pro2_loss: "PRO2 LOSS", rank_title: "LOSS Ranking", chart_title: "Output vs Target", dm_title1: "DM Meeting Check", dm_title2: "Execution Rate", dm_th_am: "AM Mtg", dm_th_pm: "PM Mtg", dm_th_rank: "Rank", dm_th_should: "Plan", dm_th_actual: "Actual", dm_th_rate: "Rate", prob_title: "PDCA Problem Loop", btn_add: "Add Prob", prob_th_date: "Date", prob_th_ws: "Area", prob_th_desc: "Description", prob_th_loc: "Line/Shift", prob_th_owner: "Owner", prob_th_dept: "Dept", prob_th_status: "Status", prob_th_del: "Del", btn_ai_trans: "Translate", loss_title: "Production LOSS Control (PRO2)", btn_add_loss: "Add LOSS", btn_ai_import: "AI Smart Import", loss_th_date: "Date", loss_th_line: "Line", loss_th_shift: "Shift", loss_th_desc: "Description", loss_th_qty: "LOSS Qty", loss_ai_title: "AI LOSS Extraction", loss_ai_sub: "Paste any text.", trend_title: "Panoramic Trend Analysis", trend_memo: "Daily Review Memo", opt_upph: "UPPH Trend", opt_o: "Output Trend", opt_loss: "LOSS Qty Trend", opt_h: "Hours Trend", opt_attrate: "Att. Rate Trend", opt_head: "Headcount Trend", btn_ai_trend: "AI Data Insight", opt_7d: "Last 7 Days", opt_15d: "Last 15 Days", opt_30d: "Last 30 Days", opt_month: "This Month", opt_all: "All", opt_rep_day: "Daily Report", opt_rep_week: "Weekly Report", opt_rep_month: "Monthly Report", btn_print: "Print Report", rep_title: "GAT Panoramic Summary Report", rep_period: "Period:", r_out: "Total Output (PRO2)", r_upph: "Avg UPPH (PRO2)", r_loss: "Total LOSS (PRO2)", r_att: "Avg Attendance", r_dm: "DM Exec Rate", r_prob: "Global Close Rate", r_prob_depts: "Dept Close Rate Details", r_chart1: "Output Comparison", r_chart2: "Problem Dept Dist", ai_summary_title: "AI Exec Summary", btn_gen_ai: "Generate Report", r_loss_rank: "Dept LOSS Ranking & Improvement", ws_label: "Area", act_label: "Actual", tgt_label: "Target", status_unres: "Open", status_prog: "In Prog", status_res: "Closed", normal: "Normal", add_line: "Add Line", prod_upph_title: "UPPH Achievement", prod_shift_title: "Output Achievement of Each Shift PRO2", prod_pic: "PIC", prod_baseline: "2025 Baseline", prod_daily: "Daily", prod_monthly: "Monthly Total", prod_output: "Output", prod_working_hr: "Work. Hour", prod_upph: "UPPH", prod_imp_rate: "Imp. Rate", prod_line: "LINE", prod_shift: "Shift", prod_target: "Target", prod_actual: "Actual", prod_rate: "Rate", prod_rank_d: "Rank (D)", prod_rank_m: "Rank (M)", prod_del: "Del", prod_ttl: "TTL", prod_notes_title: "Key Abnormal Notes", prod_add_row: "Add Row", prod_date: "Date Filter", loss_filter_period: "LOSS Filter:", loss_to: "to", btn_ai_summary: "AI Summary", btn_generate_report: "LOSS Brief", btn_psp_report: "PSP Close-Out Report", btn_undo_translate: "Undo Translate", btn_batch_delete: "Batch Delete", btn_export_excel: "Export Excel", btn_fast_parse: "Quick Parse", btn_ai_messy_parse: "AI Messy Parse", btn_cancel: "Cancel", btn_force_close: "Force Close", btn_ai_extract: "AI Extract", btn_quick_import: "Quick Import", btn_add_record: "Add Record", btn_confirm_save: "Confirm Save", btn_close: "Close", btn_compact: "Compact", btn_comfortable: "Comfortable", btn_save_continue: "OK, Save Anyway", btn_target_set: "Set Target", btn_setting_theme: "Theme", btn_setting_density: "Density", label_month: "Month", label_dept: "Dept/Area", label_record_count: "Records", label_completion_rate: "Close Rate", label_risk_pending: "Pending Risk", label_image_preview: "Preview", label_original_size: "Original", label_compressed: "Compressed", label_quality: "Quality", label_paste_ctrl_v: "Ctrl+V Paste Image", label_paste_hint: "Screenshot or copy image, then Ctrl+V", label_select_file: "Select File", label_theme_color: "Theme Color", label_display_density: "Display Density", modal_title_ai_report: "AI Analysis Report", modal_title_kaizen_import: "Kaizen Quick Import", modal_title_equip_photo: "Equipment Photo", modal_title_sys_detail: "System Ops Detail", modal_title_settings: "Page Settings", msg_system_prompt: "System Notice", msg_ready: "Ready", hint_settings_save: "Settings saved locally. No impact on cloud data.", improve_title: "Improve Tracking", improve_btn_poster: "Export Poster", improve_btn_excel: "Export Excel", improve_btn_add: "Add Project", improve_filter_label: "Filter:", improve_filter_dept: "Dept", improve_filter_status: "Status", improve_filter_date: "Start Date", improve_filter_to: "to", improve_opt_all: "All", improve_btn_month: "This Month", improve_total: "Total", improve_done: "Done", improve_prog: "In Prog", improve_over: "Overdue", improve_rate: "Rate", improve_thead_date: "Start Date", improve_thead_name: "Project Name", improve_thead_dept: "Dept", improve_thead_status: "Status", improve_thead_desc: "Progress", improve_thead_plan: "Plan End", improve_thead_del: "Del" },
-            th: { sys_name: "Daily Management", menu_input: "บันทึกผลผลิต", menu_sys: "ระบบปฏิบัติการ", menu_monitor: "แดชบอร์ดรายวัน", menu_dm: "ปัญหาและแก้ไข", menu_loss: "ควบคุม LOSS", menu_trend: "วิเคราะห์แนวโน้ม", menu_target: "เป้าหมาย", menu_sim: "จำลองกำลังคน", menu_report: "รายงานภาพรวม", status_checking: "ตรวจสอบ...", status_online: "คลาวด์ออนไลน์", status_offline: "โหมดออฟไลน์", global_date: "วันที่:", drop_hint: "ปล่อยไฟล์", input_title: "บันทึกผลผลิตและกำลังคน", btn_import_prod: "นำเข้าไฟล์", btn_paste: "นำเข้าอัจฉริยะ", paste_title: "นำเข้าข้อมูลอัจฉริยะ", paste_sub: "วางข้อมูลจาก Excel", btn_ai_parse: "AI แยกข้อมูล", th_ws: "พื้นที่ / ไลน์", th_target: "แผนผลิต", th_output: "ทำได้จริง", th_hrs: "ชั่วโมง (H)", th_att: "มาทำงาน", th_head: "คนทั้งหมด", dash_title: "ประสิทธิภาพรายวัน", kpi_pro2_out: "ผลผลิต PRO2", kpi_pro2_loss: "LOSS", rank_title: "อันดับ LOSS", chart_title: "แผน vs ทำได้", dm_title1: "เช็คชื่อประชุม DM", dm_title2: "อัตราการประชุม", dm_th_am: "เช้า", dm_th_pm: "เย็น", dm_th_rank: "อันดับ", dm_th_should: "แผน", dm_th_actual: "จริง", dm_th_rate: "เปอร์เซ็นต์", prob_title: "ติดตามปัญหา", btn_add: "เพิ่มปัญหา", prob_th_date: "วันที่", prob_th_ws: "พื้นที่", prob_th_desc: "รายละเอียด", prob_th_loc: "ไลน์/กะ", prob_th_owner: "ผู้รับผิดชอบ", prob_th_dept: "แผนก", prob_th_status: "สถานะ", prob_th_del: "ลบ", btn_ai_trans: "แปลภาษา", loss_title: "บันทึกความสูญเสีย", btn_add_loss: "เพิ่ม LOSS", btn_ai_import: "AI นำเข้าอัจฉริยะ", loss_th_date: "วันที่", loss_th_line: "ไลน์", loss_th_shift: "กะ", loss_th_desc: "ปัญหา", loss_th_qty: "จำนวนสูญเสีย", loss_ai_title: "AI สกัด LOSS", loss_ai_sub: "วางข้อความ", trend_title: "วิเคราะห์แนวโน้มภาพรวม", trend_memo: "บันทึกประจำวัน", opt_upph: "แนวโน้ม UPPH", opt_o: "แนวโน้มผลผลิต", opt_loss: "แนวโน้ม LOSS", opt_h: "แนวโน้มชั่วโมง", opt_attrate: "แนวโน้มอัตราเข้างาน", opt_head: "แนวโน้มคนทั้งหมด", btn_ai_trend: "AI วิเคราะห์ข้อมูล", opt_7d: "7 วันล่าสุด", opt_15d: "15 วันล่าสุด", opt_30d: "30 วันล่าสุด", opt_month: "เดือนนี้", opt_all: "ทั้งหมด", opt_rep_day: "รายวัน", opt_rep_week: "รายสัปดาห์", opt_rep_month: "รายเดือน", btn_print: "พิมพ์รายงาน", rep_title: "รายงานสรุปการผลิต GAT", rep_period: "ช่วงเวลา:", r_out: "ผลผลิตรวม (PRO2)", r_upph: "UPPH เฉลี่ย (PRO2)", r_loss: "LOSS", r_att: "อัตราการมาทำงาน", r_dm: "ประชุม DM", r_prob: "ภาพรวมการแก้ปัญหา", r_prob_depts: "รายละเอียดแยกตามแผนก", r_chart1: "เปรียบเทียบผลผลิต", r_chart2: "แผนกที่เกิดปัญหา", ai_summary_title: "AI สรุปผล", btn_gen_ai: "สร้างรายงาน", r_loss_rank: "อันดับ LOSS", ws_label: "พื้นที่", act_label: "ทำได้จริง", tgt_label: "แผนผลิต", status_unres: "ยังไม่แก้", status_prog: "กำลังทำ", status_res: "แก้ไขแล้ว", normal: "ปกติ", add_line: "เพิ่มไลน์", prod_upph_title: "ผลสำเร็จ UPPH", prod_shift_title: "ผลผลิตแต่ละกะ PRO2", prod_pic: "ผู้รับผิดชอบ", prod_baseline: " Baseline 2025", prod_daily: "รายวัน", prod_monthly: "รวมเดือน", prod_output: "ผลผลิต", prod_working_hr: "ชม.ทำงาน", prod_upph: "UPPH", prod_imp_rate: "อัตราเด่น", prod_line: "LINE", prod_shift: "กะ", prod_target: "เป้าหมาย", prod_actual: "ทำได้", prod_rate: "อัตรา", prod_rank_d: "อันดับ (วัน)", prod_rank_m: "อันดับ (เดือน)", prod_del: "ลบ", prod_ttl: "รวม", prod_notes_title: "บันทึกผลกระทบสำคัญ", prod_add_row: "เพิ่มแถว", prod_date: "กรองวันที่", loss_filter_period: "กรองช่วง LOSS:", loss_to: "ถึง", btn_ai_summary: "AI สรุป", btn_generate_report: "รายงาน LOSS", btn_psp_report: "รายงานปิด PSP", btn_undo_translate: "ยกเลิกแปล", btn_batch_delete: "ลบทีเดียว", btn_export_excel: "ส่งออก Excel", date_today: "วันนี้", date_yesterday: "เมื่อวาน", date_this_month: "เดือนนี้", btn_fast_parse: "วิเคราะห์มาตรฐานด่วน", btn_ai_messy_parse: "AI แยกข้อมูล", btn_cancel: "ยกเลิก", btn_force_close: "ปิดบังคับ", btn_ai_extract: "AI สกัดข้อมูล", btn_quick_import: "นำเข้าด่วน", btn_add_record: "เพิ่มรายการ", btn_confirm_save: "บันทึก", btn_close: "ปิด", btn_compact: "กะทัดรัด", btn_comfortable: "สบาย", btn_save_continue: "บันทึกต่อ", btn_target_set: "ตั้งเป้าหมาย", btn_setting_theme: "ธีมสี", btn_setting_density: "ความหนาแน่น", label_month: "เดือน", label_dept: "แผนก/พื้นที่", label_record_count: "จำนวนรายการ", label_completion_rate: "อัตราสำเร็จ", label_risk_pending: "ความเสี่ยงรอติดตาม", label_image_preview: "ดูภาพ", label_original_size: "ขนาดเดิม", label_compressed: "หลังบีบอัด", label_quality: "คุณภาพ", label_paste_ctrl_v: "Ctrl+V วางภาพ", label_paste_hint: "แคปหน้าจอหรือคัดลอกรูปแล้วกด Ctrl+V", label_select_file: "เลือกไฟล์", label_theme_color: "ธีมสี", label_display_density: "ความหนาแน่น", modal_title_ai_report: "รายงาน AI วิเคราะห์", modal_title_kaizen_import: "นำเข้าโครงการ", modal_title_equip_photo: "รูปภาพตรวจสอบอุปกรณ์", modal_title_sys_detail: "รายละเอียดระบบปฏิบัติการ", modal_title_settings: "ตั้งค่าหน้า", msg_system_prompt: "ข้อความระบบ", msg_ready: "พร้อม", hint_settings_save: "การตั้งค่าถูกบันทึกไว้ในเบราว์เซอร์ ไม่มีผลต่อข้อมูลธุรกิจบนคลาวด์", improve_title: "ติดตามโครงการปรับปรุง", improve_btn_poster: "ส่งออกโปสเตอร์", improve_btn_excel: "ส่งออก Excel", improve_btn_add: "เพิ่มโครงการ", improve_filter_label: "กรอง:", improve_filter_dept: "แผนก", improve_filter_status: "สถานะ", improve_filter_date: "วันที่เริ่ม", improve_filter_to: "ถึง", improve_opt_all: "ทั้งหมด", improve_btn_month: "เดือนนี้", improve_total: "รวม", improve_done: "เสร็จ", improve_prog: "กำลังทำ", improve_over: "เกินกำหนด", improve_rate: "อัตรา", improve_thead_date: "วันที่เริ่ม", improve_thead_name: "ชื่อโครงการ", improve_thead_dept: "แผนก", improve_thead_status: "สถานะ", improve_thead_desc: "รายละเอียด", improve_thead_plan: "กำหนดเสร็จ", improve_thead_del: "ลบ" }
+            zh: { sys_name: "日常管理", menu_input: "实况数据录入", menu_sys: "事前事中事后", menu_monitor: "每日生产看板", menu_dm: "异常问题闭环", menu_loss: "异常LOSS管控", menu_trend: "全景趋势分析", menu_target: "目标管理", menu_sim: "工时&人员推演", menu_report: "经营全景报告", date_today: "今天", date_yesterday: "昨天", date_this_month: "本月", status_checking: "引擎自检中...", status_online: "云端协同在线", status_offline: "单机防丢模式", global_date: "全局业务日期:", drop_hint: "松开鼠标 释放生产与出勤数据进行AI解析", input_title: "生产与人力底账录入", btn_import_prod: "选择文件导入", btn_paste: "极速/AI导入", paste_title: "数据极速/AI导入引擎", paste_sub: "直接在 Excel 或 CSV 中按 Ctrl+A 全选复制,然后粘贴。若表头规整请点【极速解析】;若散乱请点【AI排版】。", btn_ai_parse: "AI 智能排版解析", th_ws: "制造单元/线体", th_target: "计划排产", th_output: "实际产出", th_hrs: "投入工时(H)", th_att: "出勤人数", th_head: "绝对人数", dash_title: "产出效率达成情况", kpi_pro2_out: "PRO2 当日产出", kpi_pro2_loss: "PRO2 当日 LOSS", rank_title: "LOSS 排名", chart_title: "产出达成对比", dm_title1: "DM 会议打卡", dm_title2: "开展率排位", dm_th_am: "AM 会议", dm_th_pm: "PM 会议", dm_th_rank: "名次", dm_th_should: "应开", dm_th_actual: "实开", dm_th_rate: "达成率", prob_title: "异常问题点闭环 (PSP)", btn_add: "新增异常", prob_th_date: "日期", prob_th_ws: "车间", prob_th_desc: "问题详细描述", prob_th_loc: "线体/班次", prob_th_owner: "责任人", prob_th_dept: "责任部门", prob_th_status: "状态", prob_th_del: "删", btn_ai_trans: "智能翻译", loss_title: "生产过程异常LOSS管控 (仅限 PRO2)", btn_add_loss: "新增LOSS记录", btn_ai_import: "无格式AI识别导入", loss_th_date: "日期", loss_th_line: "线体", loss_th_shift: "班次", loss_th_desc: "异常问题点描述", loss_th_qty: "损失数量", loss_ai_title: "AI 智能识别 LOSS", loss_ai_sub: "粘贴文本即可自动抓取", trend_title: "全景趋势分析", trend_memo: "人工复盘备忘录", opt_upph: "UPPH 达成趋势", opt_o: "实际产出 趋势", opt_loss: "LOSS 欠产套数趋势", opt_h: "投入工时(H) 趋势", opt_attrate: "出勤率 趋势", opt_head: "绝对人数 趋势", btn_ai_trend: "AI 智能洞察数据", opt_7d: "近 7 天", opt_15d: "近 15 天", opt_30d: "近 30 天", opt_month: "本月", opt_all: "全", opt_rep_day: "日报", opt_rep_week: "周报", opt_rep_month: "月报", btn_print: "打印报告", rep_title: "GAT 生产经营全景总结报告", rep_period: "统计范围:", r_out: "总产出 (PRO2)", r_upph: "平均 UPPH (PRO2)", r_loss: "总损失 LOSS (PRO2)", r_att: "全厂出勤率", r_dm: "DM 开展率", r_prob: "全局闭环率", r_prob_depts: "各责任部门异常闭环率明细", r_chart1: "各车间产出达成对比", r_chart2: "异常责任部门分布", ai_summary_title: "AI 智能管理复盘总结", btn_gen_ai: "生成专业复盘报告", r_loss_rank: "各责任部门 LOSS 排名与改善监控", ws_label: "车间", act_label: "实际", tgt_label: "计划", status_unres: "未解决", status_prog: "处理中", status_res: "已解决", normal: "正常", add_line: "新增线体", prod_upph_title: "UPPH Achievement", prod_shift_title: "Output Achievement of Each Shift PRO2", prod_pic: "PIC", prod_baseline: "2025 Baseline", prod_daily: "Daily", prod_monthly: "Monthly Total", prod_output: "Output", prod_working_hr: "Working Hour", prod_upph: "UPPH", prod_imp_rate: "Improvement Rate", prod_line: "LINE", prod_shift: "Shift", prod_target: "Target", prod_actual: "Actual", prod_rate: "Rate", prod_rank_d: "Rank (日)", prod_rank_m: "Rank (月)", prod_del: "删", prod_ttl: "TTL", prod_notes_title: "重点异常影响 (Notes)", prod_add_row: "Add Row", prod_date: "日期筛选", loss_filter_period: "LOSS周期筛选:", loss_to: "至", btn_ai_summary: "AI智能总结", btn_generate_report: "生成LOSS通报", btn_psp_report: "问题点闭环通报", btn_undo_translate: "撤回翻译", btn_batch_delete: "批量删除选中", btn_export_excel: "导出Excel", btn_fast_parse: "极速标准解析 (1秒内)", btn_ai_messy_parse: "AI 杂乱排版提取 (备用)", btn_cancel: "取消", btn_force_close: "强制关闭", btn_ai_extract: "无格式智能提取", btn_quick_import: "极速解析导入", btn_add_record: "新增记录", btn_confirm_save: "确认保存", btn_close: "关闭", btn_compact: "紧凑", btn_comfortable: "舒适", btn_save_continue: "知道了，继续保存", btn_target_set: "目标设定", btn_setting_theme: "主题", btn_setting_density: "密度", label_month: "月份", label_dept: "车间/部门", label_record_count: "记录数量", label_completion_rate: "达成率/关闭率", label_risk_pending: "待跟进风险", label_image_preview: "图片预览", label_original_size: "原始大小", label_compressed: "压缩后", label_quality: "压缩质量", label_paste_ctrl_v: "Ctrl+V 粘贴图片", label_paste_hint: "截图或复制图片后按 Ctrl+V 即可粘贴", label_select_file: "选择文件", label_theme_color: "主题颜色", label_display_density: "显示密度", modal_title_ai_report: "专家级 AI 智能分析报告", modal_title_kaizen_import: "少人化项目极速导入", modal_title_equip_photo: "设备点检图片", modal_title_sys_detail: "事前事中事后明细", modal_title_settings: "页面设置", msg_system_prompt: "系统提示", msg_ready: "就绪", hint_settings_save: "设置会保存在本机浏览器，不影响云端业务数据。主题用于改善长时间管理复盘时的可读性。", improve_title: "改善项目跟踪", improve_btn_poster: "导出改善项目海报", improve_btn_excel: "导出Excel", improve_btn_add: "新增改善项目", improve_filter_label: "筛选：", improve_filter_dept: "责任部门", improve_filter_status: "进度", improve_filter_date: "立项时间", improve_filter_to: "至", improve_opt_all: "全部", improve_btn_month: "本月", improve_total: "项目总数", improve_done: "已完成", improve_prog: "进行中", improve_over: "已逾期", improve_rate: "完成率", improve_thead_date: "立项时间", improve_thead_name: "项目名称", improve_thead_dept: "责任部门", improve_thead_status: "进度", improve_thead_desc: "进度描述", improve_thead_plan: "计划完成时间", improve_thead_del: "删", improve_status_notstart: "未开始", improve_status_prog: "进行中", improve_status_done: "已完成", improve_status_over: "逾期", improve_empty: "暂无改善项目，点击「新增改善项目」开始录入", improve_placeholder_name: "请输入项目名称", improve_placeholder_desc: "进度描述", improve_opt_select: "请选择", improve_confirm_del: "确认删除该改善项目？", improve_del_done: "改善项目已删除", improve_add_done: "已新增改善项目，请填写详细信息", improve_not_found: "暂无改善项目记录" },
+            en: { sys_name: "Daily Management", menu_input: "Input Data", menu_sys: "System Ops", menu_monitor: "Daily Dashboard", menu_dm: "PSP Loop", menu_loss: "Loss Control", menu_trend: "Trend Analysis", menu_target: "Target Mgmt", menu_sim: "Manpower Sim", menu_report: "Summary Report", date_today: "Today", date_yesterday: "Yesterday", date_this_month: "This Month", status_checking: "Checking...", status_online: "Cloud Online", status_offline: "Local Mode", global_date: "Global Date:", drop_hint: "Drop file", input_title: "Production & HR Input", btn_import_prod: "Import File", btn_paste: "Smart Paste", paste_title: "Smart Import Engine", paste_sub: "Paste Excel/CSV.", btn_ai_parse: "AI Smart Parse", th_ws: "Area / Line", th_target: "Target", th_output: "Output", th_hrs: "Hours (H)", th_att: "Attendance", th_head: "Headcount", dash_title: "Efficiency Dashboard", kpi_pro2_out: "PRO2 Output", kpi_pro2_loss: "PRO2 LOSS", rank_title: "LOSS Ranking", chart_title: "Output vs Target", dm_title1: "DM Meeting Check", dm_title2: "Execution Rate", dm_th_am: "AM Mtg", dm_th_pm: "PM Mtg", dm_th_rank: "Rank", dm_th_should: "Plan", dm_th_actual: "Actual", dm_th_rate: "Rate", prob_title: "PDCA Problem Loop", btn_add: "Add Prob", prob_th_date: "Date", prob_th_ws: "Area", prob_th_desc: "Description", prob_th_loc: "Line/Shift", prob_th_owner: "Owner", prob_th_dept: "Dept", prob_th_status: "Status", prob_th_del: "Del", btn_ai_trans: "Translate", loss_title: "Production LOSS Control (PRO2)", btn_add_loss: "Add LOSS", btn_ai_import: "AI Smart Import", loss_th_date: "Date", loss_th_line: "Line", loss_th_shift: "Shift", loss_th_desc: "Description", loss_th_qty: "LOSS Qty", loss_ai_title: "AI LOSS Extraction", loss_ai_sub: "Paste any text.", trend_title: "Panoramic Trend Analysis", trend_memo: "Daily Review Memo", opt_upph: "UPPH Trend", opt_o: "Output Trend", opt_loss: "LOSS Qty Trend", opt_h: "Hours Trend", opt_attrate: "Att. Rate Trend", opt_head: "Headcount Trend", btn_ai_trend: "AI Data Insight", opt_7d: "Last 7 Days", opt_15d: "Last 15 Days", opt_30d: "Last 30 Days", opt_month: "This Month", opt_all: "All", opt_rep_day: "Daily Report", opt_rep_week: "Weekly Report", opt_rep_month: "Monthly Report", btn_print: "Print Report", rep_title: "GAT Panoramic Summary Report", rep_period: "Period:", r_out: "Total Output (PRO2)", r_upph: "Avg UPPH (PRO2)", r_loss: "Total LOSS (PRO2)", r_att: "Avg Attendance", r_dm: "DM Exec Rate", r_prob: "Global Close Rate", r_prob_depts: "Dept Close Rate Details", r_chart1: "Output Comparison", r_chart2: "Problem Dept Dist", ai_summary_title: "AI Exec Summary", btn_gen_ai: "Generate Report", r_loss_rank: "Dept LOSS Ranking & Improvement", ws_label: "Area", act_label: "Actual", tgt_label: "Target", status_unres: "Open", status_prog: "In Prog", status_res: "Closed", normal: "Normal", add_line: "Add Line", prod_upph_title: "UPPH Achievement", prod_shift_title: "Output Achievement of Each Shift PRO2", prod_pic: "PIC", prod_baseline: "2025 Baseline", prod_daily: "Daily", prod_monthly: "Monthly Total", prod_output: "Output", prod_working_hr: "Work. Hour", prod_upph: "UPPH", prod_imp_rate: "Imp. Rate", prod_line: "LINE", prod_shift: "Shift", prod_target: "Target", prod_actual: "Actual", prod_rate: "Rate", prod_rank_d: "Rank (D)", prod_rank_m: "Rank (M)", prod_del: "Del", prod_ttl: "TTL", prod_notes_title: "Key Abnormal Notes", prod_add_row: "Add Row", prod_date: "Date Filter", loss_filter_period: "LOSS Filter:", loss_to: "to", btn_ai_summary: "AI Summary", btn_generate_report: "LOSS Brief", btn_psp_report: "PSP Close-Out Report", btn_undo_translate: "Undo Translate", btn_batch_delete: "Batch Delete", btn_export_excel: "Export Excel", btn_fast_parse: "Quick Parse", btn_ai_messy_parse: "AI Messy Parse", btn_cancel: "Cancel", btn_force_close: "Force Close", btn_ai_extract: "AI Extract", btn_quick_import: "Quick Import", btn_add_record: "Add Record", btn_confirm_save: "Confirm Save", btn_close: "Close", btn_compact: "Compact", btn_comfortable: "Comfortable", btn_save_continue: "OK, Save Anyway", btn_target_set: "Set Target", btn_setting_theme: "Theme", btn_setting_density: "Density", label_month: "Month", label_dept: "Dept/Area", label_record_count: "Records", label_completion_rate: "Close Rate", label_risk_pending: "Pending Risk", label_image_preview: "Preview", label_original_size: "Original", label_compressed: "Compressed", label_quality: "Quality", label_paste_ctrl_v: "Ctrl+V Paste Image", label_paste_hint: "Screenshot or copy image, then Ctrl+V", label_select_file: "Select File", label_theme_color: "Theme Color", label_display_density: "Display Density", modal_title_ai_report: "AI Analysis Report", modal_title_kaizen_import: "Kaizen Quick Import", modal_title_equip_photo: "Equipment Photo", modal_title_sys_detail: "System Ops Detail", modal_title_settings: "Page Settings", msg_system_prompt: "System Notice", msg_ready: "Ready", hint_settings_save: "Settings saved locally. No impact on cloud data.", improve_title: "Improve Tracking", improve_btn_poster: "Export Poster", improve_btn_excel: "Export Excel", improve_btn_add: "Add Project", improve_filter_label: "Filter:", improve_filter_dept: "Dept", improve_filter_status: "Status", improve_filter_date: "Start Date", improve_filter_to: "to", improve_opt_all: "All", improve_btn_month: "This Month", improve_total: "Total", improve_done: "Done", improve_prog: "In Prog", improve_over: "Overdue", improve_rate: "Rate", improve_thead_date: "Start Date", improve_thead_name: "Project Name", improve_thead_dept: "Dept", improve_thead_status: "Status", improve_thead_desc: "Progress", improve_thead_plan: "Plan End", improve_thead_del: "Del", improve_status_notstart: "Not Started", improve_status_prog: "In Progress", improve_status_done: "Completed", improve_status_over: "Overdue", improve_empty: "No projects yet, click Add to start", improve_placeholder_name: "Enter project name", improve_placeholder_desc: "Progress description", improve_opt_select: "Select", improve_confirm_del: "Confirm deletion?", improve_del_done: "Project deleted", improve_add_done: "Project added, please fill details", improve_not_found: "No projects found" },
+            th: { sys_name: "Daily Management", menu_input: "บันทึกผลผลิต", menu_sys: "ระบบปฏิบัติการ", menu_monitor: "แดชบอร์ดรายวัน", menu_dm: "ปัญหาและแก้ไข", menu_loss: "ควบคุม LOSS", menu_trend: "วิเคราะห์แนวโน้ม", menu_target: "เป้าหมาย", menu_sim: "จำลองกำลังคน", menu_report: "รายงานภาพรวม", status_checking: "ตรวจสอบ...", status_online: "คลาวด์ออนไลน์", status_offline: "โหมดออฟไลน์", global_date: "วันที่:", drop_hint: "ปล่อยไฟล์", input_title: "บันทึกผลผลิตและกำลังคน", btn_import_prod: "นำเข้าไฟล์", btn_paste: "นำเข้าอัจฉริยะ", paste_title: "นำเข้าข้อมูลอัจฉริยะ", paste_sub: "วางข้อมูลจาก Excel", btn_ai_parse: "AI แยกข้อมูล", th_ws: "พื้นที่ / ไลน์", th_target: "แผนผลิต", th_output: "ทำได้จริง", th_hrs: "ชั่วโมง (H)", th_att: "มาทำงาน", th_head: "คนทั้งหมด", dash_title: "ประสิทธิภาพรายวัน", kpi_pro2_out: "ผลผลิต PRO2", kpi_pro2_loss: "LOSS", rank_title: "อันดับ LOSS", chart_title: "แผน vs ทำได้", dm_title1: "เช็คชื่อประชุม DM", dm_title2: "อัตราการประชุม", dm_th_am: "เช้า", dm_th_pm: "เย็น", dm_th_rank: "อันดับ", dm_th_should: "แผน", dm_th_actual: "จริง", dm_th_rate: "เปอร์เซ็นต์", prob_title: "ติดตามปัญหา", btn_add: "เพิ่มปัญหา", prob_th_date: "วันที่", prob_th_ws: "พื้นที่", prob_th_desc: "รายละเอียด", prob_th_loc: "ไลน์/กะ", prob_th_owner: "ผู้รับผิดชอบ", prob_th_dept: "แผนก", prob_th_status: "สถานะ", prob_th_del: "ลบ", btn_ai_trans: "แปลภาษา", loss_title: "บันทึกความสูญเสีย", btn_add_loss: "เพิ่ม LOSS", btn_ai_import: "AI นำเข้าอัจฉริยะ", loss_th_date: "วันที่", loss_th_line: "ไลน์", loss_th_shift: "กะ", loss_th_desc: "ปัญหา", loss_th_qty: "จำนวนสูญเสีย", loss_ai_title: "AI สกัด LOSS", loss_ai_sub: "วางข้อความ", trend_title: "วิเคราะห์แนวโน้มภาพรวม", trend_memo: "บันทึกประจำวัน", opt_upph: "แนวโน้ม UPPH", opt_o: "แนวโน้มผลผลิต", opt_loss: "แนวโน้ม LOSS", opt_h: "แนวโน้มชั่วโมง", opt_attrate: "แนวโน้มอัตราเข้างาน", opt_head: "แนวโน้มคนทั้งหมด", btn_ai_trend: "AI วิเคราะห์ข้อมูล", opt_7d: "7 วันล่าสุด", opt_15d: "15 วันล่าสุด", opt_30d: "30 วันล่าสุด", opt_month: "เดือนนี้", opt_all: "ทั้งหมด", opt_rep_day: "รายวัน", opt_rep_week: "รายสัปดาห์", opt_rep_month: "รายเดือน", btn_print: "พิมพ์รายงาน", rep_title: "รายงานสรุปการผลิต GAT", rep_period: "ช่วงเวลา:", r_out: "ผลผลิตรวม (PRO2)", r_upph: "UPPH เฉลี่ย (PRO2)", r_loss: "LOSS", r_att: "อัตราการมาทำงาน", r_dm: "ประชุม DM", r_prob: "ภาพรวมการแก้ปัญหา", r_prob_depts: "รายละเอียดแยกตามแผนก", r_chart1: "เปรียบเทียบผลผลิต", r_chart2: "แผนกที่เกิดปัญหา", ai_summary_title: "AI สรุปผล", btn_gen_ai: "สร้างรายงาน", r_loss_rank: "อันดับ LOSS", ws_label: "พื้นที่", act_label: "ทำได้จริง", tgt_label: "แผนผลิต", status_unres: "ยังไม่แก้", status_prog: "กำลังทำ", status_res: "แก้ไขแล้ว", normal: "ปกติ", add_line: "เพิ่มไลน์", prod_upph_title: "ผลสำเร็จ UPPH", prod_shift_title: "ผลผลิตแต่ละกะ PRO2", prod_pic: "ผู้รับผิดชอบ", prod_baseline: " Baseline 2025", prod_daily: "รายวัน", prod_monthly: "รวมเดือน", prod_output: "ผลผลิต", prod_working_hr: "ชม.ทำงาน", prod_upph: "UPPH", prod_imp_rate: "อัตราเด่น", prod_line: "LINE", prod_shift: "กะ", prod_target: "เป้าหมาย", prod_actual: "ทำได้", prod_rate: "อัตรา", prod_rank_d: "อันดับ (วัน)", prod_rank_m: "อันดับ (เดือน)", prod_del: "ลบ", prod_ttl: "รวม", prod_notes_title: "บันทึกผลกระทบสำคัญ", prod_add_row: "เพิ่มแถว", prod_date: "กรองวันที่", loss_filter_period: "กรองช่วง LOSS:", loss_to: "ถึง", btn_ai_summary: "AI สรุป", btn_generate_report: "รายงาน LOSS", btn_psp_report: "รายงานปิด PSP", btn_undo_translate: "ยกเลิกแปล", btn_batch_delete: "ลบทีเดียว", btn_export_excel: "ส่งออก Excel", date_today: "วันนี้", date_yesterday: "เมื่อวาน", date_this_month: "เดือนนี้", btn_fast_parse: "วิเคราะห์มาตรฐานด่วน", btn_ai_messy_parse: "AI แยกข้อมูล", btn_cancel: "ยกเลิก", btn_force_close: "ปิดบังคับ", btn_ai_extract: "AI สกัดข้อมูล", btn_quick_import: "นำเข้าด่วน", btn_add_record: "เพิ่มรายการ", btn_confirm_save: "บันทึก", btn_close: "ปิด", btn_compact: "กะทัดรัด", btn_comfortable: "สบาย", btn_save_continue: "บันทึกต่อ", btn_target_set: "ตั้งเป้าหมาย", btn_setting_theme: "ธีมสี", btn_setting_density: "ความหนาแน่น", label_month: "เดือน", label_dept: "แผนก/พื้นที่", label_record_count: "จำนวนรายการ", label_completion_rate: "อัตราสำเร็จ", label_risk_pending: "ความเสี่ยงรอติดตาม", label_image_preview: "ดูภาพ", label_original_size: "ขนาดเดิม", label_compressed: "หลังบีบอัด", label_quality: "คุณภาพ", label_paste_ctrl_v: "Ctrl+V วางภาพ", label_paste_hint: "แคปหน้าจอหรือคัดลอกรูปแล้วกด Ctrl+V", label_select_file: "เลือกไฟล์", label_theme_color: "ธีมสี", label_display_density: "ความหนาแน่น", modal_title_ai_report: "รายงาน AI วิเคราะห์", modal_title_kaizen_import: "นำเข้าโครงการ", modal_title_equip_photo: "รูปภาพตรวจสอบอุปกรณ์", modal_title_sys_detail: "รายละเอียดระบบปฏิบัติการ", modal_title_settings: "ตั้งค่าหน้า", msg_system_prompt: "ข้อความระบบ", msg_ready: "พร้อม", hint_settings_save: "การตั้งค่าถูกบันทึกไว้ในเบราว์เซอร์ ไม่มีผลต่อข้อมูลธุรกิจบนคลาวด์", improve_title: "ติดตามโครงการปรับปรุง", improve_btn_poster: "ส่งออกโปสเตอร์", improve_btn_excel: "ส่งออก Excel", improve_btn_add: "เพิ่มโครงการ", improve_filter_label: "กรอง:", improve_filter_dept: "แผนก", improve_filter_status: "สถานะ", improve_filter_date: "วันที่เริ่ม", improve_filter_to: "ถึง", improve_opt_all: "ทั้งหมด", improve_btn_month: "เดือนนี้", improve_total: "รวม", improve_done: "เสร็จ", improve_prog: "กำลังทำ", improve_over: "เกินกำหนด", improve_rate: "อัตรา", improve_thead_date: "วันที่เริ่ม", improve_thead_name: "ชื่อโครงการ", improve_thead_dept: "แผนก", improve_thead_status: "สถานะ", improve_thead_desc: "รายละเอียด", improve_thead_plan: "กำหนดเสร็จ", improve_thead_del: "ลบ", improve_status_notstart: "ยังไม่เริ่ม", improve_status_prog: "กำลังทำ", improve_status_done: "เสร็จแล้ว", improve_status_over: "เกินกำหนด", improve_empty: "ไม่มีโครงการ คลิก \u0022เพิ่มโครงการ\u0022 เพื่อเริ่ม", improve_placeholder_name: "กรุณากรอกชื่อโครงการ", improve_placeholder_desc: "รายละเอียดความคืบหน้า", improve_opt_select: "เลือก", improve_confirm_del: "ยืนยันลบโครงการนี้?", improve_del_done: "ลบโครงการแล้ว", improve_add_done: "เพิ่มโครงการแล้ว กรุณากรอกรายละเอียด", improve_not_found: "ไม่พบโครงการ" }
         };
         const factoryDict = [
             { zh: "C轴短缺导致线体停机", en: "C-shaft shortage causing line stop", th: "เพลา C ขาดแคลนทําให้ไลน์หยุด" },
@@ -7646,8 +7626,14 @@ window.renderImproveProjects = function() {
             return true;
         });
 
-        // Sort: overdue first, then in progress, then completed
+        // Sort: group by department (when ALL), then overdue first, then in progress, then completed
+        var isGrouped = !deptFilter;
         filtered.sort(function(a, b) {
+            if (isGrouped) {
+                var deptA = a.dept || '';
+                var deptB = b.dept || '';
+                if (deptA !== deptB) return deptA.localeCompare(deptB);
+            }
             var aScore = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
             var bScore = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
             if (aScore !== bScore) return aScore - bScore;
@@ -7669,39 +7655,49 @@ window.renderImproveProjects = function() {
         var body = document.getElementById('improve-table-body');
         if (!body) return;
 
-        body.innerHTML = filtered.map(function(p) {
+        // Build grouped HTML with department separators when ALL filter
+        var bodyHTML = '';
+        var lastDept = null;
+        filtered.forEach(function(p) {
+            if (isGrouped) {
+                var curDept = p.dept || t('improve_opt_select');
+                if (curDept !== lastDept) {
+                    lastDept = curDept;
+                    bodyHTML += '<tr style="background:linear-gradient(90deg,#dbeafe,#eff6ff);"><td colspan="7" style="padding:4px 10px;font-weight:800;font-size:13px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;"><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i>' + curDept + '</td></tr>';
+                }
+            }
             var isOverdue = p.progress === '逾期';
             var rowBg = isOverdue ? 'style="background:#fef2f2;"' : '';
-            // Determine effective select value: if overdue, show the original progress (not 逾期)
             var effectiveProgress = p.progress;
             if (p.progress === '逾期') {
-                // Show the original status for the dropdown (before auto-overdue)
                 effectiveProgress = p._origProgress || '进行中';
             }
             var isOverdueCheck = p.progress === '逾期';
-            var overdueFlag = isOverdueCheck ? ' <span style="color:#dc2626;font-weight:900;font-size:10px;">⚠️</span>' : '';
+            var overdueFlag = isOverdueCheck ? ' <span style="color:#dc2626;font-weight:900;font-size:10px;">\u26a0\ufe0f</span>' : '';
             var selectStyle = isOverdueCheck ? 'border:1px solid #fecaca;background:#fef2f2;' : 'border:none;background:transparent;';
 
-            return '<tr ' + rowBg + '>' +
+            bodyHTML += '<tr ' + rowBg + '>' +
                 '<td style="padding:4px 8px;"><input type="date" value="' + (p.startDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'startDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;"></td>' +
-                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.projectName || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'projectName\',this.value)" placeholder="请输入项目名称" style="width:100%;border:none;font-size:13px;font-weight:700;background:transparent;"></td>' +
+                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.projectName || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'projectName\',this.value)" placeholder="' + t('improve_placeholder_name') + '" style="width:100%;border:none;font-size:13px;font-weight:700;background:transparent;"></td>' +
                 '<td style="padding:4px 8px;"><select onchange="updateImproveField(\'' + p.id + '\',\'dept\',this.value)" style="width:100%;border:none;font-size:12px;font-weight:600;background:transparent;">' +
                     DEPTS.map(function(d) { return '<option ' + (p.dept === d ? 'selected' : '') + '>' + d + '</option>'; }).join('') +
-                    '<option ' + ((!p.dept || DEPTS.indexOf(p.dept) === -1) ? 'selected' : '') + ' value="">请选择</option>' +
+                    '<option ' + ((!p.dept || DEPTS.indexOf(p.dept) === -1) ? 'selected' : '') + ' value="">' + t('improve_opt_select') + '</option>' +
                 '</select></td>' +
                 '<td style="padding:4px 8px;text-align:center;">' +
                     '<select onchange="updateImproveField(\'' + p.id + '\',\'progress\',this.value)" style="width:100%;font-size:12px;font-weight:600;cursor:pointer;' + selectStyle + 'padding:2px 4px;border-radius:4px;">' +
-                        '<option value="未开始" ' + (effectiveProgress === '未开始' ? 'selected' : '') + '>未开始</option>' +
-                        '<option value="进行中" ' + (effectiveProgress === '进行中' ? 'selected' : '') + '>进行中</option>' +
-                        '<option value="已完成" ' + (effectiveProgress === '已完成' ? 'selected' : '') + '>已完成</option>' +
+                        '<option value="未开始" ' + (effectiveProgress === '未开始' ? 'selected' : '') + '>' + t('improve_status_notstart') + '</option>' +
+                        '<option value="进行中" ' + (effectiveProgress === '进行中' ? 'selected' : '') + '>' + t('improve_status_prog') + '</option>' +
+                        '<option value="已完成" ' + (effectiveProgress === '已完成' ? 'selected' : '') + '>' + t('improve_status_done') + '</option>' +
                     '</select>' +
                     overdueFlag +
                 '</td>' +
-                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.progressDesc || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'progressDesc\',this.value)" placeholder="进度描述" style="width:100%;border:none;font-size:12px;background:transparent;"></td>' +
+                '<td style="padding:4px 8px;"><input value="' + escapeHtml(p.progressDesc || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'progressDesc\',this.value)" placeholder="' + t('improve_placeholder_desc') + '" style="width:100%;border:none;font-size:12px;background:transparent;"></td>' +
                 '<td style="padding:4px 8px;"><input type="date" value="' + (p.planEndDate || '') + '" onchange="updateImproveField(\'' + p.id + '\',\'planEndDate\',this.value)" style="width:100%;border:none;font-size:12px;background:transparent;font-weight:600;' + (isOverdue ? 'color:#dc2626;' : '') + '"></td>' +
                 '<td style="padding:4px 8px;text-align:center;"><i class="fa-solid fa-xmark" style="color:var(--danger);cursor:pointer;font-size:16px;" onclick="delImproveProject(\'' + p.id + '\')"></i></td>' +
                 '</tr>';
-        }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>暂无改善项目，点击「新增改善项目」开始录入</td></tr>';
+        });
+        bodyHTML = bodyHTML || '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>' + t('improve_empty') + '</td></tr>';
+        body.innerHTML = bodyHTML;
     } catch(e) { console.error('[改善项目跟踪] render error:', e.message); }
 };
 
@@ -7720,7 +7716,7 @@ window.addImproveProject = function() {
     triggerAutoSave();
     renderImproveProjects();
     populateImproveDeptFilter();
-    showToast('fa-solid fa-plus-circle', '已新增改善项目，请填写详细信息');
+    showToast('fa-solid fa-plus-circle', t('improve_add_done'));
 };
 
 window.updateImproveField = function(id, field, value) {
@@ -7749,7 +7745,7 @@ window.updateImproveField = function(id, field, value) {
 
 window.delImproveProject = function(id) {
     if (!db.improveProjects) return;
-    if (!confirm('确认删除该改善项目？')) return;
+    if (!confirm(t('improve_confirm_del'))) return;
     db.improveProjects = db.improveProjects.filter(function(p) { return String(p.id) !== String(id); });
     _deferredLocalStorageSave();
     setTimeout(function() {
@@ -7757,7 +7753,7 @@ window.delImproveProject = function(id) {
     }, 0);
     renderImproveProjects();
     populateImproveDeptFilter();
-    showToast('fa-solid fa-check', '改善项目已删除');
+    showToast('fa-solid fa-check', t('improve_del_done'));
 };
 
 window.quickImproveDateRange = function() {
@@ -7776,7 +7772,7 @@ function populateImproveDeptFilter() {
     var currentVal = sel.value;
     var depts = {};
     (db.improveProjects || []).forEach(function(p) { if (p.dept) depts[p.dept] = true; });
-    sel.innerHTML = '<option value="">全部</option>' +
+    sel.innerHTML = '<option value="">' + t('improve_opt_all') + '</option>' +
         Object.keys(depts).sort().map(function(d) { return '<option ' + (currentVal === d ? 'selected' : '') + '>' + d + '</option>'; }).join('');
     if (!Object.keys(depts).length) {
         DEPTS.forEach(function(d) { sel.innerHTML += '<option>' + d + '</option>'; });
@@ -7789,7 +7785,7 @@ window.generateImprovePoster = function() {
     try {
         var items = db.improveProjects || [];
         if (items.length === 0) {
-            showToast('fa-solid fa-info-circle', '暂无改善项目记录');
+            showToast('fa-solid fa-info-circle', t('improve_not_found'));
             return;
         }
         var todayStr = new Date().toISOString().split('T')[0];
@@ -7833,6 +7829,64 @@ window.generateImprovePoster = function() {
         h += '<div class="psp-ps-item"><b style="color:#ea580c;">' + prog + '</b><span class="bi-cn">进行中</span><span class="bi-en">In Progress</span></div>';
         h += '<div class="psp-ps-item" style="background:#fef2f2;"><b style="color:#dc2626;font-size:22px;">' + over + '</b><span class="bi-cn" style="color:#dc2626;">已逾期</span><span class="bi-en" style="color:#dc2626;">Overdue</span></div>';
         h += '<div class="psp-ps-item"><b style="color:#1e40af;">' + rate + '%</b><span class="bi-cn">完成率</span><span class="bi-en">Completion Rate</span></div>';
+        h += '</div>';
+
+        // ===== 各部门完成率排名 =====
+        var deptStats = {};
+        items.forEach(function(p) {
+            var d = p.dept || '其他';
+            if (!deptStats[d]) deptStats[d] = { total:0, done:0, prog:0, over:0, notstart:0 };
+            deptStats[d].total++;
+            if (p.progress === '已完成') deptStats[d].done++;
+            else if (p.progress === '逾期') deptStats[d].over++;
+            else if (p.progress === '进行中') deptStats[d].prog++;
+            else deptStats[d].notstart++;
+        });
+        var deptRanking = Object.keys(deptStats).map(function(d) {
+            var s = deptStats[d];
+            return { dept: d, total: s.total, done: s.done, prog: s.prog, over: s.over, notstart: s.notstart, rate: s.total > 0 ? Math.round(s.done / s.total * 100) : 0 };
+        }).sort(function(a, b) {
+            if (a.rate !== b.rate) return b.rate - a.rate;
+            return b.total - a.total;
+        });
+
+        h += '<div style="margin:12px 0 8px;padding:10px 12px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;border:1px solid #bae6fd;">';
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
+        h += '<span style="font-size:16px;">\uD83C\uDFC6</span>';
+        h += '<span style="font-weight:900;font-size:14px;color:#0369a1;">各部门改善完成率排名</span>';
+        h += '<span style="font-size:10px;color:#64748b;font-weight:400;">Department Completion Rate Ranking</span>';
+        h += '</div>';
+        h += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+        h += '<thead><tr>';
+        h += '<th style="width:32px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;border-radius:4px 0 0 0;">#</th>';
+        h += '<th style="padding:3px 6px;background:#0284c7;color:#fff;font-size:11px;font-weight:800;text-align:left;"><span style="display:block;line-height:1.2;">\u90E8\u95E8</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Dept</span></th>';
+        h += '<th style="width:38px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;">\u603B</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Total</span></th>';
+        h += '<th style="width:38px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;color:#86efac;">\u2713</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Done</span></th>';
+        h += '<th style="width:36px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;color:#fcd34d;">\u26A0</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Over</span></th>';
+        h += '<th style="width:50px;padding:3px 4px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:center;"><span style="display:block;">\u5B8C\u6210\u7387</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Rate</span></th>';
+        h += '<th style="padding:3px 6px;background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-align:left;border-radius:0 4px 0 0;"><span style="display:block;">\u8FDB\u5EA6\u6761</span><span style="display:block;font-size:8px;font-weight:400;opacity:0.8;">Progress Bar</span></th>';
+        h += '</tr></thead><tbody>';
+
+        deptRanking.forEach(function(d, idx) {
+            var medal = '';
+            if (idx === 0 && d.rate > 0) medal = '\uD83E\uDD47';
+            else if (idx === 1 && d.rate > 0) medal = '\uD83E\uDD48';
+            else if (idx === 2 && d.rate > 0) medal = '\uD83E\uDD49';
+            var barColor = d.rate >= 80 ? '#16a34a' : (d.rate >= 50 ? '#ea580c' : '#dc2626');
+            var barBg = d.rate >= 80 ? '#dcfce7' : (d.rate >= 50 ? '#fed7aa' : '#fecaca');
+            var rowBg = idx % 2 === 0 ? 'background:#f0f9ff;' : 'background:#fff;';
+            h += '<tr style="' + rowBg + '">';
+            h += '<td style="padding:3px 4px;text-align:center;font-weight:800;font-size:13px;border-bottom:1px solid #e2e8f0;">' + (medal || '<span style="color:#94a3b8;font-size:10px;">' + (idx + 1) + '</span>') + '</td>';
+            h += '<td style="padding:3px 6px;text-align:left;font-weight:700;font-size:12px;border-bottom:1px solid #e2e8f0;">' + d.dept + '</td>';
+            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;border-bottom:1px solid #e2e8f0;">' + d.total + '</td>';
+            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:#16a34a;border-bottom:1px solid #e2e8f0;">' + d.done + '</td>';
+            h += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:' + (d.over > 0 ? '#dc2626' : '#94a3b8') + ';border-bottom:1px solid #e2e8f0;">' + d.over + '</td>';
+            h += '<td style="padding:3px 4px;text-align:center;font-weight:900;font-size:13px;color:' + barColor + ';border-bottom:1px solid #e2e8f0;">' + d.rate + '%</td>';
+            h += '<td style="padding:3px 6px;border-bottom:1px solid #e2e8f0;"><div style="height:14px;background:' + barBg + ';border-radius:7px;overflow:hidden;position:relative;"><div style="height:100%;width:' + d.rate + '%;background:linear-gradient(90deg,' + barColor + ',' + (d.rate >= 80 ? '#22c55e' : (d.rate >= 50 ? '#f97316' : '#ef4444')) + ');border-radius:7px;transition:width 0.3s;"></div></div></td>';
+            h += '</tr>';
+        });
+
+        h += '</tbody></table>';
         h += '</div>';
 
         // Table
