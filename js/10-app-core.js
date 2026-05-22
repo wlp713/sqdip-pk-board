@@ -7879,10 +7879,10 @@ window.generateImprovePoster = function() {
 
         // Sidebar dark blue gradient (low saturation, visible gradient)
         // Section titles = LEVEL 1 (high level = darker, deep blue)
-        var SEC_A = '#1A2638', SEC_B = '#384B64';
+        var SEC_A = '#1A2638', SEC_B = '#4E7090';
         var SEC_GRAD_135 = 'linear-gradient(135deg, ' + SEC_A + ' 0%, ' + SEC_B + ' 100%)';
         // Dept bars = LEVEL 2 (secondary = lighter than L1)
-        var DEPT_A = '#25364A', DEPT_B = '#7090B0';
+        var DEPT_A = '#203248', DEPT_B = '#446284';
         var DEPT_GRAD = 'linear-gradient(180deg, ' + DEPT_A + ' 0%, ' + DEPT_B + ' 100%)';
 
         // ==================== BUILD HTML ====================
