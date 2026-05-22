@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="sys_name">日常管理V1 (分解版)</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦞</text></svg>">
+
+    <!-- [分解版] 外部 CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- 外部 CDN 依赖 -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <!-- Firebase 初始化 -->
+    <script>
+        // ================= Firebase 初始化 =================
+        var firebaseConfig = {
+            apiKey: "AIzaSyBrl-gHO48HnyM4e8nkl2vqR7mz4f5mv_E",
+            authDomain: "dm111-e8a7d.firebaseapp.com",
+            projectId: "dm111-e8a7d",
+            storageBucket: "dm111-e8a7d.firebasestorage.app",
+            messagingSenderId: "262083858435",
+            appId: "1:262083858435:web:d51fb541eded52261fbe36",
+            measurementId: "G-1NVJLWJMVP",
+            databaseURL: "https://dm111-e8a7d-default-rtdb.firebaseio.com"
+        };
+        
+        try {
+            var app = firebase.initializeApp(firebaseConfig);
+            var database = firebase.database();
+            var dbRef = database.ref('dm_system');
+            
+            // 暴露到全局
+            window.firebaseApp = app;
+            window.firebaseDatabase = database;
+            window.firebaseDbRef = dbRef;
+            window.firebaseSet = function(ref, data) { return ref.set(data); };
+            window.firebasePush = function(ref) { return ref.push(); };
+            window.firebaseOnValue = function(ref, cb) { ref.on('value', cb); };
+            window.firebaseGet = function(ref) { return ref.once('value'); };
+            window.firebaseRef = function(db, path) { return db.ref(path); };
+            window.firebaseRemove = function(ref) { return ref.remove(); };
+            window.isFirebaseReady = true;
+            
+            console.log('[Firebase] 初始化成功');
+            
+            // 触发初始化完成事件
+            window.dispatchEvent(new CustomEvent('firebaseReady'));
+        } catch(e) {
+            console.warn('[Firebase] 初始化失败（离线模式可忽略）:', e.message);
+        }
+    </script>
+
+    <!-- 其他 CDN 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- 安全 DOM 层 -->
+    <script>
+        // ========== 全局安全修复 ==========
+        window.safeDOM = {
+            get: function(id) {
+                const el = document.getElementById(id);
+                if (!el) {
+                    console.warn("[安全DOM] 元素不存在:", id);
+                    // 为关键元素创建虚拟元素
+                    if (id === "globalDate") {
+                        const dummy = document.createElement("input");
+                        dummy.id = "globalDate";
+                        dummy.type = "hidden";
+                        dummy.value = new Date().toISOString().split("T")[0];
+                        document.body.appendChild(dummy);
+                        return dummy;
+                    }
+                    return null;
+                }
+                return el;
+            },
+            
+            html: function(id, content) {
+                const el = this.get(id);
+                if (el) el.innerHTML = content;
+            },
+            
+            val: function(id, value) {
+                const el = this.get(id);
+                if (el && value !== undefined) el.value = value;
+                return el ? el.value : "";
+            }
+        };
+
+        // 全局错误处理
+        window.addEventListener("error", function(e) {
+            console.warn("[全局错误]", e.message, "at", e.filename + ":" + e.lineno);
+            e.preventDefault();
+            return true;
+        });
+
+        // 安全初始化
+        window.safeInit = function() {
+            console.log("[安全初始化] 开始");
+            
+            // 确保关键元素存在
+            const criticalIds = [
+                "cloud-status-badge",
+                "globalDate"
+            ];
+            
+            criticalIds.forEach(id => {
+                if (!document.getElementById(id)) {
+                    console.warn("[安全初始化] 创建虚拟元素:", id);
+                    const el = document.createElement("div");
+                    el.id = id;
+                    el.style.display = "none";
+                    document.body.appendChild(el);
+                }
+            });
+            
+            // 延迟执行初始化函数
+            setTimeout(function() {
+                try {
+                    if (typeof initApp === "function") {
+                        console.log("[安全初始化] 调用initApp");
+                        initApp();
+                    }
+
+                    console.log("[安全初始化] 完成");
+                } catch (err) {
+                    console.error("[安全初始化] 错误:", err);
+                }
+            }, 800);
+        };
+
+        // 页面加载后执行安全初始化
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", window.safeInit);
+        } else {
+            window.safeInit();
+        }
+        // ========== 安全修复结束 ==========
+        
+        // 临时的showPage函数，防止按钮点击错误
+        window.showPage = window.showPage || function(id, btn) {
+            console.log('页面切换函数正在加载...', id);
+            // 显示加载提示
+            if (typeof showToast === 'function') {
+                showToast('fa-solid fa-spinner fa-spin', '系统正在加载，请稍候...');
+            }
+        };
+    </script>
+
+    <!-- 模块加载 (defer 顺序执行) -->
+    <script src="js/10-app-core.js" defer></script>
+
+
+</head>
+<body ondragover="handleDragOver(event)">
+    <div id="particles-js"></div>
+    <div id="drop-zone" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <i class="fa-solid fa-file-excel"></i>
+        <p data-i18n="drop_hint">松开鼠标 释放生产与出勤数据进行极速/AI解析</p>
+    </div>
+    <div id="paste-modal" class="modal-overlay" onclick="if(event.target===this) safeCloseModal('paste-modal')">
+        <div class="paste-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 style="color:var(--midea-dark); font-size:18px; font-weight:800; margin:0;"><i class="fa-solid fa-bolt"></i> <span data-i18n="paste_title">极速 / AI 智能导入引擎</span></h3>
+                <div class="flex-row">
+                    <button class="btn btn-success" onclick="fastParseData()"><i class="fa-solid fa-bolt"></i> 极速标准解析 (1秒内)</button>
+                    <button class="btn btn-ai" onclick="aiParseData()" id="btn-ai-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 杂乱排版提取 (备用)</button>
+                </div>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom: 10px; font-size: 12px;" data-i18n="paste_sub">复制 Excel 后粘贴。标准表头会走系统极速解析，不依赖 AI；数据极其散乱时再用 AI 备用。</p>
+            <div style="background:#f8fafc;border:1px solid rgba(15,23,42,0.08);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--text-main);">
+                <b style="color:var(--midea-dark);">标准导入表头：</b>
+                <span style="font-family:Consolas,monospace;">ws,line,target,output,hours,att,head,date</span>
+                <br>说明：`ws` 必须为 PRO1/PRO2/PRO3/PRO4；PRO2 可填 `line` 为 LINE A-D；PRO1/3/4 可不填 line；date 可为空，默认使用全局业务日期。
+            </div>
+            <textarea id="pasteInput" class="paste-area" placeholder="在此粘贴 Excel/CSV 内容..."></textarea>
+            <div class="flex-row" style="justify-content: space-between; align-items: center;">
+                <button class="btn btn-danger" onclick="forceCloseAllModals()" style="font-size: 11px; padding: 4px 8px;" title="强制关闭所有模态框（紧急情况）"><i class="fa-solid fa-triangle-exclamation"></i> 强制关闭</button>
+                <div>
+                    <button class="btn" onclick="safeCloseModal('paste-modal')" data-i18n="btn_cancel">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="loss-ai-modal" class="modal-overlay" onclick="if(event.target===this) safeCloseModal('loss-ai-modal')">
+        <div class="paste-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 style="color:var(--midea-dark); font-size:18px; font-weight:800; margin:0;"><i class="fa-solid fa-robot"></i> <span data-i18n="loss_ai_title">AI 智能识别 LOSS</span></h3>
+                <button class="btn btn-danger" onclick="safeCloseModal('loss-ai-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom: 15px; font-size: 12px;" data-i18n="loss_ai_sub">粘贴聊天记录、文本或表格数据。无需指定格式，只要包含日期/线体/班次/问题/数量，AI即可自动归类抓取。</p>
+            <textarea id="lossPasteInput" class="paste-area" placeholder="例: 昨天 A line 白班 员工缺勤 -765\n设备故障 损失 120..."></textarea>
+            <div class="flex-row" style="justify-content: flex-end;">
+                <button class="btn" onclick="safeCloseModal('loss-ai-modal')">取消</button>
+                <button class="btn btn-ai" onclick="aiParseLoss()" id="btn-ai-parse-loss" style="padding:8px 20px; font-size: 14px !important;"><i class="fa-solid fa-wand-magic-sparkles"></i> 无格式智能提取</button>
+            </div>
+        </div>
+    </div>
+    <div id="ai-result-modal" class="modal-overlay">
+        <div class="paste-box" style="height: 75vh; max-width: 900px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 style="color:var(--midea-dark); font-size:18px; font-weight:800; margin:0;"><i class="fa-solid fa-brain"></i> 专家级 AI 智能分析报告</h3>
+                <button class="btn btn-danger" onclick="safeCloseModal('ai-result-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="ai-result-content" class="ai-html-content" style="flex-grow:1; overflow-y:auto; padding: 20px; background: rgba(240,249,255,0.5); border-radius: 8px; border: 1px solid rgba(2,132,199,0.15);"></div>
+        </div>
+    </div>
+    <div id="kaizen-paste-modal" class="modal-overlay" onclick="if(event.target===this) safeCloseModal('kaizen-paste-modal')">
+        <div class="paste-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                <h3 style="color:var(--midea-dark); font-size:18px; font-weight:800; margin:0;"><i class="fa-solid fa-clipboard"></i> 少人化项目极速导入</h3>
+                <button class="btn btn-danger" onclick="safeCloseModal('kaizen-paste-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom: 10px; font-size: 12px;">从 Excel 复制项目列表后粘贴。每行一个项目，格式：<b data-i18n="label_dept">项目名称,车间/部门,减人数,状态,责任人</b>（状态可选：未开始/进行中/已完成）</p>
+            <textarea id="kaizenPasteInput" class="paste-area" placeholder="在此粘贴 Excel 项目内容...
+示例：
+自动化项目A,PRO2,2,进行中,张三
+工装治具改造,PRO1,1,未开始,李四
+流水线优化,PRO3,3,已完成,王五
+"></textarea>
+            <div class="flex-row" style="justify-content: flex-end;">
+                <button class="btn" onclick="safeCloseModal('kaizen-paste-modal')">取消</button>
+                <button class="btn btn-success" onclick="parseKaizenPaste()" style="padding:8px 20px; font-size: 14px !important;"><i class="fa-solid fa-bolt"></i> 极速解析导入</button>
+            </div>
+        </div>
+    </div>
+    <div id="sys-detail-panel" class="sys-detail-panel">
+        <div class="sys-detail-box">
+            <div class="section-title">
+                <h3 id="sys-detail-title"><i class="fa-solid fa-gears"></i> 事前事中事后明细</h3>
+                <div class="flex-row">
+                    <button class="btn btn-ai" id="btn-sys-ai-repeat" style="display:none;" onclick="aiAnalyzeSystemRepeat()"><i class="fa-solid fa-brain"></i> AI识别重复LOSS</button>
+                    <button class="btn btn-primary" onclick="addSysRecord()" data-i18n="btn_add_record"><i class="fa-solid fa-plus"></i> 新增记录</button>
+                    <button class="btn btn-danger" onclick="closeSysDetail()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="sys-detail-toolbar">
+                <span style="font-weight:900;color:var(--text-muted);" data-i18n="label_month">月份</span>
+                <input type="month" id="sys-detail-month" class="btn" onchange="typeof renderSysDetail==='function'&&renderSysDetail()">
+                <span style="font-weight:900;color:var(--text-muted);margin-left:6px;">主范围</span>
+                <input type="date" id="sys-main-start" class="btn" style="width:120px;font-size:12px;" onchange="localStorage.setItem('mbs_main_start',this.value);window._handleMainRangeChange()">
+                <span style="font-weight:900;color:var(--text-muted);">至</span>
+                <input type="date" id="sys-main-end" class="btn" style="width:120px;font-size:12px;" onchange="localStorage.setItem('mbs_main_end',this.value);window._handleMainRangeChange()">
+                <span style="font-weight:900;color:var(--text-muted);">车间/部门</span>
+                <select id="sys-detail-owner-filter" class="btn" onchange="typeof renderSysDetail==='function'&&renderSysDetail()">
+                    <option value="">全部</option><option>PRO1</option><option>PRO2</option><option>PRO3</option><option>PRO4</option><option>PE</option>
+                </select>
+                <label style="font-size:12px;font-weight:800;color:var(--danger);" id="sys-unconfirmed-label" data-i18n="label_show_uncompleted"><input type="checkbox" id="sys-show-unconfirmed" onchange="typeof renderSysDetail==='function'&&renderSysDetail()" checked> <i class="fa-solid fa-bell"></i> 仅显示未完成</label>
+                <span style="font-size:12px;color:var(--text-muted);font-weight:800;">事前区分车间与设备部门责任；事中记录响应、停机等待、影响套数；事后自动关联 PSP/LOSS。</span>
+                <button class="btn btn-success" onclick="exportSysDetailExcel()" style="margin-left:auto;padding:4px 12px;font-size:11px;background:var(--success);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
+            </div>
+            <div class="sys-kpi-strip">
+                <div class="sys-kpi-mini"><span id="sys-kpi-1-label">记录数量</span><b id="sys-detail-count">0</b></div>
+                <div class="sys-kpi-mini"><span id="sys-kpi-2-label">平均响应</span><b id="sys-detail-rate">0分</b></div>
+                <div class="sys-kpi-mini"><span id="sys-kpi-3-label">停机时长</span><b id="sys-detail-risk">0分</b></div>
+                <div class="sys-kpi-mini"><span id="sys-kpi-4-label">影响数量</span><b id="sys-detail-impact">0</b></div>
+            </div>
+            <div id="sys-ai-repeat-wrapper" style="display:none;margin-bottom:12px;background:#f8fafc;border:1px solid rgba(15,23,42,0.08);border-radius:8px;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(2,132,199,0.06);border-bottom:1px solid rgba(15,23,42,0.08);cursor:pointer;" onclick="toggleAIReplyRepeat()">
+                    <span style="font-size:12px;font-weight:800;color:var(--text-main);"><i class="fa-solid fa-chart-bar"></i> AI 重复LOSS统计分析 <span id="sys-ai-summary-badge" style="font-size:11px;font-weight:600;color:var(--text-muted);margin-left:6px;"></span></span>
+                    <span id="sys-ai-toggle-icon" style="font-size:14px;color:var(--text-muted);"><i class="fa-solid fa-chevron-up"></i></span>
+                </div>
+                <div id="sys-ai-repeat-result" class="ai-html-content" style="padding:10px;max-height:500px;overflow-y:auto;"></div>
+            </div>
+            <div class="table-wrap" style="max-height:430px; overflow-y:auto;">
+                <table class="grid sys-detail-table">
+                    <thead id="sys-detail-head"></thead>
+                    <tbody id="sys-detail-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- ★ 设备点检图片粘贴模态框 -->
+    <div id="equip-photo-modal" class="modal-overlay" onclick="if(event.target===this) equipClosePhotoModal()" style="display:none;z-index:10000;">
+        <div class="modal-box" style="max-width:600px;width:92%;padding:20px;border-radius:12px;" onclick="event.stopPropagation()">
+            <div class="flex-row" style="margin-bottom:12px;">
+                <h4 id="equip-photo-modal-title" style="margin:0;font-size:15px;" data-i18n="modal_title_equip_photo"><i class="fa-solid fa-camera"></i> 设备点检图片</h4>
+                <button class="btn btn-danger" onclick="equipClosePhotoModal()" style="padding:4px 12px;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="equip-photo-paste-zone" onpaste="equipModalHandlePaste(event)" onclick="document.getElementById('equip-photo-paste-textarea').focus()" style="width:100%;min-height:180px;border:2px dashed var(--primary);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-card);padding:16px;box-sizing:border-box;cursor:text;">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size:40px;color:var(--primary);margin-bottom:12px;"></i>
+                <span style="font-size:14px;font-weight:800;" data-i18n="label_paste_ctrl_v">Ctrl+V 粘贴图片</span>
+                <span style="font-size:12px;color:var(--text-muted);margin-top:4px;" data-i18n="label_paste_hint">截图或复制图片后按 Ctrl+V 即可粘贴</span>
+                <textarea id="equip-photo-paste-textarea" placeholder="点击这里，然后按 Ctrl+V 粘贴图片..." style="width:80%;height:50px;margin-top:12px;padding:8px;font-size:12px;border:1px solid var(--primary);border-radius:6px;resize:none;background:#f0f9ff;text-align:center;color:var(--text-muted);cursor:text;" onpaste="equipModalHandlePaste(event)" onfocus="this.select()"></textarea>
+                <label class="btn" style="margin-top:8px;padding:8px 20px;font-size:13px;cursor:pointer;">
+                    <i class="fa-solid fa-folder-open"></i> 选择文件
+                    <input type="file" accept="image/*" style="display:none;" onchange="equipModalHandleFileSelect(event)">
+                </label>
+            </div>
+
+            <div id="equip-photo-preview" style="display:none;margin-top:12px;">
+                <div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-weight:900;font-size:13px;" data-i18n="label_image_preview">图片预览</span>
+                    <button class="btn btn-primary" onclick="equipModalSavePhoto()" style="padding:6px 16px;font-size:12px;" data-i18n="btn_confirm_save"><i class="fa-solid fa-check"></i> 确认保存</button>
+                </div>
+                <img id="equip-photo-preview-img" style="max-width:100%;max-height:300px;border-radius:6px;display:block;margin:0 auto;">
+                <div style="margin-top:8px;font-size:11px;color:var(--text-muted);display:flex;gap:20px;flex-wrap:wrap;">
+                    <span>原始大小: <b id="equip-photo-orig-size">0KB</b></span>
+                    <span>压缩后: <b id="equip-photo-comp-size">0KB</b></span>
+                    <span>压缩质量: <input type="range" id="equip-photo-quality" min="0.1" max="0.8" step="0.05" value="0.35" onchange="equipModalUpdatePreview()" style="width:100px;vertical-align:middle;"> <b id="equip-photo-quality-label">35%</b></span>
+                </div>
+            </div>
+            <div style="margin-top:12px;font-size:11px;color:var(--text-muted);text-align:center;border-top:1px solid var(--border);padding-top:10px;">
+                图片自动压缩至 <b>150px</b> 宽度，推荐质量 35%  
+            </div>
+        </div>
+    </div>
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-box">
+            <div class="section-title">
+                <h3><i class="fa-solid fa-sliders"></i> 页面设置</h3>
+                <button class="btn btn-danger" onclick="closeSettings()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="settings-row">
+                <span style="font-weight:900;color:var(--text-muted);width:90px;" data-i18n="label_theme_color">主题颜色</span>
+                <button class="theme-swatch active" style="background:linear-gradient(135deg,#0092D8,#33a8e0)" onclick="setTheme('')" title="清朗蓝 (默认)"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#0c4a6e,#0284c7)" onclick="setTheme('theme-ocean')" title="深海蓝"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#1e3a8a,#2563eb)" onclick="setTheme('theme-sky')" title="天空蓝"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#065f46,#10b981)" onclick="setTheme('theme-emerald')" title="翡翠绿"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#1e293b,#475569)" onclick="setTheme('theme-carbon')" title="碳素灰"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#881337,#be123c)" onclick="setTheme('theme-coral')" title="珊瑚红"></button>
+                <button class="theme-swatch" style="background:linear-gradient(135deg,#78350f,#f59e0b)" onclick="setTheme('theme-warm')" title="暖阳金"></button>
+            </div>
+            <div class="settings-row">
+                <span style="font-weight:900;color:var(--text-muted);width:90px;" data-i18n="label_display_density">显示密度</span>
+                <button class="btn" onclick="setDensity('compact')" data-i18n="btn_compact">紧凑</button>
+                <button class="btn" onclick="setDensity('comfortable')" data-i18n="btn_comfortable">舒适</button>
+            </div>
+            <p style="color:var(--text-muted);font-size:12px;font-weight:700;line-height:1.6;" data-i18n="btn_setting_theme">设置会保存在本机浏览器，不影响云端业务数据。主题用于改善长时间管理复盘时的可读性。</p>
+        </div>
+    </div>
+    <div id="toast"><i class="fa-solid fa-check"></i> <span id="toast-msg" data-i18n="msg_system_prompt">系统提示</span></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fa-solid fa-layer-group" style="margin-right:6px;"></i><span data-i18n="sys_name">日常管理V2.6 AI</span></h2>
+            <button class="toggle-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i class="fa-solid fa-bars-staggered"></i></button>
+        </div>
+        <button class="nav-link active" onclick="showPage('p-input', this)"><i class="fa-solid fa-keyboard"></i> <span data-i18n="menu_input">实况数据录入</span></button>
+
+        <button class="nav-link" onclick="showPage('p-sys', this)"><i class="fa-solid fa-gears"></i> <span data-i18n="menu_sys">系统运作 (事前后)</span><span id="sys-nav-badge" style="display:none;margin-left:auto;background:var(--danger);color:white;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;"></span></button>
+        <button class="nav-link" onclick="showPage('p-monitor', this)"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="menu_monitor">每日生产看板</span></button>
+        <div id="save-indicator" style="position:absolute;bottom:10px;left:10px;right:10px;font-size:10px;color:rgba(255,255,255,0.6);text-align:center;padding:4px;white-space:nowrap;overflow:hidden;">💾 <span id="save-indicator-text" data-i18n="msg_ready">就绪</span></div>
+        <button class="nav-link" onclick="showPage('p-dm', this)"><i class="fa-solid fa-list-check"></i> <span data-i18n="menu_dm">异常问题闭环</span></button>
+        <button class="nav-link" onclick="showPage('p-loss', this)"><i class="fa-solid fa-arrow-trend-down"></i> <span data-i18n="menu_loss">异常LOSS管控</span></button>
+        <button class="nav-link" onclick="showPage('p-trend', this)"><i class="fa-solid fa-chart-line"></i> <span data-i18n="menu_trend">全景趋势分析</span></button>
+        <button class="nav-link" onclick="showPage('p-report', this)"><i class="fa-solid fa-file-invoice"></i> <span data-i18n="menu_report">经营全景报告</span></button>
+    </aside>
+    <main class="viewport">
+        <header class="global-topbar">
+            <div class="flex-row" style="gap:10px;">
+                <div id="cloud-status-badge" style="font-weight:900; font-size:13px; color:var(--midea-blue); text-shadow: 0 1px 2px rgba(255,255,255,0.8); margin-right:10px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> <span data-i18n="status_checking">引擎自检中...</span>
+                </div>
+                <button class="btn-history" onclick="forceSyncCloud()" title="强制推送到云端"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+                <button class="btn-history" onclick="openSettings()" title="页面设置 / 换肤"><i class="fa-solid fa-sliders"></i></button>
+            </div>
+            <div class="flex-row">
+                <div style="display:flex; gap:6px; margin-right:20px; border-right:1px solid rgba(0,0,0,0.1); padding-right:20px;">
+                    <button id="btn-undo" class="btn-history" onclick="performUndo()" disabled title="撤销 (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button id="btn-redo" class="btn-history" onclick="performRedo()" disabled title="重做 (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <select id="lang-selector" onchange="changeLanguage(this.value)" class="btn" style="border:none; background:transparent; font-size:15px !important; margin-right:15px; padding:0; box-shadow:none; color:var(--text-main);">
+                    <option value="zh">🇨🇳 中文</option>
+                    <option value="th">🇹🇭 ไทย</option>
+                    <option value="en">🇬🇧 EN</option>
+                </select>
+                <select id="ai-model-selector" style="margin-right:15px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);font-weight:600;cursor:pointer;">
+                    <option value="Qwen/Qwen3.5-4B">🤖 Qwen3.5-4B</option>
+                    <option value="THUDM/GLM-4-9B-0414" selected>🤖 GLM-4-9B</option>
+                    <option value="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B">🤖 DeepSeek-R1-8B</option>
+                    <option value="MiniMaxAI/MiniMax-M2.5">🤖 MiniMax-M2.5</option>
+                </select>
+                <span style="color:var(--text-muted); font-size:12px; font-weight:bold;" data-i18n="global_date">全局业务日期:</span>
+                <input type="date" id="globalDate" value="" style="border:1px solid rgba(2,132,199,0.2); padding:4px 10px; border-radius:6px; outline:none; color:var(--text-main); font-weight:800; font-family:inherit; font-size:13px !important; background:white; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);" onchange="handleDateChange()">
+            </div>
+        </header>
+        <div class="page-container">
+            <div id="p-input" class="page active">
+                <div class="card" style="flex-grow:1; margin:0; display:flex; flex-direction:column; overflow:hidden;">
+                    <div class="section-title" style="flex-shrink:0;">
+                        <h3><i class="fa-solid fa-pen-to-square"></i> <span data-i18n="input_title">生产与人力底账录入</span></h3>
+                        <div class="flex-row">
+                            <button class="btn" onclick="window.showTargetSetting()" style="background:var(--midea-blue); color:white;" data-i18n="btn_target_set"><i class="fa-solid fa-bullseye"></i> 目标设定</button>
+                            <button class="btn btn-success" onclick="document.getElementById('paste-modal').style.display='flex'"><i class="fa-solid fa-clipboard"></i> <span data-i18n="btn_paste">极速/AI导入</span></button>
+                            <button class="btn btn-primary" onclick="showImportGuideAndOpenFile()"><i class="fa-solid fa-industry"></i> <span data-i18n="btn_import_prod">选择文件导入</span></button>
+                            <input type="file" id="importProdFile" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleExcelImport(this, 'prod')">
+                        </div>
+                    </div>
+
+                    
+                    <div class="excel-container">
+
+                        <table class="excel-grid" style="width:100%; table-layout:fixed;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 19%; text-align: left;" data-i18n="th_ws">制造单元/线体</th>
+                                    <th style="width: 11.5%;" data-i18n="th_target">计划排产</th>
+                                    <th style="width: 11.5%;" data-i18n="th_output">实际产出</th>
+                                    <th style="width: 11.5%;" data-i18n="th_hrs">投入工时(H)</th>
+                                    <th style="width: 11.5%;" data-i18n="th_att">出勤人数<br><span style="font-weight:400;font-size:10px;opacity:0.8;">Attendance</span></th>
+                                    <th style="width: 11.5%;" data-i18n="th_head">绝对人数<br><span style="font-weight:400;font-size:10px;opacity:0.8;">Headcount</span></th>
+                                    <th style="width: 11.5%;">UPPH</th>
+                                    <th style="width: 11.5%; color:var(--danger);">Missing Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inputTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="p-sys" class="page">
+                <div class="card" style="flex-grow:1; margin:0; display:flex; flex-direction:column;">
+                    <div class="section-title">
+                        <h3><i class="fa-solid fa-gears"></i> MBS 日常管理成熟度：事前事中事后监控</h3>
+                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">数据自动关联各模块，反映运作纪律真实水平</span>
+                    </div>
+                    <div class="sys-grid">
+                        <div class="sys-box" onclick="window.openSysDetail('equipment')">
+                            <h4><i class="fa-solid fa-screwdriver-wrench" style="color:var(--midea-blue);"></i> 每日设备点检</h4>
+                            <div class="sys-compact-strip">
+                                <div class="sys-chip"><span class="sys-chip-label">本周点检率</span><b id="sys-equip-week">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">本月点检率</span><b id="sys-equip-month">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">异常设备</span><b id="sys-equip-fault">--台</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">今日打卡</span><b id="sys-equip-today">--</b></div>
+                            </div>
+                            <div class="sys-progress-wrap">
+                                <div class="sys-progress-label">设备完好率</div>
+                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-equip-bar" style="width:0%; background:var(--midea-blue);"></div></div>
+                                <span class="sys-progress-num" id="sys-equip-pct">0%</span>
+                            </div>
+                            <div class="sys-box-footer">
+                                <span><i class="fa-solid fa-camera"></i> 图片记录 <b id="sys-equip-photos">0</b></span>
+                                <span><i class="fa-solid fa-clipboard-check"></i> 点检项 <b id="sys-equip-count">0</b></span>
+                            </div>
+                        </div>
+                        <div class="sys-box" onclick="window.openSysDetail('mid')">
+                            <h4><i class="fa-solid fa-gauge-high" style="color:var(--warning);"></i> 事中 — 过程响应与纪律</h4>
+                            <div class="sys-compact-strip">
+                                <div class="sys-chip"><span class="sys-chip-label">平均响应</span><b id="sys-mid-andon">--分</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">线停损失</span><b id="sys-mid-stoploss">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">品质异常</span><b id="sys-mid-quality">--件</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">巡检记录</span><b id="sys-mid-patrol">--条</b></div>
+                            </div>
+                            <div class="sys-progress-wrap">
+                                <div class="sys-progress-label">过程管控分</div>
+                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-mid-bar" style="width:0%; background:var(--warning);"></div></div>
+                                <span class="sys-progress-num" id="sys-mid-pct">0分</span>
+                            </div>
+                            <div class="sys-box-footer">
+                                <span><i class="fa-solid fa-stopwatch"></i> 累计等待 <b id="sys-mid-wait">0分</b></span>
+                                <span><i class="fa-solid fa-clock"></i> 事件 <b id="sys-mid-count">0</b></span>
+                            </div>
+                        </div>
+                        <div class="sys-box" onclick="window.openSysDetail('post')">
+                            <h4><i class="fa-solid fa-flag-checkered" style="color:var(--success);"></i> 事后 — 闭环与复盘效能</h4>
+                            <div class="sys-compact-strip">
+                                <div class="sys-chip"><span class="sys-chip-label">PSP闭环率</span><b id="sys-post-close">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">LOSS重复率</span><b id="sys-post-repeat">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">DM开展率</span><b id="sys-post-dm">--</b></div>
+                                <div class="sys-chip"><span class="sys-chip-label">改善提案</span><b id="sys-post-kaizen">--</b></div>
+                            </div>
+                            <div class="sys-progress-wrap">
+                                <div class="sys-progress-label">事后综合得分</div>
+                                <div class="sys-progress-track"><div class="sys-progress-bar" id="sys-post-bar" style="width:0%; background:var(--success);"></div></div>
+                                <span class="sys-progress-num" id="sys-post-pct">0分</span>
+                            </div>
+                            <div class="sys-box-footer">
+                                <span><i class="fa-solid fa-bug"></i> 黑洞问题 <b id="sys-post-blackhole">0</b></span>
+                                <span><i class="fa-solid fa-rotate-left"></i> 复发次数 <b id="sys-post-repeat-count">0</b></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="p-monitor" class="page">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="flex:1;"></div>
+                    <h2 id="dash-dynamic-title" class="dash-title" style="margin-bottom:0; font-size:26px; font-weight:900; text-align:center; flex:2; letter-spacing:2px; color:var(--midea-dark);">2026年5月3日 产出效率达成情况</h2>
+                    <div style="flex:1; text-align:right; display:flex; gap:8px; justify-content:flex-end;">
+                        <button class="btn" id="monitorTargetToggleBtn" onclick="toggleMonitorTarget()" style="font-size:13px; padding:8px 18px; background:linear-gradient(135deg,#e67e22,#f39c12); color:white; border:none;"><i class="fa-solid fa-bullseye"></i> 目标管理</button>
+                        <button class="btn btn-success" onclick="exportMonitorPoster()" style="font-size:13px; padding:8px 18px;"><i class="fa-solid fa-file-image"></i> 导出海报</button>
+                    </div>
+                </div>
+                <div id="monitorTargetPanel" style="display:none; margin-bottom:15px; padding:15px; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 style="font-size:16px; font-weight:800; color:var(--midea-dark); display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-bullseye" style="color:var(--midea-blue);"></i> 🎯 目标管理引擎</h3>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <span style="font-size:12px; font-weight:700; color:var(--text-muted);">目标月份</span>
+                            <input type="month" id="monitorTargetMonth" class="btn" onchange="renderMonitorTarget()" style="border-color:var(--midea-blue); font-size:12px;">
+                            <button class="btn btn-primary" onclick="showMonitorTargetEdit()" style="font-size:11px;"><i class="fa-solid fa-pen"></i> 设定目标</button>
+                            <button class="btn" onclick="toggleMonitorTarget()" style="font-size:11px;"><i class="fa-solid fa-xmark"></i> 关闭</button>
+                        </div>
+                    </div>
+                    <div id="monitorTargetContent" style="flex-grow:1; overflow-y:auto; max-height:450px;"></div>
+                </div>
+                <div class="monitor-top">
+                    <div class="kpi-card"><h4 data-i18n="kpi_pro2_out">PRO2 当日产出</h4><div class="val" id="kpiGat">0</div></div>
+                    <div class="kpi-card" id="kpiLossCard" style="background: var(--danger); color: white;">
+                        <h4 style="color:rgba(255,255,255,0.85); font-weight:700;" data-i18n="kpi_pro2_loss">PRO2 当日差异</h4><div class="val" id="kpiMissing" style="color:white">0</div>
+                    </div>
+                </div>
+                <div class="monitor-middle">
+                    <div class="card" style="margin:0; overflow:hidden;">
+                        <div class="section-title" style="flex-shrink:0;"><h3>📊 <span id="chartTitleText">产出达成对比</span></h3>
+                            <div id="chartWsTags" style="display:flex;gap:6px;font-size:12px;font-weight:700;"></div></div>
+                        <div class="chart-wrapper"><canvas id="chartMonitor"></canvas></div>
+                    </div>
+                    <div class="card" style="margin:0; overflow:hidden;">
+                        <div class="section-title" style="flex-shrink:0;"><h3><i class="fa-solid fa-ranking-star"></i> <span data-i18n="rank_title">UPPH 排名</span></h3></div>
+                        <ul class="rank-list" id="monitorRank"></ul>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:15px; width:100%; flex-shrink:0;">
+                    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-size:16px;">📈 <span id="upphDatePrefix"></span><span data-i18n="prod_upph_title"> UPPH 达成</span></h3>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted);"><span data-i18n="prod_date">日期筛选</span>:</span>
+                            <input type="date" id="prodReportDate" value="" onchange="window.prodReportDate=this.value;window._prodReportDateSet=true;window.renderProdReport();" style="font-size:11px; padding:2px 6px; border:1px solid var(--border); border-radius:4px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:15px;">
+                        <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--midea-dark);"><span data-i18n="prod_shift_title">Output Achievement of Each Shift PRO2</span></h4>
+                        <button class="btn btn-primary" onclick="addProdShiftRow()" style="padding:2px 10px; font-size:11px; margin-bottom:6px;"><i class="fa-solid fa-plus"></i> <span data-i18n="prod_add_row">Add Row</span></button>
+                        <div class="table-wrap prod-table-wrap" style="border:none; background:transparent;">
+                            <table class="grid prod-shift-table" id="shiftTable">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="min-width:45px;"><span data-i18n="prod_line">LINE</span></th>
+                                        <th rowspan="2" style="min-width:40px;"><span data-i18n="prod_shift">Shift</span></th>
+                                        <th colspan="3"><span data-i18n="prod_daily">Daily</span></th>
+                                        <th rowspan="2"><span data-i18n="prod_rank_d">Rank (D)</span></th>
+                                        <th colspan="3"><span data-i18n="prod_monthly">Monthly</span></th>
+                                        <th rowspan="2"><span data-i18n="prod_rank_m">Rank (M)</span></th>
+                                        <th rowspan="2" style="width:25px; min-width:25px;"><span data-i18n="prod_del">Del</span></th>
+                                    </tr>
+                                    <tr>
+                                        <th><span data-i18n="prod_target">Target</span></th><th><span data-i18n="prod_actual">Actual</span></th><th><span data-i18n="prod_rate">Rate</span></th>
+                                        <th><span data-i18n="prod_target">Target</span></th><th><span data-i18n="prod_actual">Actual</span></th><th><span data-i18n="prod_rate">Rate</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shiftBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--midea-dark);"><span data-i18n="prod_notes_title">重点异常影响 (Notes)</span></h4>
+                        <textarea id="prodNotes" rows="6" style="width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:12px; resize:vertical; font-family:inherit; box-sizing:border-box;"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div id="p-dm" class="page">
+                <div class="card" style="margin:0; flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
+                    <div class="section-title" style="flex-shrink:0;">
+                        <h3><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> <span data-i18n="prob_title">异常问题点闭环 (PSP)</span></h3>
+                        <div class="flex-row">
+                            <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" data-i18n="prod_date"><i class="fa-solid fa-filter"></i> 日期筛选：</span>
+                            <input type="date" id="psp-ai-start" class="ai-date-picker" onchange="renderPDCA()">
+                            <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" data-i18n="loss_to">至</span>
+                            <input type="date" id="psp-ai-end" class="ai-date-picker" onchange="renderPDCA()">
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('psp-ai-start','psp-ai-end','today')" style="background:#3b82f6;color:white;border:1px solid rgba(255,255,255,0.3);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_today">今天</button>
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('psp-ai-start','psp-ai-end','yesterday')" style="background:#64748b;color:white;border:1px solid rgba(255,255,255,0.2);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_yesterday">昨天</button>
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('psp-ai-start','psp-ai-end','month')" style="background:#10b981;color:white;border:1px solid rgba(255,255,255,0.3);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_this_month">本月</button>
+                            <button class="btn btn-export" onclick="window.exportPSPToExcel()" style="background:var(--success);color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
+                            <button class="btn" onclick="window.generatePSPCompactReport()" style="background:#8b5cf6;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-image"></i> <span data-i18n="btn_psp_report">问题点闭环通报</span></button>
+                            <button class="btn btn-primary" onclick="window.addProblem()"><i class="fa-solid fa-plus"></i> <span data-i18n="btn_add">新增异常</span></button>
+                        </div>
+                    </div>
+                    <div class="table-wrap" style="height: 500px; overflow: auto; border: 1px solid var(--border); border-radius: 4px; position: relative;">
+                        <table class="grid" style="table-layout: fixed;">
+                            <thead style="z-index:2; position: sticky; top: 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="width: 72px;" data-i18n="prob_th_date">日期</th>
+                                    <th style="width: 90px;" data-i18n="prob_th_ws">车间</th>
+                                    <th style="min-width:200px;" data-i18n="prob_th_desc">问题详细描述</th>
+                                    <th style="width: 80px;" data-i18n="prob_th_loc">线体/班次</th>
+                                    <th style="width: 110px;" data-i18n="prob_th_owner">跟进人</th>
+                                    <th style="width: 85px;" data-i18n="prob_th_dept">责任部门</th>
+                                    <th style="width: 72px;">纳期/完成时间</th>
+                                    <th style="width: 60px;" data-i18n="prob_th_status">状态</th>
+                                    <th style="width: 35px;" data-i18n="prob_th_del">删</th>
+                                </tr>
+                                <tr class="filter-row">
+                                    <th><input type="date" id="f-date" onchange="renderPDCA()"></th>
+                                    <th><select id="f-ws" onchange="renderPDCA()"><option value="" data-i18n="opt_all">全</option><option>PRO1</option><option>PRO2</option><option>PRO3</option><option>PRO4</option></select></th>
+                                    <th><input type="text" id="f-desc" oninput="_debouncedRenderPDCA()"></th>
+                                    <th><input type="text" id="f-loc" placeholder="线体/班次" oninput="_debouncedRenderPDCA()"></th>
+                                    <th><input type="text" id="f-owner" oninput="_debouncedRenderPDCA()"></th>
+                                    <th><select id="f-dept" onchange="renderPDCA()"><option value="" data-i18n="opt_all">全</option></select></th>
+                                    <th><input type="date" id="f-duedate" onchange="renderPDCA()"></th>
+                                    <th><select id="f-status" onchange="renderPDCA()"><option value="" data-i18n="opt_all">全</option><option value="未解决">未解决</option><option value="处理中">处理中</option><option value="已解决">已解决</option></select></th>
+                                    <th>-</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pdcaBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div id="p-loss" class="page">
+                <div class="card" style="margin:0; flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
+                    <div class="section-title" style="flex-shrink:0;">
+                        <h3><i class="fa-solid fa-arrow-trend-down" style="color:var(--warning)"></i> <span data-i18n="loss_title">生产过程异常LOSS管控 (仅限 PRO2)</span></h3>
+                        <div class="flex-row">
+                            <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);"><i class="fa-solid fa-filter"></i> <span data-i18n="loss_filter_period">LOSS周期筛选：</span></span>
+                            <input type="date" id="loss-ai-start" class="ai-date-picker" onchange="renderLoss()">
+                            <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" data-i18n="loss_to">至</span>
+                            <input type="date" id="loss-ai-end" class="ai-date-picker" onchange="renderLoss()">
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('loss-ai-start','loss-ai-end','today')" style="background:#3b82f6;color:white;border:1px solid rgba(255,255,255,0.3);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_today">今天</button>
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('loss-ai-start','loss-ai-end','yesterday')" style="background:#64748b;color:white;border:1px solid rgba(255,255,255,0.2);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_yesterday">昨天</button>
+                            <button type="button" class="btn-date-quick" onclick="setQuickDateRange('loss-ai-start','loss-ai-end','month')" style="background:#10b981;color:white;border:1px solid rgba(255,255,255,0.3);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="date_this_month">本月</button>
+                            <button class="btn btn-ai" onclick="aiIntelligentSummary(this)"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="btn_ai_summary">AI智能总结</span></button>
+                            <button class="btn" onclick="generateLossCompactReport()" style="background:#8b5cf6;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-image"></i> <span data-i18n="btn_generate_report">生成紧凑长图</span></button>
+                            <button class="btn btn-success" onclick="document.getElementById('loss-ai-modal').style.display='flex'"><i class="fa-solid fa-robot"></i> <span data-i18n="btn_ai_import">无格式AI识别导入</span></button>
+                            <button class="btn btn-ai" onclick="window.aiTranslateLossProblems(this)"><i class="fa-solid fa-language"></i> <span data-i18n="btn_ai_trans">AI智能翻译</span></button>
+                            <button class="btn" onclick="window.undoTranslateLoss()" style="border:1px dashed var(--warning);color:var(--warning);"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="btn_undo_translate">撤回翻译</span></button>
+                            <button class="btn btn-primary" onclick="window.addLossRecord()"><i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_loss">新增LOSS记录</span></button>
+                            <button class="btn btn-danger" onclick="window.batchDeleteLoss()" style="margin-left: 10px;"><i class="fa-solid fa-trash-can"></i> <span data-i18n="btn_batch_delete">批量删除选中</span></button>
+                            <button class="btn btn-export" onclick="window.exportLossToExcel()" style="margin-left: 10px; background:var(--success);color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-file-excel"></i> <span data-i18n="btn_export_excel">导出Excel</span></button>
+                        </div>
+                    </div>
+                    <div class="table-wrap" style="height: 500px; overflow: auto; border: 1px solid var(--border); border-radius: 4px; position: relative;">
+                        <table class="grid" style="table-layout: fixed;">
+                            <thead style="z-index:2; position: sticky; top: 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="width: 28px;"><input type="checkbox" id="loss-select-all" onclick="window.toggleSelectAllLoss(this)" style="width:14px;height:14px;"></th>
+                                    <th style="width: 120px;" data-i18n="loss_th_date">日期</th>
+                                    <th style="width: 60px;" data-i18n="loss_th_line">线体</th>
+                                    <th style="width: 75px;" data-i18n="loss_th_shift">班次</th>
+                                    <th style="width: auto;" data-i18n="loss_th_desc">异常问题点描述</th>
+                                    <th style="width: 8%;" data-i18n="loss_th_qty">损失数量</th>
+                                    <th style="width: 110px;" data-i18n="prob_th_owner">责任人</th>
+                                    <th style="width: 80px;" data-i18n="prob_th_dept">责任部门</th>
+                                    <th style="width: 40px;"><i class="fa-solid fa-plus" title="关联PSP"></i></th>
+                                    <th style="width: 28px;" data-i18n="prob_th_del">删</th>
+                                </tr>
+                                <tr class="filter-row" style="position: sticky; top: 35px; background: #f8fafc; z-index: 1;">
+                                    <th style="padding: 2px;">-</th>
+                                    <th style="padding: 2px;"><input type="date" id="fl-date" onchange="renderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;"></th>
+                                    <th style="padding: 2px;"><select id="fl-line" onchange="renderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;"><option value="" data-i18n="opt_all">全</option><option value="LINE A">LINE A</option><option value="LINE B">LINE B</option><option value="LINE C">LINE C</option><option value="LINE D">LINE D</option></select></th>
+                                    <th style="padding: 2px;"><select id="fl-shift" onchange="renderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;"><option value="" data-i18n="opt_all">全</option><option value="D">D (白班)</option><option value="N">N (夜班)</option></select></th>
+                                    <th style="padding: 2px;"><input type="text" id="fl-desc" oninput="_debouncedRenderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;" placeholder="搜索问题描述"></th>
+                                    <th style="padding: 2px;">-</th>
+                                    <th style="padding: 2px;"><input type="text" id="fl-owner" oninput="_debouncedRenderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;" placeholder="搜索责任人"></th>
+                                    <th style="padding: 2px;"><select id="fl-dept" onchange="renderLoss()" style="width: 100%; box-sizing: border-box; padding: 1px 3px; font-size: 11px;"><option value="" data-i18n="opt_all">全</option></select></th>
+                                    <th style="padding: 2px;">-</th>
+                                    <th style="padding: 2px;">-</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lossBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div id="lossLinkDropdown" class="loss-link-dd"></div>
+            <div id="lossLinkModal" class="loss-link-modal">
+                <div class="loss-link-box">
+                    <h3><i class="fa-solid fa-link"></i> 关联 LOSS 到 PSP 问题</h3>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; padding:8px 12px; background:var(--bg-base); border-radius:6px;">
+                        <strong>当前 LOSS：</strong><span id="lossLinkDesc"></span>
+                        <span id="lossLinkDate" style="margin-left:12px; font-size:11px;"></span>
+                    </div>
+                    <div style="margin-bottom:10px; display:flex; gap:8px;">
+                        <button class="btn btn-primary" onclick="createPSPfromLoss()"><i class="fa-solid fa-plus-circle"></i> 一键生成新 PSP</button>
+                        <button class="btn" onclick="unlinkLossPsp()" style="border-color:var(--danger); color:var(--danger);"><i class="fa-solid fa-unlink"></i> 取消关联</button>
+                    </div>
+                    <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">或选择已有 PSP 关联：</div>
+                    <div id="lossLinkPSPList" style="max-height:300px; overflow-y:auto;"></div>
+                    <div style="margin-top:12px; text-align:right;">
+                        <button class="btn" onclick="safeCloseModal('lossLinkModal')" data-i18n="btn_close">关闭</button>
+                    </div>
+                </div>
+            </div>
+            <!-- 紧凑报告模态框 -->
+            <div id="compact-report-wrap" class="compact-report-wrap" onclick="if(event.target===this)this.style.display='none'">
+                <div class="compact-report-box">
+                    <div class="cr-toolbar">
+                        <h3><i class="fa-solid fa-file-image"></i> LOSS 紧凑通报报告</h3>
+                        <div class="cr-actions">
+                            <button class="btn-cr-img" onclick="window.openPasteRepeatUI()"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS</button>
+                            <button class="btn-cr-img" onclick="downloadCRImage()"><i class="fa-solid fa-download"></i> 生成长图</button>
+                            <button class="btn-cr-close" onclick="document.getElementById('compact-report-wrap').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <div class="compact-report-scroll" id="compact-report-content"></div>
+                </div>
+            </div>
+            <!-- 粘贴重复LOSS分析模态框 -->
+            <div id="cr-paste-modal" class="modal-overlay" onclick="if(event.target===this)safeCloseModal('cr-paste-modal')">
+                <div class="paste-box" style="max-width:600px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h3 style="color:var(--warning);font-size:16px;font-weight:800;margin:0;"><i class="fa-solid fa-paste"></i> 粘贴重复LOSS分析结果</h3>
+                        <button class="btn btn-danger" onclick="safeCloseModal('cr-paste-modal')"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p style="color:var(--text-muted);margin-bottom:12px;font-size:12px;line-height:1.5;">
+                        将外部AI分析的重复LOSS结果粘贴到下方文本框。<br>
+                        <b>支持格式：</b>JSON数组 / Markdown表格 / 制表符分隔 / 带|分隔的文本 / 自由文本<br>
+                        <b>示例JSON：</b><code>[{"Issue":"งานรั่ว DV","Today_Count":5,"Prev_Count":3,"Weekly_Total":15}]</code>
+                    </p>
+                    <textarea id="cr-paste-input" class="paste-area" placeholder="在此粘贴外部AI分析的重复LOSS结果..."></textarea>
+                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-ai" onclick="window.parsePastedRepeatLoss()" id="btn-parse-repeat"><i class="fa-solid fa-wand-magic-sparkles"></i> 解析并渲染</button>
+                        <button class="btn" onclick="window.parsePastedRepeatLoss({forceBigram:true})" style="border:1px dashed #6366f1;color:#6366f1;"><i class="fa-solid fa-calculator"></i> 使用本地Bigram分析</button>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:#94a3b8;">
+                        <i class="fa-solid fa-lightbulb"></i> 提示：使用外部AI分析后复制结果JSON/表格，粘贴后点击"解析并渲染"即可自动识别格式生成表格。
+                    </div>
+                </div>
+            </div>
+            <div id="repeatLossModal" class="loss-link-modal">
+                <div class="loss-link-box">
+                    <h3 style="color:var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> ⚠️ 发现重复 LOSS</h3>
+                    <div id="repeatLossList" style="margin:8px 0; max-height:300px; overflow-y:auto;"></div>
+                    <div style="margin-top:12px; text-align:right;">
+                        <button class="btn" onclick="safeCloseModal('repeatLossModal')" data-i18n="btn_save_continue">知道了，继续保存</button>
+                    </div>
+                </div>
+            </div>
+            <div id="p-trend" class="page">
+                <div class="card" style="flex-grow:1; margin:0; display:flex; flex-direction:column;">
+                    <div class="section-title" style="flex-shrink:0;">
+                        <h3><i class="fa-solid fa-chart-line"></i> <span data-i18n="trend_title">全景趋势分析</span></h3>
+                        <div class="flex-row">
+                            <select id="trendWs" class="btn" style="padding:4px 8px; border-color:var(--midea-blue); color:#333; background:#fff;" onchange="renderTrend()">
+                                <option value="all">全部车间对比</option>
+                                <option value="PRO1">PRO1 车间</option>
+                                <option value="PRO2">PRO2 车间</option>
+                                <option value="PRO3">PRO3 车间</option>
+                                <option value="PRO4">PRO4 车间</option>
+                                <option value="H_MOTOR">H电机线产出</option>
+                                <option value="F_MOTOR">F电机线产出</option>
+                                <option value="S_MOTOR">S系列电机线产出</option>
+                                <option value="CRANK">曲轴线产出</option>
+                            </select>
+                            <select id="trendMetric" class="btn" style="padding:4px 8px; border-color:var(--midea-blue); color:#333; background:#fff;" onchange="renderTrend()">
+                                <option value="upph" data-i18n="opt_upph">UPPH 达成趋势</option>
+                                <option value="o" data-i18n="opt_o">实际产出 趋势</option>
+                                <option value="loss" data-i18n="opt_loss">LOSS 欠产套数趋势</option>
+                                <option value="h" data-i18n="opt_h">投入工时(H) 趋势</option>
+                                <option value="attRate" data-i18n="opt_attrate">出勤率 趋势</option>
+                                <option value="head" data-i18n="opt_head">绝对人数 趋势</option>
+                            </select>
+                            <select id="trendSpan" class="btn" style="padding:4px 8px; border-color:var(--border-dark);" onchange="renderTrend()">
+                                <option value="7" data-i18n="opt_7d">近 7 天滚动</option>
+                                <option value="15" data-i18n="opt_15d">近 15 天滚动</option>
+                                <option value="30" data-i18n="opt_30d">近 30 天全景</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper-wide"><canvas id="chartTrend"></canvas></div>
+                    <div style="margin-top: 15px; flex-shrink:0;">
+                        <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:6px; display:flex; justify-content:space-between;">
+                            <span><i class="fa-solid fa-pen-nib" style="color:var(--midea-blue);"></i> <span data-i18n="trend_memo">人工复盘备忘录</span></span>
+                            <div class="flex-row">
+                                <button class="btn btn-ai" style="padding: 2px 8px; font-size:11px !important;" onclick="aiAnalyzeTrend()" id="btn-ai-trend"><i class="fa-solid fa-brain"></i> <span data-i18n="btn_ai_trend">AI 智能洞察数据</span></button>
+                                <button class="btn btn-ai" style="padding: 2px 8px; font-size:11px !important; background:var(--midea-blue)" onclick="aiTranslateMemo()"><i class="fa-solid fa-language"></i> <span data-i18n="btn_ai_trans">智能翻译备忘录</span></button>
+                            </div>
+                        </div>
+                        <textarea id="memoText" class="memo-box" onchange="saveMemo()"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div id="p-report" class="page">
+                <div class="section-title" style="border:none; padding:0; margin-bottom:15px; flex-shrink:0;">
+                    <div class="flex-row">
+                        <select id="reportType" class="btn" style="background:white; border-color:var(--midea-blue); color:var(--midea-blue);" onchange="renderReport()">
+                            <option value="day" data-i18n="opt_rep_day">日报 (基于全局日期)</option>
+                            <option value="week" data-i18n="opt_rep_week">周报 (近7天累计)</option>
+                            <option value="month" data-i18n="opt_rep_month">月报 (当月累计)</option>
+                        </select>
+                    </div>
+                    <div class="flex-row">
+                        <button class="btn btn-success" onclick="exportReportPDF()"><i class="fa-solid fa-file-pdf"></i> 导出PDF报告</button>
+                    </div>
+                    <div class="report-filter-bar">
+                        <span style="font-weight:900;color:var(--text-muted);">报告模块</span>
+                        <label><input type="checkbox" class="report-toggle" data-target="report-kpi-section" checked onchange="applyReportFilters()"> 经营KPI</label>
+                        <label><input type="checkbox" class="report-toggle" data-target="report-ai-section" checked onchange="applyReportFilters()"> AI总结</label>
+
+                        <label><input type="checkbox" class="report-toggle" data-target="report-sys-section" checked onchange="applyReportFilters()"> 事前事中事后</label>
+                        <label><input type="checkbox" class="report-toggle" data-target="report-loss-section" checked onchange="applyReportFilters()"> LOSS排名</label>
+                        <label><input type="checkbox" class="report-toggle" data-target="report-problem-section" checked onchange="applyReportFilters()"> 闭环率</label>
+                        <label><input type="checkbox" class="report-toggle" data-target="report-chart-section" checked onchange="applyReportFilters()"> 图表</label>
+                    </div>
+                </div>
+                <div class="report-canvas" id="reportCanvasBlock">
+                    <div class="r-header">
+                        <h1 data-i18n="rep_title">GAT 生产经营全景总结报告</h1>
+                        <div style="color:var(--text-muted); font-size:13px; font-weight: 600;"><span data-i18n="rep_period">统计范围:</span> <span id="r-period" style="font-weight:900; color:var(--midea-blue);"></span></div>
+                    </div>
+                    <div class="r-kpi-grid" id="report-kpi-section">
+                        <div class="r-block">
+                            <div class="r-block-title" data-i18n="r_out">总产出 (PRO2)</div><div class="r-block-main" id="rp-out-tot">0</div>
+                            <div class="r-block-list" id="rp-out-list"></div>
+                        </div>
+                        <div class="r-block" style="border-top: 3px solid var(--midea-blue);">
+                            <div class="r-block-title" data-i18n="r_upph">平均 UPPH (PRO2)</div><div class="r-block-main" id="rp-upph-tot" style="color:var(--midea-blue);">0</div>
+                            <div class="r-block-list" id="rp-upph-list"></div>
+                        </div>
+                        <div class="r-block" style="border-top: 3px solid var(--danger);">
+                            <div class="r-block-title" data-i18n="r_loss">总损失 Missing Qty (PRO2)</div><div class="r-block-main" id="rp-loss-tot" style="color:var(--danger);">0</div>
+                            <div class="r-block-list" id="rp-loss-list"></div>
+                        </div>
+                        <div class="r-block" style="border-top: 3px solid #0ea5e9;">
+                            <div class="r-block-title" data-i18n="r_att">全厂出勤率</div><div class="r-block-main" id="rp-att-tot" style="color:#0ea5e9;">0%</div>
+                            <div class="r-block-list" id="rp-att-list"></div>
+                        </div>
+                        <div class="r-block">
+                            <div class="r-block-title" data-i18n="r_dm">DM 开展率</div><div class="r-block-main" id="rp-dm-tot">0%</div>
+                            <div class="r-block-list" id="rp-dm-list"></div>
+                        </div>
+                    </div>
+                    <div class="r-kpi-grid" id="report-ai-section" style="grid-template-columns: 1fr; margin-bottom: 20px;">
+                        <div class="r-block" style="border-top: 3px solid #8b5cf6;">
+                            <div class="section-title">
+                                <h3><i class="fa-solid fa-wand-magic-sparkles" style="color:#c026d3;"></i> <span data-i18n="ai_summary_title">AI 智能管理复盘总结</span></h3>
+                                <div class="flex-row">
+                                    <button class="btn" onclick="toggleAISummary()" title="收缩/展开"><i id="ai-toggle-icon" class="fa-solid fa-chevron-up"></i></button>
+                                    <button class="btn btn-ai" onclick="generateAISummary()" id="btn-gen-ai"><i class="fa-solid fa-robot"></i> <span data-i18n="btn_gen_ai">生成专业复盘报告</span></button>
+                                </div>
+                            </div>
+                            <div id="ai-summary-content" class="ai-html-content" style="padding:10px 5px; min-height: 80px; transition: all 0.3s ease;">点击上方按钮，AI基于全景数据生成涵盖 UPPH、欠产预警及 Influence Sets (影响套数) 的复盘报告。</div>
+                        </div>
+                    </div>
+
+                    <div class="r-dept-container" id="report-sys-section" style="border-left: 4px solid var(--success); background: white;">
+                        <div class="section-title" style="margin-bottom: 8px;">
+                            <h4 style="color:var(--success); margin:0; font-size:15px !important;"><i class="fa-solid fa-gears"></i> 事前事中事后</h4>
+                        </div>
+                        <div class="r-dept-grid" id="rp-sys-list" style="grid-template-columns: repeat(6, 1fr);"></div>
+                    </div>
+                    <div class="r-dept-container" id="report-loss-section" style="border-left: 4px solid var(--warning); background: white;">
+                        <div class="section-title" style="margin-bottom: 5px;">
+                            <h4 data-i18n="r_loss_rank" style="color:var(--warning); margin:0; font-size:15px !important;"><i class="fa-solid fa-ranking-star"></i> 各责任部门 LOSS 排名与改善监控</h4>
+                        </div>
+                        <div class="flex-row" style="margin-bottom: 12px; font-size: 12px; color: var(--text-main); background: rgba(245, 158, 11, 0.05); padding: 8px; border-radius: 6px; border: 1px dashed rgba(245, 158, 11, 0.3);">
+                            <span style="font-weight: 800;"><i class="fa-solid fa-calendar-day"></i> 本期范围：</span>
+                            <input type="date" id="rank-curr-start" class="btn" style="padding: 2px 5px;" onchange="renderReport()"> <span style="color: #94a3b8;">至</span>
+                            <input type="date" id="rank-curr-end" class="btn" style="padding: 2px 5px;" onchange="renderReport()">
+                            <span style="font-weight: 800; margin-left: 20px;"><i class="fa-solid fa-clock-rotate-left"></i> 对比上期：</span>
+                            <input type="date" id="rank-prev-start" class="btn" style="padding: 2px 5px;" onchange="renderReport()"> <span style="color: #94a3b8;">至</span>
+                            <input type="date" id="rank-prev-end" class="btn" style="padding: 2px 5px;" onchange="renderReport()">
+                        </div>
+                        <div class="table-wrap" style="border:none;">
+                            <table class="grid" style="min-width: 100%;">
+                                <thead style="background: rgba(245, 158, 11, 0.1);">
+                                    <tr>
+                                        <th style="width:50px;">排名</th>
+                                        <th style="text-align: left; padding-left: 15px;">责任部门</th>
+                                        <th>本期 LOSS (总量)</th>
+                                        <th>对比期 LOSS (总量)</th>
+                                        <th>差值变化</th>
+                                        <th>改善状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rp-loss-rank-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="r-dept-container" id="report-problem-section">
+                        <h4 data-i18n="r_prob_depts">各责任部门异常闭环率明细</h4>
+                        <div class="r-dept-grid" id="rp-prob-list"></div>
+                    </div>
+                    <div class="r-charts" id="report-chart-section">
+                        <div class="r-chart-box">
+                            <h4 data-i18n="r_chart1">各车间产出达成对比</h4>
+                            <div class="chart-wrapper"><canvas id="r-barChart"></canvas></div>
+                        </div>
+                        <div class="r-chart-box">
+                            <h4 data-i18n="r_chart2">异常责任部门分布</h4>
+                            <div class="chart-wrapper"><canvas id="r-pieChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    </body>
+</html>
