@@ -7811,11 +7811,6 @@ window.generateImprovePoster = function() {
         var notstart = items.filter(function(p) { return p.progress === '未开始'; }).length;
         var rate = total > 0 ? Math.round(done / total * 100) : 0;
 
-        // Overdue items
-        var overdueItems = items.filter(function(p) { return p.progress === '逾期'; }).sort(function(a, b) {
-            return (a.planEndDate || '').localeCompare(b.planEndDate || '');
-        });
-
         // Department stats
         var deptStats = {};
         items.forEach(function(p) {
@@ -7835,10 +7830,23 @@ window.generateImprovePoster = function() {
             return b.total - a.total;
         });
 
-        // ==================== BUILD HTML (PSP Poster Style, Compact) ====================
+        // Sort items for display: overdue → in prog → not started → done
+        var sortedItems = items.slice().sort(function(a, b) {
+            var rankA = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
+            var rankB = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
+            if (rankA !== rankB) return rankA - rankB;
+            return (a.dept || '').localeCompare(b.dept || '');
+        });
+
+        // Split into left and right halves for two-column table
+        var mid = Math.ceil(sortedItems.length / 2);
+        var leftItems = sortedItems.slice(0, mid);
+        var rightItems = sortedItems.slice(mid);
+
+        // ==================== BUILD HTML ====================
         var h = '<div class="ip-poster">';
 
-        // ---- 1. HEADER: Title + bilingual + period ----
+        // ---- 1. HEADER ----
         h += '<div class="ip-header">';
         h += '<div class="ip-title">\uD83C\uDFAF 改善项目跟踪通报</div>';
         h += '<div class="ip-subtitle">Improvement Project Tracking Report</div>';
@@ -7847,7 +7855,7 @@ window.generateImprovePoster = function() {
         h += '<span style="font-size:10px;color:#94a3b8;">Period: ' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' | Generated: ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + '</span>';
         h += '</div></div>';
 
-        // ---- 2. SUMMARY BAR (like PSP, but compact) ----
+        // ---- 2. SUMMARY BAR (compressed height) ----
         h += '<div class="ip-summary-bar">';
         h += '<div class="ip-sum-item"><b>' + total + '</b><span class="ip-cn">项目总数</span><span class="ip-en">Total</span></div>';
         h += '<div class="ip-sum-item"><b style="color:#16a34a;">' + done + '</b><span class="ip-cn">已完成</span><span class="ip-en">Closed</span></div>';
@@ -7857,23 +7865,7 @@ window.generateImprovePoster = function() {
         h += '<div class="ip-sum-item"><b style="color:#2563eb;">' + rate + '%</b><span class="ip-cn">完成率</span><span class="ip-en">Rate</span></div>';
         h += '</div>';
 
-        // ---- 3. OVERDUE ALERT STRIP (compact strip, not cards) ----
-        if (over > 0) {
-            h += '<div class="ip-overdue-strip">';
-            h += '<span class="ip-overdue-title">\u26A0\uFE0F 已逾期项目 (' + over + '项):</span>';
-            var stripMax = Math.min(overdueItems.length, 6);
-            for (var oi = 0; oi < stripMax; oi++) {
-                var o = overdueItems[oi];
-                var oName = (o.projectName || '').length > 12 ? (o.projectName || '').substring(0, 12) + '..' : (o.projectName || '');
-                h += '<span class="ip-overdue-tag">' + (o.dept || '') + '·' + escapeHtml(oName) + ' (' + (o.planEndDate || '') + ')</span>';
-            }
-            if (overdueItems.length > 6) {
-                h += '<span class="ip-overdue-more">+ ' + (overdueItems.length - 6) + '项</span>';
-            }
-            h += '</div>';
-        }
-
-        // ---- 4. DEPT RANKING (compact progress bars, 4 per row) ----
+        // ---- 3. DEPT RANKING (progress bar height compressed to 3px) ----
         h += '<div class="ip-section">';
         h += '<div class="ip-sec-title">A. 部门完成率排名 / Dept Completion Rate</div>';
         h += '<div class="ip-dept-grid">';
@@ -7891,48 +7883,55 @@ window.generateImprovePoster = function() {
         });
         h += '</div></div>';
 
-        // ---- 5. PROJECT TABLE (compact, single column, PSP table style) ----
+        // ---- 4. PROJECT DETAILS (left-right two columns) ----
         h += '<div class="ip-section">';
-        h += '<div class="ip-sec-title">B. 项目明细 / Project Details</div>';
-        h += '<table class="ip-table">';
-        h += '<thead><tr>';
-        h += '<th style="width:70px;"><span class="ip-th-cn">日期</span><span class="ip-th-en">Date</span></th>';
-        h += '<th><span class="ip-th-cn">项目名称</span><span class="ip-th-en">Project Name</span></th>';
-        h += '<th style="width:55px;"><span class="ip-th-cn">部门</span><span class="ip-th-en">Dept</span></th>';
-        h += '<th style="width:65px;"><span class="ip-th-cn">进度</span><span class="ip-th-en">Status</span></th>';
-        h += '<th style="width:78px;"><span class="ip-th-cn">计划完成</span><span class="ip-th-en">Plan End</span></th>';
-        h += '</tr></thead><tbody>';
+        h += '<div class="ip-sec-title">B. 项目明细 / Project Details &emsp; ';
+        h += '<span style="font-weight:400;font-size:10px;">逾期: \u26A0\uFE0F &nbsp; 进行中: \uD83D\uDFE1 &nbsp; 已完成: \u2705 &nbsp; 未开始: \u26AA</span></div>';
 
-        var sortedByStatus = items.slice().sort(function(a, b) {
-            var rankA = a.progress === '逾期' ? 0 : (a.progress === '进行中' ? 1 : (a.progress === '未开始' ? 2 : 3));
-            var rankB = b.progress === '逾期' ? 0 : (b.progress === '进行中' ? 1 : (b.progress === '未开始' ? 2 : 3));
-            if (rankA !== rankB) return rankA - rankB;
-            return (a.dept || '').localeCompare(b.dept || '');
-        });
+        // Helper to render a table block
+        function renderTableBlock(itemArray) {
+            if (itemArray.length === 0) return '<div style="text-align:center;padding:10px;color:#94a3b8;font-size:11px;">\u2014 无数据 \u2014</div>';
+            var tb = '<table class="ip-table">';
+            tb += '<thead><tr>';
+            tb += '<th style="width:62px;"><span class="ip-th-cn">日期</span><span class="ip-th-en">Date</span></th>';
+            tb += '<th><span class="ip-th-cn">项目名称</span><span class="ip-th-en">Project</span></th>';
+            tb += '<th style="width:48px;"><span class="ip-th-cn">部门</span><span class="ip-th-en">Dept</span></th>';
+            tb += '<th style="width:60px;"><span class="ip-th-cn">进度</span><span class="ip-th-en">Status</span></th>';
+            tb += '<th style="width:72px;"><span class="ip-th-cn">计划完成</span><span class="ip-th-en">Plan End</span></th>';
+            tb += '</tr></thead><tbody>';
+            for (var i = 0; i < itemArray.length; i++) {
+                var p = itemArray[i];
+                var isOv = p.progress === '逾期';
+                var isDone = p.progress === '已完成';
+                var isProg2 = p.progress === '进行中';
+                var rowBg = isOv ? 'background:#fef2f2;' : '';
+                var rowBorder = isOv ? 'border-left:3px solid #dc2626;' : (isDone ? 'border-left:3px solid #16a34a;' : (isProg2 ? 'border-left:3px solid #ea580c;' : 'border-left:3px solid #d1d5db;'));
 
-        for (var i = 0; i < sortedByStatus.length; i++) {
-            var p = sortedByStatus[i];
-            var isOv = p.progress === '逾期';
-            var isDone = p.progress === '已完成';
-            var isProg = p.progress === '进行中';
-            var rowBg = isOv ? 'background:#fef2f2;' : '';
-            var statusDisplay = isOv ? '<span style="color:#dc2626;font-weight:900;font-size:12px;">逾期 Overdue</span>' :
-                (isDone ? '<span style="color:#16a34a;font-weight:900;font-size:12px;">已完成 Closed</span>' :
-                (isProg ? '<span style="color:#ea580c;font-weight:900;font-size:12px;">进行中 In Prog</span>' :
-                '<span style="color:#64748b;font-size:12px;">未开始 N/A</span>'));
-            h += '<tr style="' + rowBg + '">';
-            h += '<td>' + (p.startDate || '') + '</td>';
-            h += '<td style="text-align:left;font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(p.projectName || '') + '</td>';
-            h += '<td>' + (p.dept || '') + '</td>';
-            h += '<td>' + statusDisplay + '</td>';
-            h += '<td' + (isOv ? ' style="color:#dc2626;font-weight:700;"' : '') + '>' + (p.planEndDate || '') +
-                (isOv ? '<br><span style="font-size:9px;color:#dc2626;">\u26A0\uFE0F逾期</span>' : '') + '</td>';
-            h += '</tr>';
+                var badgeText = isOv ? '逾期' : (isDone ? '已完成' : (isProg2 ? '进行中' : '未开始'));
+                var badgeColor = isOv ? '#dc2626' : (isDone ? '#16a34a' : (isProg2 ? '#ea580c' : '#94a3b8'));
+                var badgeBg = isOv ? '#fef2f2' : (isDone ? '#f0fdf4' : (isProg2 ? '#fff7ed' : '#f9fafb'));
+                var badgeBorder = isOv ? '#fecaca' : (isDone ? '#bbf7d0' : (isProg2 ? '#fed7aa' : '#e5e7eb'));
+
+                tb += '<tr style="' + rowBg + rowBorder + '">';
+                tb += '<td style="font-size:10px;">' + (p.startDate || '') + '</td>';
+                tb += '<td style="text-align:left;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + (isOv ? 'color:#b91c1c;' : '') + '">' + escapeHtml(p.projectName || '') + '</td>';
+                tb += '<td style="font-size:10px;">' + (p.dept || '') + '</td>';
+                tb += '<td><span class="ip-status-badge" style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBorder + ';">' + badgeText + '</span></td>';
+                tb += '<td style="font-size:10px;' + (isOv ? 'color:#dc2626;font-weight:700;' : '') + '">' + (p.planEndDate || '');
+                if (isOv) tb += '<br><span style="font-size:8px;color:#dc2626;">\u26A0\uFE0F逾期</span>';
+                tb += '</td>';
+                tb += '</tr>';
+            }
+            tb += '</tbody></table>';
+            return tb;
         }
 
-        h += '</tbody></table></div>';
+        h += '<div class="ip-table-grid">';
+        h += '<div class="ip-table-col">' + renderTableBlock(leftItems) + '</div>';
+        h += '<div class="ip-table-col">' + renderTableBlock(rightItems) + '</div>';
+        h += '</div></div>';
 
-        // ---- 6. FOOTER ----
+        // ---- 5. FOOTER ----
         h += '<div class="ip-footer">';
         h += '逾期说明: 计划完成时间已过但未完成标记为红色「已逾期」，请责任部门尽快确认并推进。<br>';
         h += '<span style="font-size:9px;color:#94a3b8;">Note: Items past plan end date and not completed are marked red as "Overdue". Please confirm and take action ASAP.</span>';
@@ -7940,7 +7939,7 @@ window.generateImprovePoster = function() {
 
         h += '</div>'; // ip-poster
 
-        // ==================== OPEN IN NEW WINDOW (Like PSP) ====================
+        // ==================== OPEN IN NEW WINDOW ====================
         var win = window.open('', '_blank');
         if (!win) {
             showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
@@ -7949,46 +7948,45 @@ window.generateImprovePoster = function() {
 
         var inlineCSS = '<style>' +
             'body{margin:0;padding:6px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:10px;color:#1e293b;}' +
-            '@page{size:A4 landscape;margin:5mm;}' +
+            '@page{size:A4 landscape;margin:4mm;}' +
             '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
-            '.ip-poster{width:900px;margin:0 auto;background:#fff;border-radius:6px;padding:10px 14px;}' +
-            // HEADER
-            '.ip-header{text-align:center;padding-bottom:6px;border-bottom:2.5px solid #1e40af;margin-bottom:6px;}' +
-            '.ip-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;line-height:1.2;}' +
-            '.ip-subtitle{font-size:11px;font-weight:600;color:#64748b;margin:1px 0;}' +
-            '.ip-period{font-size:10px;color:#64748b;font-weight:600;margin-top:2px;}' +
-            // SUMMARY BAR (PSP style, compact)
-            '.ip-summary-bar{display:flex;gap:4px;margin-bottom:5px;}' +
-            '.ip-sum-item{flex:1;text-align:center;background:#f8fafc;border-radius:4px;padding:4px 2px;border:1px solid #e2e8f0;}' +
-            '.ip-sum-item b{display:block;font-size:18px;font-weight:900;color:#1e293b;}' +
-            '.ip-sum-item .ip-cn{display:block;font-size:9px;font-weight:700;line-height:1.2;}' +
-            '.ip-sum-item .ip-en{display:block;font-size:8px;font-weight:500;color:#64748b;line-height:1.2;}' +
-            // OVERDUE STRIP (compact)
-            '.ip-overdue-strip{background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:4px 6px;margin-bottom:5px;font-size:10px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;}' +
-            '.ip-overdue-title{font-weight:800;color:#dc2626;white-space:nowrap;}' +
-            '.ip-overdue-tag{background:#fff;border:1px solid #fca5a5;border-radius:3px;padding:1px 5px;color:#b91c1c;font-weight:600;font-size:9px;white-space:nowrap;}' +
-            '.ip-overdue-more{color:#dc2626;font-weight:700;font-size:9px;font-style:italic;padding:1px 4px;}' +
+            '.ip-poster{width:1060px;margin:0 auto;background:#fff;border-radius:6px;padding:8px 12px;}' +
+            // HEADER (compact)
+            '.ip-header{text-align:center;padding-bottom:4px;border-bottom:2.5px solid #1e40af;margin-bottom:4px;}' +
+            '.ip-title{font-size:19px;font-weight:900;color:#1e3a5f;letter-spacing:1px;line-height:1.2;}' +
+            '.ip-subtitle{font-size:10px;font-weight:600;color:#64748b;margin:0;}' +
+            '.ip-period{font-size:9px;color:#64748b;font-weight:600;margin-top:1px;}' +
+            // SUMMARY BAR (compressed height)
+            '.ip-summary-bar{display:flex;gap:3px;margin-bottom:3px;}' +
+            '.ip-sum-item{flex:1;text-align:center;background:#f8fafc;border-radius:3px;padding:2px 2px;border:1px solid #e2e8f0;}' +
+            '.ip-sum-item b{display:block;font-size:15px;font-weight:900;color:#1e293b;line-height:1.1;}' +
+            '.ip-sum-item .ip-cn{display:block;font-size:8px;font-weight:700;line-height:1.1;letter-spacing:0.3px;}' +
+            '.ip-sum-item .ip-en{display:block;font-size:7px;font-weight:500;color:#64748b;line-height:1.1;}' +
             // SECTION
-            '.ip-section{margin-bottom:4px;}' +
-            '.ip-sec-title{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e40af,#3b82f6);padding:3px 8px;border-radius:4px;margin-bottom:3px;}' +
-            // DEPT GRID (4 per row with progress bars)
-            '.ip-dept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px;margin-bottom:2px;}' +
-            '.ip-dept-item{display:flex;align-items:center;gap:3px;padding:1px 2px;}' +
-            '.ip-dept-label{font-size:9px;font-weight:700;color:#1e293b;white-space:nowrap;min-width:38px;overflow:hidden;text-overflow:ellipsis;}' +
-            '.ip-dept-bar-wrap{flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;min-width:15px;}' +
-            '.ip-dept-bar{height:100%;min-width:2px;border-radius:4px;}' +
-            '.ip-dept-pct{font-size:9px;font-weight:800;white-space:nowrap;min-width:24px;text-align:right;}' +
-            '.ip-dept-nums{font-size:8px;color:#94a3b8;white-space:nowrap;min-width:18px;text-align:right;}' +
-            // TABLE (PSP style compact)
+            '.ip-section{margin-bottom:3px;}' +
+            '.ip-sec-title{font-size:11px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1e40af,#3b82f6);padding:2px 8px;border-radius:4px;margin-bottom:2px;}' +
+            // DEPT GRID (4 cols, compact bars)
+            '.ip-dept-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px 3px;margin-bottom:1px;}' +
+            '.ip-dept-item{display:flex;align-items:center;gap:2px;padding:1px 2px;}' +
+            '.ip-dept-label{font-size:8px;font-weight:700;color:#1e293b;white-space:nowrap;min-width:32px;overflow:hidden;text-overflow:ellipsis;}' +
+            '.ip-dept-bar-wrap{flex:1;height:3px;background:#f0f0f0;border-radius:2px;overflow:hidden;min-width:12px;}' +
+            '.ip-dept-bar{height:100%;min-width:2px;border-radius:2px;}' +
+            '.ip-dept-pct{font-size:8px;font-weight:800;white-space:nowrap;min-width:20px;text-align:right;}' +
+            '.ip-dept-nums{font-size:7px;color:#94a3b8;white-space:nowrap;min-width:16px;text-align:right;}' +
+            // TABLE GRID (two columns)
+            '.ip-table-grid{display:flex;gap:6px;}' +
+            '.ip-table-col{flex:1;min-width:0;}' +
+            // TABLE (PSP style)
             '.ip-table{width:100%;border-collapse:collapse;}' +
-            '.ip-table thead th{background:#1e40af;color:#fff;padding:3px 6px;font-weight:900;font-size:11px;text-align:center;}' +
-            '.ip-table thead th .ip-th-cn{display:block;font-size:10px;font-weight:800;line-height:1.2;}' +
-            '.ip-table thead th .ip-th-en{display:block;font-size:8px;font-weight:500;line-height:1.2;opacity:0.85;}' +
-            '.ip-table tbody td{padding:2px 5px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;}' +
-            '.ip-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
-            '.ip-table tbody tr:hover td{background:#e8f0fe;}' +
+            '.ip-table thead th{background:#1e40af;color:#fff;padding:2px 4px;font-weight:900;font-size:10px;text-align:center;}' +
+            '.ip-table thead th .ip-th-cn{display:block;font-size:9px;font-weight:800;line-height:1.2;}' +
+            '.ip-table thead th .ip-th-en{display:block;font-size:7px;font-weight:500;line-height:1.2;opacity:0.85;}' +
+            '.ip-table tbody td{padding:1px 4px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:10px;}' +
+            '.ip-table tbody tr:nth-child(even) td{background:#fafbfc;}' +
+            // STATUS BADGE
+            '.ip-status-badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;line-height:1.3;}' +
             // FOOTER
-            '.ip-footer{text-align:center;font-size:9px;color:#94a3b8;margin-top:5px;padding-top:4px;border-top:1px solid #e2e8f0;}' +
+            '.ip-footer{text-align:center;font-size:8px;color:#94a3b8;margin-top:3px;padding-top:3px;border-top:1px solid #e2e8f0;}' +
             '</style>';
 
         win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>改善项目跟踪通报 | Improvement Project Tracking Report</title>');
@@ -8008,8 +8006,7 @@ window.generateImprovePoster = function() {
         console.error('[改善项目海报] 生成失败:', e.message, e.stack);
         showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
     }
-};
-// ================= 📊 改善项目导出Excel =================
+};// ================= 📊 改善项目导出Excel =================
 window.exportImproveToExcel = function() {
     if (!db.improveProjects || db.improveProjects.length === 0) {
         showToast('fa-solid fa-info-circle', '暂无改善项目记录', 'warning');
