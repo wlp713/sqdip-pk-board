@@ -2729,6 +2729,8 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
             prompt += '[{\"Issue\":\"标准的泰语描述(如 งานรั่ว DV)\",\"Today_Count\":今天出现的次数,\"Prev_Count\":昨天出现的次数,\"Weekly_Total\":本周总计出现的次数}, ...]';
 
             try {
+                var _ac = new AbortController();
+                var _timeoutId = setTimeout(function() { _ac.abort(); }, 45000);
                 var resp = await fetch(_AI_API_BASE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': AI_KEY },
@@ -2740,8 +2742,10 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                         ],
                         temperature: 0,
                         max_tokens: 4096
-                    })
+                    }),
+                    signal: _ac.signal
                 });
+                clearTimeout(_timeoutId);
                 if (!resp.ok) return { success: false, error: 'API error: ' + resp.status };
                 var data = await resp.json();
                 var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
@@ -3107,23 +3111,27 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 }
 
                 var cSection = document.getElementById('cr-section-c');
-                if (!cSection) return;
+                if (!cSection) { return; }
 
-                var cHtml = '';
-                cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
+                try {
+                    var cHtml = '';
+                    cHtml += '<div class="cr-section-title">C. Repeat LOSS Analysis — ' + start + ' vs ' + _prevDate + '</div>';
 
-                if (aiResult && aiResult.success) {
-                    var aiItems = aiResult.items || [];
-                    cHtml += _crRenderRepeatSection(
-                        aiResult.totalCur, aiResult.totalPrev, _prevDate,
-                        aiItems,
-                        'AI Direct Compare (Today vs Yesterday vs Weekly)'
-                    );
-                } else {
-                    cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
+                    if (aiResult && aiResult.success) {
+                        var aiItems = aiResult.items || [];
+                        cHtml += _crRenderRepeatSection(
+                            aiResult.totalCur, aiResult.totalPrev, _prevDate,
+                            aiItems,
+                            'AI Direct Compare (Today vs Yesterday vs Weekly)'
+                        );
+                    } else {
+                        cHtml += '<div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">AI analysis failed: ' + (aiResult ? aiResult.error : 'unknown') + '</div>';
+                    }
+
+                    cSection.innerHTML = cHtml;
+                } catch(e) {
+                    cSection.innerHTML = '<div class="cr-section-title">C. Repeat LOSS Analysis</div><div style="padding:12px;text-align:center;color:#dc2626;font-size:13px;">渲染错误: ' + e.message + '</div>';
                 }
-
-                cSection.innerHTML = cHtml;
             })();
         };
         window.downloadCRImage = async function() {
