@@ -7877,8 +7877,8 @@ window.generateImprovePoster = function() {
         }
         function calcDateFS(t) { return (t || '').length > 10 ? '9px' : '10px'; }
 
-        // Sidebar dark blue gradient (low saturation #1E2330)
-        var SIDE_A = '#1E2330', SIDE_B = '#262C3C';
+        // Sidebar dark blue gradient (low saturation, visible gradient)
+        var SIDE_A = '#1E2738', SIDE_B = '#3A4F6A';
         var SIDE_GRAD = 'linear-gradient(180deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
         var SIDE_GRAD_135 = 'linear-gradient(135deg, ' + SIDE_A + ' 0%, ' + SIDE_B + ' 100%)';
 
@@ -7972,7 +7972,7 @@ window.generateImprovePoster = function() {
                 html += '<div class="ip-sub-hdr">';
                 html += '<span class="ip-sub-hdr-date">日期 Date</span>';
                 html += '<span class="ip-sub-hdr-name">项目名称 Project</span>';
-                html += '<span class="ip-sub-hdr-status">进度 Status</span>';
+                html += '<span class="ip-sub-hdr-status">Status</span>';
                 html += '<span class="ip-sub-hdr-end">计划完成 Plan End</span>';
                 html += '</div>';
 
@@ -7983,7 +7983,7 @@ window.generateImprovePoster = function() {
                     var isProg2 = p.progress === '进行中';
                     var rowBg = isOv ? 'background:#fef2f2;' : '';
                     var borderSide = isOv ? 'border-left:3px solid #dc2626;' : (isDone ? 'border-left:3px solid #16a34a;' : (isProg2 ? 'border-left:3px solid #ea580c;' : 'border-left:3px solid #d1d5db;'));
-                    var badgeText = isOv ? '逾期' : (isDone ? '已完成' : (isProg2 ? '进行中' : '未开始'));
+                    var badgeText = isOv ? 'Overdue' : (isDone ? 'Closed' : (isProg2 ? 'In Prog' : 'Not Start'));
                     var badgeColor = isOv ? '#dc2626' : (isDone ? '#16a34a' : (isProg2 ? '#ea580c' : '#94a3b8'));
                     var badgeBg = isOv ? '#fef2f2' : (isDone ? '#f0fdf4' : (isProg2 ? '#fff7ed' : '#f9fafb'));
                     var badgeBd = isOv ? '#fecaca' : (isDone ? '#bbf7d0' : (isProg2 ? '#fed7aa' : '#e5e7eb'));
