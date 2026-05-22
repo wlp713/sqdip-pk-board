@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="sys_name">日常管理V1 (分解版)</title>
+    <title data-i18n="sys_name">Daily Management</title>
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦞</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 
     <!-- [分解版] 外部 CSS -->
     <link rel="stylesheet" href="css/styles.css">
@@ -342,14 +342,14 @@
     <div id="toast"><i class="fa-solid fa-check"></i> <span id="toast-msg" data-i18n="msg_system_prompt">系统提示</span></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h2><i class="fa-solid fa-layer-group" style="margin-right:6px;"></i><span data-i18n="sys_name">日常管理V2.6 AI</span></h2>
+            <h2><i class="fa-solid fa-layer-group" style="margin-right:6px;"></i><span data-i18n="sys_name">Daily Management</span></h2>
             <button class="toggle-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i class="fa-solid fa-bars-staggered"></i></button>
         </div>
         <button class="nav-link active" onclick="showPage('p-input', this)"><i class="fa-solid fa-keyboard"></i> <span data-i18n="menu_input">实况数据录入</span></button>
 
         <button class="nav-link" onclick="showPage('p-sys', this)"><i class="fa-solid fa-gears"></i> <span data-i18n="menu_sys">系统运作 (事前后)</span><span id="sys-nav-badge" style="display:none;margin-left:auto;background:var(--danger);color:white;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;"></span></button>
         <button class="nav-link" onclick="showPage('p-monitor', this)"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="menu_monitor">每日生产看板</span></button>
-        <button class="nav-link" onclick="showPage('p-improve-track', this)"><i class="fa-solid fa-bullseye"></i> <span>改善项目跟踪</span></button>
+        <button class="nav-link" onclick="showPage('p-improve-track', this)"><i class="fa-solid fa-bullseye"></i> <span data-i18n="improve_title">改善项目跟踪</span></button>
         <div id="save-indicator" style="position:absolute;bottom:10px;left:10px;right:10px;font-size:10px;color:rgba(255,255,255,0.6);text-align:center;padding:4px;white-space:nowrap;overflow:hidden;">💾 <span id="save-indicator-text" data-i18n="msg_ready">就绪</span></div>
         <button class="nav-link" onclick="showPage('p-dm', this)"><i class="fa-solid fa-list-check"></i> <span data-i18n="menu_dm">异常问题闭环</span></button>
         <button class="nav-link" onclick="showPage('p-loss', this)"><i class="fa-solid fa-arrow-trend-down"></i> <span data-i18n="menu_loss">异常LOSS管控</span></button>
@@ -565,51 +565,52 @@
             <div id="p-improve-track" class="page">
                 <div class="card" style="margin:0; flex-grow:1; display:flex; flex-direction:column; overflow:hidden;">
                     <div class="section-title" style="flex-shrink:0;">
-                        <h3><i class="fa-solid fa-bullseye" style="color:var(--midea-blue)"></i> <span>改善项目跟踪</span></h3>
+                        <h3><i class="fa-solid fa-bullseye" style="color:var(--midea-blue)"></i> <span data-i18n="improve_title">改善项目跟踪</span></h3>
                         <div class="flex-row">
-                            <button class="btn" onclick="window.generateImprovePoster()" style="background:#8b5cf6;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-image"></i> 导出改善项目海报</button>
-                            <button class="btn" onclick="window.exportImproveToExcel()" style="background:var(--success);color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-file-excel"></i> 导出Excel</button>
-                            <button class="btn btn-primary" onclick="window.addImproveProject()"><i class="fa-solid fa-plus"></i> 新增改善项目</button>
+                            <button class="btn" onclick="window.generateImprovePoster()" style="background:#8b5cf6;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-image"></i> <span data-i18n="improve_btn_poster">导出改善项目海报</span></button>
+                            <button class="btn" onclick="window.exportImproveToExcel()" style="background:var(--success);color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;"><i class="fa-solid fa-file-excel"></i> <span data-i18n="improve_btn_excel">导出Excel</span></button>
+                            <button class="btn btn-primary" onclick="window.addImproveProject()"><i class="fa-solid fa-plus"></i> <span data-i18n="improve_btn_add">新增改善项目</span></button>
                         </div>
                     </div>
                     <div class="improve-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;font-size:12px;border-bottom:1px solid var(--border-light);margin-bottom:8px;">
-                        <span style="font-weight:900;color:var(--text-muted);"><i class="fa-solid fa-filter"></i> 筛选：</span>
-                        <span style="font-weight:700;color:var(--text-muted);">责任部门</span>
+                        <span style="font-weight:900;color:var(--text-muted);"><i class="fa-solid fa-filter"></i> <span data-i18n="improve_filter_label">筛选：</span></span>
+                        <span style="font-weight:700;color:var(--text-muted);" data-i18n="improve_filter_dept">责任部门</span>
                         <select id="improve-filter-dept" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;">
-                            <option value="">全部</option>
+                            <option value="" data-i18n="improve_opt_all">全部</option>
                         </select>
-                        <span style="font-weight:700;color:var(--text-muted);">进度</span>
+                        <span style="font-weight:700;color:var(--text-muted);" data-i18n="improve_filter_status">进度</span>
                         <select id="improve-filter-status" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;">
                             <option value="">全部</option>
-                            <option value="已完成">已完成</option>
+                            <option value="未开始">未开始</option>
                             <option value="进行中">进行中</option>
+                            <option value="已完成">已完成</option>
                             <option value="逾期">逾期</option>
                         </select>
-                        <span style="font-weight:700;color:var(--text-muted);">立项时间</span>
+                        <span style="font-weight:700;color:var(--text-muted);" data-i18n="improve_filter_date">立项时间</span>
                         <input type="date" id="improve-filter-start" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;width:130px;">
-                        <span>至</span>
+                        <span data-i18n="improve_filter_to">至</span>
                         <input type="date" id="improve-filter-end" class="btn" onchange="renderImproveProjects()" style="font-size:12px;padding:2px 6px;width:130px;">
-                        <button class="btn" onclick="quickImproveDateRange()" style="background:#3b82f6;color:white;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">本月</button>
+                        <button class="btn" onclick="quickImproveDateRange()" style="background:#3b82f6;color:white;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;" data-i18n="improve_btn_month">本月</button>
                     </div>
                     <div class="improve-summary-bar" style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
                         <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
-                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">项目总数</span>
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;" data-i18n="improve_total">项目总数</span>
                             <b id="improve-total-count" style="font-size:22px;font-weight:900;color:var(--text-main);">0</b>
                         </div>
                         <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
-                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">已完成</span>
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;" data-i18n="improve_done">已完成</span>
                             <b id="improve-done-count" style="font-size:22px;font-weight:900;color:var(--success);">0</b>
                         </div>
                         <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
-                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">进行中</span>
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;" data-i18n="improve_prog">进行中</span>
                             <b id="improve-prog-count" style="font-size:22px;font-weight:900;color:var(--warning);">0</b>
                         </div>
                         <div class="improve-summary-item" style="flex:1;text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:8px 6px;">
-                            <span style="font-size:11px;font-weight:700;color:var(--danger);display:block;">已逾期</span>
+                            <span style="font-size:11px;font-weight:700;color:var(--danger);display:block;" data-i18n="improve_over">已逾期</span>
                             <b id="improve-over-count" style="font-size:22px;font-weight:900;color:var(--danger);">0</b>
                         </div>
                         <div class="improve-summary-item" style="flex:1;text-align:center;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;">
-                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;">完成率</span>
+                            <span style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;" data-i18n="improve_rate">完成率</span>
                             <b id="improve-rate" style="font-size:22px;font-weight:900;color:var(--midea-blue);">0%</b>
                         </div>
                     </div>
@@ -617,13 +618,13 @@
                         <table class="grid" style="table-layout:fixed;">
                             <thead style="z-index:2;position:sticky;top:0;background:white;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                                 <tr>
-                                    <th style="width:100px;"><span>立项时间</span></th>
-                                    <th style="min-width:180px;"><span>项目名称</span></th>
-                                    <th style="width:100px;"><span>责任部门</span></th>
-                                    <th style="width:90px;"><span>进度</span></th>
-                                    <th style="min-width:200px;"><span>进度描述</span></th>
-                                    <th style="width:110px;"><span>计划完成时间</span></th>
-                                    <th style="width:40px;"><span>删</span></th>
+                                    <th style="width:112px;"><span data-i18n="improve_thead_date">立项时间</span></th>
+                                    <th style="min-width:180px;"><span data-i18n="improve_thead_name">项目名称</span></th>
+                                    <th style="width:100px;"><span data-i18n="improve_thead_dept">责任部门</span></th>
+                                    <th style="width:90px;"><span data-i18n="improve_thead_status">进度</span></th>
+                                    <th style="min-width:200px;"><span data-i18n="improve_thead_desc">进度描述</span></th>
+                                    <th style="width:115px;"><span data-i18n="improve_thead_plan">计划完成时间</span></th>
+                                    <th style="width:40px;"><span data-i18n="improve_thead_del">删</span></th>
                                 </tr>
                             </thead>
                             <tbody id="improve-table-body"></tbody>
