@@ -7882,7 +7882,7 @@ window.generateImprovePoster = function() {
         var SEC_A = '#1A2638', SEC_B = '#384B64';
         var SEC_GRAD_135 = 'linear-gradient(135deg, ' + SEC_A + ' 0%, ' + SEC_B + ' 100%)';
         // Dept bars = LEVEL 2 (secondary = lighter than L1)
-        var DEPT_A = '#283A50', DEPT_B = '#6A8CAC';
+        var DEPT_A = '#25364A', DEPT_B = '#7090B0';
         var DEPT_GRAD = 'linear-gradient(180deg, ' + DEPT_A + ' 0%, ' + DEPT_B + ' 100%)';
 
         // ==================== BUILD HTML ====================
