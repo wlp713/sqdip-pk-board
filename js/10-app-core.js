@@ -5988,61 +5988,72 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
 
                 h += '</div>'; // psp-poster
 
-                // 打开新窗口
-                var win = window.open('', '_blank');
-                if (!win) {
-                    showToast('fa-solid fa-warning', '请允许弹窗以导出海报', 'error');
-                    return;
-                }
+                // ==================== PNG 生成 ====================
+                var inlineCSS = '<style>' +
+                    '*{margin:0;padding:0;box-sizing:border-box;}' +
+                    '.ppwrap{width:960px;background:#fff;padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#1e293b;}' +
+                    '.ppwrap .psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
+                    '.ppwrap .psp-poster-title{font-size:22px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
+                    '.ppwrap .bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
+                    '.ppwrap .bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
+                    '.ppwrap .bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
+                    '.ppwrap .bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
+                    '.ppwrap .bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
+                    '.ppwrap .bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
+                    '.ppwrap .bi-en-foot{font-size:10px;color:#94a3b8;}' +
+                    '.ppwrap .psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
+                    '.ppwrap .psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
+                    '.ppwrap .psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
+                    '.ppwrap .psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
+                    '.ppwrap .psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
+                    '.ppwrap .psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
+                    '.ppwrap .psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
+                    '.ppwrap .psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
+                    '.ppwrap .psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
+                    '.ppwrap .psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
+                    '.ppwrap .psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #d5dbe6;}' +
+                    '</style>';
 
-                // 收集页面样式
-                var styleHTML = '';
-                var styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-                for (var si = 0; si < styles.length; si++) {
-                    styleHTML += styles[si].outerHTML;
-                }
+                var posterHTML = '<div class="ppwrap">' + inlineCSS + h + '</div>';
+                var tmpDiv = document.createElement('div');
+                tmpDiv.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;width:960px;';
+                tmpDiv.innerHTML = posterHTML;
+                document.body.appendChild(tmpDiv);
 
-                win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PSP异常问题闭环通报 | PSP Problem Close-Out Report</title>');
-                win.document.write(styleHTML);
-                win.document.write('<style>' +
-                    'body{margin:0;padding:8px;background:#f8fafc;font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;font-size:12px;}' +
-                    '@page{size:A4;margin:6mm;}' +
-                    '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
-                    '.psp-poster{width:960px;margin:0 auto;background:#fff;border-radius:6px;padding:16px;}' +
-                    '.psp-poster-hdr{text-align:center;padding-bottom:10px;border-bottom:3px solid #1e40af;margin-bottom:10px;}' +
-                    '.psp-poster-title{font-size:20px;font-weight:900;color:#1e3a5f;letter-spacing:1px;margin-bottom:2px;}' +
-                    '.bi-en-title{font-size:12px;font-weight:600;color:#64748b;letter-spacing:0;margin-top:1px;}' +
-                    '.bi-en-sub{font-size:11px;color:#94a3b8;font-weight:400;}' +
-                    '.bi-cn{display:block;font-size:10px;font-weight:700;line-height:1.3;}' +
-                    '.bi-en{display:block;font-size:9px;font-weight:500;color:#64748b;line-height:1.3;}' +
-                    '.bi-th-cn{font-size:11px;font-weight:800;line-height:1.3;}' +
-                    '.bi-th-en{font-size:9px;font-weight:500;line-height:1.3;opacity:0.85;}' +
-                    '.bi-en-foot{font-size:10px;color:#94a3b8;}' +
-                    '.psp-poster-period{font-size:11px;color:#64748b;font-weight:600;}' +
-                    '.psp-poster-summary-bar{display:flex;gap:8px;margin-bottom:12px;}' +
-                    '.psp-ps-item{flex:1;text-align:center;background:#f8fafc;border-radius:6px;padding:6px 4px;border:1px solid #e2e8f0;}' +
-                    '.psp-ps-item b{display:block;font-size:20px;font-weight:900;color:#1e293b;}' +
-                    '.psp-ps-item span{font-size:11px;font-weight:700;display:block;margin-top:2px;}' +
-                    '.psp-poster-table{width:100%;border-collapse:collapse;font-size:11px;}' +
-                    '.psp-poster-table thead th{background:#1e40af;color:#fff;padding:5px 8px;font-weight:900;font-size:13px;text-align:center;}' +
-                    '.psp-poster-table tbody td{padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px;}' +
-                    '.psp-poster-table tbody tr:nth-child(even) td{background:#f8fafc;}' +
-                    '.psp-poster-table tbody tr:hover td{background:#e8f0fe;}' +
-                    '.psp-poster-footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:12px;padding-top:8px;border-top:1px solid #e2e8f0;}' +
-                    '</style></head><body>');
-                win.document.write(h);
-                win.document.write('</body></html>');
-                win.document.close();
+                showToast('fa-solid fa-spinner fa-spin', '正在生成海报图片...');
 
-                showToast('fa-solid fa-file-image', '已生成PSP通报,可在新窗口打印/另存为PDF');
-                setTimeout(function() {
-                    win.focus();
-                    win.print();
-                }, 500);
+                requestAnimationFrame(function() {
+                    setTimeout(async function() {
+                        try {
+                            var posterEl = tmpDiv.querySelector('.ppwrap');
+                            if (!posterEl) throw new Error('\u6d77\u62a5\u5bb9\u5668\u672a\u627e\u5230');
+                            var canvas = await html2canvas(posterEl, {
+                                scale: 2,
+                                backgroundColor: '#ffffff',
+                                useCORS: true,
+                                logging: false,
+                                width: posterEl.scrollWidth,
+                                height: posterEl.scrollHeight
+                            });
+                            var link = document.createElement('a');
+                            link.download = 'PSP_Report_' + new Date().toISOString().split('T')[0] + '.png';
+                            link.href = canvas.toDataURL('image/png');
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            document.body.removeChild(tmpDiv);
+                            showToast('fa-solid fa-check', 'PSP\u5f02\u5e38\u95ee\u9898\u95ed\u73af\u901a\u62a5\u56fe\u7247\u5df2\u4e0b\u8f7d');
+                        } catch(e) {
+                            console.error('[PSP\u6d77\u62a5] \u751f\u6210\u56fe\u7247\u5931\u8d25:', e.message, e.stack);
+                            showToast('fa-solid fa-xmark', '\u751f\u6210\u56fe\u7247\u5931\u8d25: ' + e.message, 'error');
+                            if (tmpDiv.parentNode) document.body.removeChild(tmpDiv);
+                        }
+                    }, 100);
+                });
 
             } catch(e) {
-                console.error('[PSP海报] 生成失败:', e.message, e.stack);
-                showToast('fa-solid fa-xmark', '海报生成失败: ' + e.message, 'error');
+                console.error('[PSP\u6d77\u62a5] \u751f\u6210\u5931\u8d25:', e.message, e.stack);
+                showToast('fa-solid fa-xmark', '\u6d77\u62a5\u751f\u6210\u5931\u8d25: ' + e.message, 'error');
             }
         };
 
