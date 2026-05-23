@@ -5974,7 +5974,7 @@ pspInfo += `<button class="loss-psp-plus" data-loss-id="${p.id}" onclick="toggle
                     h += '<td>' + (p.owner || '') + '</td>';
                     h += '<td>' + (p.dueDate || '') + '</td>';
                     h += '<td style="font-size:13px;font-weight:900;' + statusStyle + statusGlow + '"><span class="bi-cn" style="font-size:13px;font-weight:900;">' + statusCN + '</span><span class="bi-en" style="font-size:10px;font-weight:600;">' + statusEN + '</span></td>';
-                    h += '<td>' + (isOverdue ? '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:15px;padding:3px 8px;border-radius:4px;text-align:center;"><span class="bi-cn">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:#fff;font-size:10px;">Overdue</span></div>' : '') + '</td>';
+                    h += '<td>' + (isOverdue ? '<div style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:5px 8px;border-radius:6px;text-align:center;box-shadow:0 2px 6px rgba(220,38,38,0.35);"><span class="bi-cn" style="font-size:15px;font-weight:900;letter-spacing:0.5px;">\u26A0\uFE0F 已逾期</span><br><span class="bi-en" style="color:rgba(255,255,255,0.9);font-size:9px;font-weight:800;letter-spacing:1px;">OVERDUE</span></div>' : '') + '</td>';
                     h += '</tr>';
                 }
 
