@@ -213,6 +213,7 @@
                 <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
                     <div class="flex items-center gap-3">
                         <h2 id="t2-p1-title" class="text-4xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300">PRO1</h2>
+                        <span class="text-[11px] text-slate-400 block mt-0.5">PIC: MS. PIYA</span>
                         <span id="t2-p1-trophy" class="text-4xl hidden animate-pulse">🏆</span>
                     </div>
                     <div class="text-right bg-[#0b1120] px-4 py-2 rounded border border-slate-800">
@@ -263,6 +264,7 @@
                 <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
                     <div class="flex items-center gap-3">
                         <h2 id="t2-p2-title" class="text-4xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300">PRO2</h2>
+                        <span class="text-[11px] text-slate-400 block mt-0.5">PIC: MR. SUDTHIPAN</span>
                         <span id="t2-p2-trophy" class="text-4xl hidden animate-pulse">🏆</span>
                     </div>
                     <div class="text-right bg-[#0b1120] px-4 py-2 rounded border border-slate-800">
@@ -343,10 +345,10 @@
         let chartInstance = null;
         
         const workshops = [
-            { id: 'PRO1', label: 'PRO1' },
-            { id: 'PRO2', label: 'PRO2' },
-            { id: 'PRO3', label: 'PRO3' },
-            { id: 'PRO4_5', label: 'PRO4&5' } 
+            { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA' },
+            { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN' },
+            { id: 'PRO3', label: 'PRO3', pic: 'MR. PRATEEP' },
+            { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' } 
         ];
         
         const dims = [
@@ -515,7 +517,8 @@
                     <div class="panel-card flex flex-col p-4">
                         <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
                             <span class="title-h2 text-lg text-white">${ws.label}</span>
-                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded border border-blue-500/30 text-[1.1rem]">${avg.toFixed(1)}</span>
+                            <span class="text-[9px] text-slate-400 ml-2 font-medium block">PIC: ${ws.pic}</span>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded border border-blue-500/30 text-[1.1rem] ml-auto">${avg.toFixed(1)}</span>
                         </div>
                         <table class="data-table"><thead><tr><th>Dim</th><th>Target</th><th>Actual</th><th>ACH%</th></tr></thead><tbody>${rows}</tbody></table>
                     </div>
