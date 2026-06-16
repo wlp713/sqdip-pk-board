@@ -228,20 +228,15 @@
                             <div id="p1-winner-text" class="text-2xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
                         </div>
                     </div>
-                    
-                    <!-- ★ Score + date -->
-                    <div class="flex items-baseline gap-2 mt-1">
-                        <div id="p1-winner-score" class="text-[22px] num-hl text-white font-bold">--</div>
-                        <span id="p1-header-date" class="text-[9px] text-slate-500 font-mono"></span>
-                    </div>
 
-                    <!-- ★ Compact ranking list (top 3) -->
-                    <div class="w-full mt-2 space-y-0.5 px-1" id="p1-rank-list"></div>
+                    <!-- ★ Ranking list: all workshops with champion highlighted -->
+                    <div class="w-full flex-1 flex flex-col justify-center space-y-1 px-0.5 mt-1" id="p1-rank-list"></div>
 
                     <!-- ★ Badge at bottom -->
                     <div class="mt-auto mb-1 flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1">
                         <span class="text-[10px]">🏆</span>
                         <span class="text-[8px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
+                        <span id="p1-header-date" class="text-[8px] text-amber-500/60 font-mono ml-1"></span>
                     </div>
                 </div>
             </div>
@@ -620,19 +615,27 @@
             }).join('');
 
             scores.sort((a,b) => b.score - a.score);
-            document.getElementById('p1-header-date').innerText = currentDate;
             document.getElementById('p1-winner-text').innerHTML = scores[0].name;
-            document.getElementById('p1-winner-score').innerHTML = `${scores[0].score.toFixed(1)}%`;
-            /* ★ Build compact ranking list (top 3) */
-            const medals = ['🥇','🥈','🥉'];
-            document.getElementById('p1-rank-list').innerHTML = scores.slice(0, 3).map((s, i) => {
-                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : 'bronze';
-                return `<div class="rank-item py-0.5 px-1.5 ${rankClass}">
-                    <span class="text-xs mr-1.5">${medals[i]}</span>
-                    <span class="text-[10px] font-bold flex-1 text-left text-slate-300">${s.name}</span>
-                    <span class="text-[10px] num-hl ${i === 0 ? 'text-amber-300' : 'text-slate-400'}">${s.score.toFixed(1)}%</span>
+            /* ★ Build ranking list: all workshops with champion highlighted */
+            const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+            const rankColors = [
+                'bg-amber-500/15 border-l-2 border-amber-400',
+                'bg-slate-300/8 border-l-2 border-slate-400',
+                'bg-amber-800/10 border-l-2 border-amber-700',
+                'bg-slate-700/10 border-l-2 border-slate-600',
+                'bg-slate-800/10 border-l-2 border-slate-700'
+            ];
+            const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
+            const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
+            document.getElementById('p1-rank-list').innerHTML = scores.map((s, i) => {
+                return `<div class="flex items-center py-0.5 px-1.5 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
+                    <span class="text-xs mr-1">${medals[i]}</span>
+                    <span class="text-[11px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
+                    <span class="text-[11px] num-hl ${scoreColors[i]}">${s.score.toFixed(1)}%</span>
                 </div>`;
             }).join('');
+            /* ★ Update date in header */
+            document.getElementById('p1-header-date').innerText = currentDate;
 
             if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
             chartInstance.setOption({
