@@ -257,6 +257,7 @@
                         <div id="t2-referee-result" class="text-sm font-black text-white mb-2 uppercase tracking-wide h-12 flex items-center justify-center text-center leading-tight">
                             AWAITING
                         </div>
+                        <div id="t2-referee-prize" class="text-[9px] text-slate-400 font-medium mt-2 leading-tight">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
                     </div>
                 </div>
             </div>
@@ -349,8 +350,8 @@
         let chartInstance = null;
         
         const workshops = [
-            { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA' },
-            { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN' },
+            { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA 钱大为' },
+            { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN 潘文星' },
             { id: 'PRO3', label: 'PRO3', pic: 'MR. PRATEEP' },
             { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' } 
         ];
@@ -495,6 +496,12 @@
                 </div>
             `;
             document.getElementById('admin-t2-inputs').innerHTML = buildT2('PRO1', state.t2.PRO1) + buildT2('PRO2', state.t2.PRO2);
+            
+            /* ★ Re-apply lock state after re-render */
+            const lockCb = document.getElementById('lock-target-toggle');
+            if(lockCb && lockCb.checked) {
+                document.querySelectorAll('.input-target').forEach(el => el.readOnly = true);
+            }
         };
 
         const updateUI = () => {
@@ -608,18 +615,23 @@
             };
 
             const resBox = document.getElementById('t2-referee-result');
+            const prizeBox = document.getElementById('t2-referee-prize');
             if (p1Rate < 90 && p2Rate < 90) {
                 resBox.innerHTML = "<span class='text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]'>BOTH<br>FAILED</span>";
+                prizeBox.style.display = 'none';
             } else if (p1Rate >= 90 && p2Rate < 90) {
                 resBox.innerHTML = "<span class='text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'>PRO1<br>WINS!</span>";
+                prizeBox.style.display = 'block';
                 setWinner(1);
             } else if (p1Rate < 90 && p2Rate >= 90) {
                 resBox.innerHTML = "<span class='text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'>PRO2<br>WINS!</span>";
+                prizeBox.style.display = 'block';
                 setWinner(2);
             } else {
                 if(p1Rate > p2Rate) { resBox.innerHTML = `<span class='text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'>PRO1 WIN<br><span class="text-[10px]">${p1Rate.toFixed(1)}%</span></span>`; setWinner(1); }
                 else if(p2Rate > p1Rate) { resBox.innerHTML = `<span class='text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'>PRO2 WIN<br><span class="text-[10px]">${p2Rate.toFixed(1)}%</span></span>`; setWinner(2); }
                 else { resBox.innerHTML = "<span class='text-slate-300'>DRAW</span>"; }
+                prizeBox.style.display = 'block';
             }
         };
 
