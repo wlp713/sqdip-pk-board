@@ -149,14 +149,12 @@
         .rank-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            transition: all 0.3s ease;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
         }
-        .rank-item.gold { background: rgba(234,179,8,0.12); border-left: 3px solid #eab308; }
-        .rank-item.silver { background: rgba(148,163,184,0.08); border-left: 3px solid #94a3b8; }
-        .rank-item.bronze { background: rgba(180,83,9,0.08); border-left: 3px solid #b45309; }
+        .rank-item.gold { background: rgba(234,179,8,0.12); border-left: 2px solid #eab308; }
+        .rank-item.silver { background: rgba(148,163,184,0.08); border-left: 2px solid #94a3b8; }
+        .rank-item.bronze { background: rgba(180,83,9,0.08); border-left: 2px solid #b45309; }
     </style>
 </head>
 <body>
@@ -219,19 +217,31 @@
                     <div id="p1-chart" class="flex-1 w-full h-full"></div>
                 </div>
 
-                <div class="panel-card champion-card p-4 w-[25%] flex flex-col justify-center items-center text-center relative overflow-hidden">
+                <div class="panel-card champion-card p-3 w-[25%] flex flex-col items-center text-center relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
-                    <div class="flex-1 flex flex-col justify-center items-center w-full gap-1">
-                        <div class="trophy-float text-5xl mb-1">🏆</div>
-                        <p class="title-h3 text-amber-400/80 text-[11px] tracking-[0.25em]">DAILY CHAMPION</p>
-                        <div id="p1-winner-text" class="text-4xl title-h2 champion-glow text-amber-300 mt-1" style="line-height:1.1">--</div>
-                        <div id="p1-winner-score" class="text-[28px] num-hl text-white font-bold mt-0.5"></div>
-                        <span id="p1-header-date" class="text-[10px] text-slate-500 font-mono mt-0.5"></span>
-                        <div class="w-full mt-2 space-y-1" id="p1-rank-list"></div>
+                    
+                    <!-- ★ Champion visual: trophy + name + score -->
+                    <div class="flex items-center gap-2 mt-3">
+                        <div class="trophy-float text-[2.2rem]">🏆</div>
+                        <div class="flex flex-col items-start">
+                            <span class="title-h3 text-amber-400/80 text-[9px] tracking-[0.2em]">CHAMPION</span>
+                            <div id="p1-winner-text" class="text-2xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
+                        </div>
                     </div>
-                    <div class="mt-auto pt-2 border-t border-slate-700/50 w-full flex justify-center items-center gap-2">
-                        <span class="text-sm">🏆</span>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Monthly Tour Flag</span>
+                    
+                    <!-- ★ Score + date -->
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <div id="p1-winner-score" class="text-[22px] num-hl text-white font-bold">--</div>
+                        <span id="p1-header-date" class="text-[9px] text-slate-500 font-mono"></span>
+                    </div>
+
+                    <!-- ★ Compact ranking list (top 3) -->
+                    <div class="w-full mt-2 space-y-0.5 px-1" id="p1-rank-list"></div>
+
+                    <!-- ★ Badge at bottom -->
+                    <div class="mt-auto mb-1 flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1">
+                        <span class="text-[10px]">🏆</span>
+                        <span class="text-[8px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
                     </div>
                 </div>
             </div>
@@ -613,17 +623,14 @@
             document.getElementById('p1-header-date').innerText = currentDate;
             document.getElementById('p1-winner-text').innerHTML = scores[0].name;
             document.getElementById('p1-winner-score').innerHTML = `${scores[0].score.toFixed(1)}%`;
-            /* ★ Build rank list for champion module */
+            /* ★ Build compact ranking list (top 3) */
             const medals = ['🥇','🥈','🥉'];
-            document.getElementById('p1-rank-list').innerHTML = scores.map((s, i) => {
-                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-                const medal = i < 3 ? medals[i] : '';
-                return `<div class="rank-item ${rankClass}">
-                    <span class="flex items-center gap-1.5">
-                        <span class="text-sm">${medal}</span>
-                        <span class="text-xs font-bold text-slate-300">${s.name}</span>
-                    </span>
-                    <span class="text-xs num-hl ${i === 0 ? 'text-amber-300' : 'text-slate-400'}">${s.score.toFixed(1)}%</span>
+            document.getElementById('p1-rank-list').innerHTML = scores.slice(0, 3).map((s, i) => {
+                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : 'bronze';
+                return `<div class="rank-item py-0.5 px-1.5 ${rankClass}">
+                    <span class="text-xs mr-1.5">${medals[i]}</span>
+                    <span class="text-[10px] font-bold flex-1 text-left text-slate-300">${s.name}</span>
+                    <span class="text-[10px] num-hl ${i === 0 ? 'text-amber-300' : 'text-slate-400'}">${s.score.toFixed(1)}%</span>
                 </div>`;
             }).join('');
 
