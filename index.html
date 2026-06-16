@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MBS Monthly DM Board v6.5 (Final Polish)</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Roboto+Mono:wght@500;700&display=swap');
-        
+
         :root {
             --dim-saf-text: #34d399; --dim-saf-bg: rgba(16, 185, 129, 0.15); --dim-saf-border: rgba(16, 185, 129, 0.3);
             --dim-pro-text: #60a5fa; --dim-pro-bg: rgba(59, 130, 246, 0.15); --dim-pro-border: rgba(59, 130, 246, 0.3);
@@ -21,7 +21,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0b1120; 
+            background-color: #0b1120;
             color: #f8fafc;
             overflow: hidden;
             height: 100vh; width: 100vw;
@@ -37,8 +37,8 @@
         .num-muted { color: #94a3b8; }
 
         .panel-card {
-            background-color: #1e293b; 
-            border: 1px solid #334155; 
+            background-color: #1e293b;
+            border: 1px solid #334155;
             border-radius: 6px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
@@ -49,28 +49,28 @@
         .badge-qua { color: var(--dim-qua-text); background: var(--dim-qua-bg); border: 1px solid var(--dim-qua-border); }
         .badge-los { color: var(--dim-los-text); background: var(--dim-los-bg); border: 1px solid var(--dim-los-border); }
 
-        .data-table { 
-            border-collapse: collapse; 
-            width: 100%; 
-            table-layout: fixed; 
+        .data-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
         }
         .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 35%; }
         .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 20%; text-align: right; }
         .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 20%; text-align: right; }
         .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 25%; text-align: right; }
 
-        .data-table th { 
-            padding: 0.5rem 0.2rem; 
-            font-size: 0.7rem; 
-            color: #94a3b8; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            border-bottom: 1px solid rgba(255,255,255,0.15); 
+        .data-table th {
+            padding: 0.5rem 0.2rem;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
         }
         .data-table td {
-            padding: 0.55rem 0.2rem; 
-            font-size: 0.8rem; 
-            border-bottom: 1px solid rgba(255,255,255,0.08); 
+            padding: 0.55rem 0.2rem;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background-color 0.2s ease;
             white-space: nowrap;
             overflow: hidden;
@@ -79,9 +79,9 @@
         .data-table tbody tr:hover td { background-color: rgba(255,255,255,0.03); }
         .data-table tbody tr:last-child td { border-bottom: none; }
 
-        .text-good { color: #10b981; } 
-        .text-bad { color: #ef4444; }  
-        .text-warn { color: #f59e0b; } 
+        .text-good { color: #10b981; }
+        .text-bad { color: #ef4444; }
+        .text-warn { color: #f59e0b; }
 
         .progress-glow-blue { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
         .progress-glow-indigo { box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
@@ -102,12 +102,12 @@
 
         .form-input-wrapper { display: flex; flex: 1; gap: 0.5rem; }
         .form-input {
-            width: 50%; 
+            width: 50%;
             background-color: #1e293b;
             border: 1px solid #334155; color: #f1f5f9;
             border-radius: 3px; padding: 0.35rem 0.4rem;
             font-size: 0.8rem; font-family: 'Roboto Mono', monospace;
-            text-align: right; 
+            text-align: right;
         }
         .form-input:focus:not(:read-only) { outline: none; border-color: #cbd5e1; box-shadow: 0 0 0 1px rgba(203,213,225,0.2); }
         input:read-only { background-color: #0f172a; color: #64748b; border-color: #1e293b; cursor: not-allowed; }
@@ -115,19 +115,19 @@
 
         .fade-enter { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
+
         @keyframes pulse-winner {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.03); }
         }
         .is-winner-title {
-            color: #ef4444 !important; 
+            color: #ef4444 !important;
             text-shadow: 0 0 15px rgba(239,68,68,0.7) !important;
-            font-size: 2.25rem !important; 
+            font-size: 2.25rem !important;
             animation: pulse-winner 2s infinite;
         }
-        
-        /* ★ 新增：胜利卡片高亮红框特效 */
+
+        /* ★ 新增:胜利卡片高亮红框特效 */
         .winner-card {
             border-color: #ef4444 !important;
             box-shadow: 0 0 20px rgba(239, 68, 68, 0.3) !important;
@@ -142,7 +142,7 @@
                 <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 <h1 class="title-h1 text-[13px] text-slate-100">MBS DM Board</h1>
             </div>
-            
+
             <div class="flex items-center bg-[#1e293b] border border-slate-700 rounded shadow-inner h-[32px]">
                 <button onclick="shiftDate(-1)" class="px-3 h-full text-slate-400 hover:text-white hover:bg-slate-700 rounded-l transition border-r border-slate-700 flex items-center">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
@@ -178,7 +178,7 @@
     </header>
 
     <main id="board-container" class="flex-1 p-4 w-full h-[calc(100vh-86px)] box-border">
-        
+
         <!-- PAGE 1 -->
         <div id="page1" class="w-full h-full flex flex-col gap-4 fade-enter">
             <div id="p1-cards-container" class="grid grid-cols-4 gap-4 h-[60%]">
@@ -193,7 +193,7 @@
                     </div>
                     <div id="p1-chart" class="flex-1 w-full h-full"></div>
                 </div>
-                
+
                 <div class="panel-card p-5 w-[25%] flex flex-col justify-center items-center text-center bg-gradient-to-b from-[#1e293b] to-[#0f172a] relative">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
                     <p class="title-h3 text-slate-400 mb-1 text-[13px]">Daily Champion</p>
@@ -209,8 +209,8 @@
 
         <!-- PAGE 2 -->
         <div id="page2" class="w-full h-full hidden flex gap-5 fade-enter">
-            
-            <!-- 加入 ID：t2-p1-card，用于胜利红框绑定 -->
+
+            <!-- 加入 ID:t2-p1-card,用于胜利红框绑定 -->
             <div id="t2-p1-card" class="panel-card flex-1 flex flex-col p-6 border-t-4 border-t-blue-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
                 <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
                     <div>
@@ -250,12 +250,12 @@
                 <div class="relative flex flex-col items-center justify-center w-full">
                     <p class="text-xs font-black text-slate-600 tracking-[0.2em] mb-3 uppercase">Battle</p>
                     <div class="text-5xl font-black italic text-slate-700 mb-6 font-serif">VS</div>
-                    
+
                     <div class="w-full panel-card border-slate-600 bg-slate-800/80 rounded-xl p-4 text-center backdrop-blur-sm shadow-xl">
-                        <!-- ★ 移除 AI Referee，修改为纯白色日期 -->
+                        <!-- ★ 移除 AI Referee,修改为纯白色日期 -->
                         <span id="t2-center-date" class="text-sm font-bold text-white border-b border-slate-700 pb-2 mb-3 block tracking-wider">YYYY-MM-DD</span>
                         <span class="text-[10px] text-slate-400 font-mono block mb-4 bg-slate-900 py-1 rounded">Limit: ≥ 90.0%</span>
-                        
+
                         <div id="t2-referee-result" class="text-sm font-black text-white mb-2 uppercase tracking-wide h-12 flex items-center justify-center text-center leading-tight">
                             AWAITING
                         </div>
@@ -264,7 +264,7 @@
                 </div>
             </div>
 
-            <!-- 加入 ID：t2-p2-card，用于胜利红框绑定 -->
+            <!-- 加入 ID:t2-p2-card,用于胜利红框绑定 -->
             <div id="t2-p2-card" class="panel-card flex-1 flex flex-col p-6 border-t-4 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
                 <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
                     <div>
@@ -307,7 +307,7 @@
         <span>MIDEA IT GMCC - AYUTTHAYA PLANT V6.5</span>
     </footer>
 
-    <!-- ★ Admin drawer overlay — click outside to close -->
+    <!-- ★ Admin drawer overlay - click outside to close -->
     <div id="admin-overlay" onclick="toggleAdmin()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:40;display:none;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)"></div>
 
     <div id="admin-drawer" class="admin-drawer">
@@ -321,7 +321,7 @@
                 <button onclick="toggleAdmin()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
         </div>
-        
+
         <div class="flex-1 overflow-y-auto admin-scroll p-5 space-y-6 bg-[#0f172a]">
             <section>
                 <h3 class="title-h3 text-blue-400 mb-4 border-b border-slate-800 pb-2">MOD 1: KPI INPUT</h3>
@@ -335,10 +335,25 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, off } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        const firebaseConfig = {
+        /* ─── Firebase dynamic loader - non-blocking ─── */
+        var firebaseModules = {};
+        var firebaseReady = false;
+
+        async function loadFirebase() {
+            try {
+                const fApp = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js");
+                const fDb  = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js");
+                firebaseModules = { initializeApp: fApp.initializeApp, getDatabase: fDb.getDatabase, ref: fDb.ref, set: fDb.set, onValue: fDb.onValue, off: fDb.off };
+                firebaseReady = true;
+            } catch(e) {
+                console.warn('Firebase unavailable - using localStorage only');
+            }
+            /* ★ Initialize Firebase if loaded */
+            if (firebaseReady) initFirebase();
+        }
+
+        var firebaseConfig = {
             apiKey: "AIzaSyBrl-gHO48HnyM4e8nkl2vqR7mz4f5mv_E",
             authDomain: "dm111-e8a7d.firebaseapp.com",
             databaseURL: "https://dm111-e8a7d-default-rtdb.firebaseio.com",
@@ -347,27 +362,34 @@
             messagingSenderId: "262083858435",
             appId: "1:262083858435:web:025a90f1e4bd49a01fbe36"
         };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        
-        let currentDate = ""; 
+
+        var fbApp = null, fbDb = null, dbRef = null;
+
+        function initFirebase() {
+            fbApp = firebaseModules.initializeApp(firebaseConfig);
+            fbDb  = firebaseModules.getDatabase(fbApp);
+            /* ★ Re-setup listener after Firebase loads */
+            listenToFirebase();
+        }
+
+        let currentDate = "";
         let dbRef = null;
         let chartInstance = null;
-        
+
         const workshops = [
             { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA 钱大为' },
             { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN 潘文星' },
             { id: 'PRO3', label: 'PRO3', pic: 'MR. PRATEEP' },
-            { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' } 
+            { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' }
         ];
-        
+
         const dims = [
             { id: 'saf', name: 'Safety & 5S', type: 'std', colorClass: 'badge-saf' },
             { id: 'pro', name: 'UPPH', type: 'std', colorClass: 'badge-pro' },
             { id: 'qua', name: 'Quality', type: 'std', colorClass: 'badge-qua' },
             { id: 'los', name: 'Loss', type: 'rev', colorClass: 'badge-los' }
         ];
-        
+
         let state = { t1: {}, t2: { PRO1: {}, PRO2: {} } };
 
         const mergeData = (source) => {
@@ -413,16 +435,11 @@
         };
 
         const listenToFirebase = () => {
-            if(dbRef) off(dbRef);
-            dbRef = ref(db, `mbs_dm_board_data/${currentDate}`);
-            /* ★ Fire `onValue` with fallback: even if Firebase is slow/reachable,
-               the page renders immediately from localStorage/defaults */
-            const localData = localStorage.getItem(`mbs_state_${currentDate}`);
-            if (localData) mergeData(JSON.parse(localData));
-            renderAdmin();
-            updateUI();
-            /* ★ Firebase listener — when data arrives it updates the UI */
-            onValue(dbRef, (snapshot) => {
+            if(!firebaseReady || !fbDb) return;
+            if(dbRef) firebaseModules.off(dbRef);
+            dbRef = firebaseModules.ref(fbDb, `mbs_dm_board_data/${currentDate}`);
+            /* ★ Firebase listener — updates UI when cloud data arrives */
+            firebaseModules.onValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 initDefaultState();
                 if (data) {
@@ -432,18 +449,30 @@
                 if (!document.getElementById('admin-drawer').classList.contains('open')) renderAdmin();
                 updateUI();
             }, (err) => {
-                /* ★ Firebase error handler — silently keep local state */
-                console.warn('Firebase sync unavailable, using local data:', err.message);
+                console.warn('Firebase sync error:', err.message);
             });
         };
 
-        window.jumpDate = () => { currentDate = document.getElementById('global-date').value; listenToFirebase(); };
+        window.jumpDate = () => { 
+            currentDate = document.getElementById('global-date').value; 
+            initDefaultState();
+            const local = localStorage.getItem(`mbs_state_${currentDate}`);
+            if (local) { try { mergeData(JSON.parse(local)); } catch(e) {} }
+            renderAdmin();
+            updateUI();
+            if(firebaseReady) listenToFirebase(); 
+        };
         window.shiftDate = (days) => {
             const d = new Date(currentDate);
             d.setDate(d.getDate() + days);
             currentDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
             document.getElementById('global-date').value = currentDate;
-            listenToFirebase();
+            initDefaultState();
+            const local = localStorage.getItem(`mbs_state_${currentDate}`);
+            if (local) { try { mergeData(JSON.parse(local)); } catch(e) {} }
+            renderAdmin();
+            updateUI();
+            if(firebaseReady) listenToFirebase();
         };
 
         let saveTimer;
@@ -467,7 +496,8 @@
                     state.t2.PRO2[l].a = Number(document.getElementById(`inp-t2-PRO2-${l}-a`).value) || 0;
                 }
                 localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
-                set(dbRef, state).then(() => { setTimeout(() => syncUI.classList.add('hidden'), 800); }).catch(() => {});
+                if(firebaseReady && dbRef) firebaseModules.set(dbRef, state).then(() => { setTimeout(() => syncUI.classList.add('hidden'), 800); }).catch(() => console.warn('Firebase save failed'));
+                else setTimeout(() => syncUI.classList.add('hidden'), 800);
                 updateUI();
             }, 800);
         };
@@ -508,7 +538,7 @@
                 </div>
             `;
             document.getElementById('admin-t2-inputs').innerHTML = buildT2('PRO1', state.t2.PRO1) + buildT2('PRO2', state.t2.PRO2);
-            
+
             /* ★ Re-apply lock state after re-render */
             const lockCb = document.getElementById('lock-target-toggle');
             if(lockCb && lockCb.checked) {
@@ -532,10 +562,10 @@
                         <td class="num-font num-hl ${rc}">${rate.toFixed(1)}%</td>
                     </tr>`;
                 }).join('');
-                
+
                 let avg = count ? sum/count : 0;
                 scores.push({name: ws.label, score: avg});
-                
+
                 return `
                     <div class="panel-card flex flex-col p-4">
                         <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
@@ -552,18 +582,18 @@
 
             scores.sort((a,b) => b.score - a.score);
             document.getElementById('p1-header-date').innerText = currentDate;            document.getElementById('p1-winner-text').innerHTML = `${scores[0].name}`;
-            
+
             if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
             chartInstance.setOption({
                 grid: { top: 30, bottom: 20, left: 30, right: 15 },
                 tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
                 xAxis: { type: 'category', data: scores.map(s=>s.name), axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }, axisLine: { lineStyle: { color: '#334155' } } },
                 yAxis: { type: 'value', min: 80, max: 110, axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }, splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } } },
-                series: [{ 
-                    data: scores.map(s=>parseFloat(s.score.toFixed(1))), 
-                    type: 'bar', barWidth: '45%', 
-                    itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#3b82f6'}, {offset: 1, color: '#1e3a8a'}]), borderRadius: [3, 3, 0, 0] }, 
-                    label: { show: true, position: 'top', color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' } 
+                series: [{
+                    data: scores.map(s=>parseFloat(s.score.toFixed(1))),
+                    type: 'bar', barWidth: '45%',
+                    itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#3b82f6'}, {offset: 1, color: '#1e3a8a'}]), borderRadius: [3, 3, 0, 0] },
+                    label: { show: true, position: 'top', color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' }
                 }]
             });
 
@@ -584,11 +614,11 @@
                 document.getElementById(`${domPrefix}-lines`).innerHTML = html;
                 document.getElementById(`${domPrefix}-target-sum`).innerText = sumT.toLocaleString();
                 document.getElementById(`${domPrefix}-actual-sum`).innerText = `ACTUAL: ${sumA.toLocaleString()}`;
-                
+
                 let rate = sumT === 0 ? 0 : (sumA/sumT)*100;
                 document.getElementById(`${domPrefix}-rate-text`).innerText = rate.toFixed(1) + '%';
                 document.getElementById(`${domPrefix}-progress`).style.width = Math.min(rate, 100) + '%';
-                
+
                 const pBar = document.getElementById(`${domPrefix}-progress`);
                 pBar.className = rate < 90 ? "h-full transition-all duration-500 bg-red-500 progress-glow-red" : `h-full transition-all duration-500 ${bgClass}`;
                 return rate;
@@ -597,7 +627,7 @@
             let p1Rate = calcP2('PRO1', 't2-p1', 'bg-blue-500 progress-glow-blue');
             let p2Rate = calcP2('PRO2', 't2-p2', 'bg-indigo-500 progress-glow-indigo');
 
-            // ★ 核心修改：同步中间日期显示
+            // ★ 核心修改:同步中间日期显示
             document.getElementById('t2-center-date').innerText = currentDate;
 
             const p1Title = document.getElementById('t2-p1-title');
@@ -606,8 +636,8 @@
             const trophy2 = document.getElementById('t2-p2-trophy');
             const p1Card = document.getElementById('t2-p1-card');
             const p2Card = document.getElementById('t2-p2-card');
-            
-            // ★ 核心修改：移除透明度变化，增加胜方红色边框
+
+            // ★ 核心修改:移除透明度变化,增加胜方红色边框
             p1Title.className = "text-4xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300";
             p2Title.className = "text-4xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300";
             trophy1.classList.add('hidden'); trophy2.classList.add('hidden');
@@ -647,13 +677,30 @@
             }
         };
 
-        const init = () => { setDateInit(); initDefaultState(); listenToFirebase(); lockBadge(); window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); };
+        const init = () => { 
+            setDateInit(); 
+            initDefaultState(); 
+            /* ★ Always render immediately from localStorage */
+            const localData = localStorage.getItem(`mbs_state_${currentDate}`);
+            if (localData) {
+                try { mergeData(JSON.parse(localData)); } catch(e) {}
+            }
+            renderAdmin();
+            updateUI();
+            lockBadge(); 
+            /* ★ Firebase sync (may or may not load) */
+            if(firebaseReady) listenToFirebase();
+            window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); 
+        };
+        
+        /* ★ Start Firebase loading in background, then render immediately */
+        loadFirebase();
         init();
 
         window.switchTab = (idx) => {
             const p1 = document.getElementById('page1'), p2 = document.getElementById('page2');
             p1.classList.remove('fade-enter'); p2.classList.remove('fade-enter');
-            void p1.offsetWidth; void p2.offsetWidth; 
+            void p1.offsetWidth; void p2.offsetWidth;
             p1.style.display = idx===1 ? 'flex' : 'none'; if(idx===1) p1.classList.add('fade-enter');
             p2.style.display = idx===2 ? 'flex' : 'none'; if(idx===2) p2.classList.add('fade-enter');
 
@@ -662,7 +709,7 @@
             if(idx===1 && chartInstance) chartInstance.resize();
         };
 
-        window.toggleAdmin = () => { 
+        window.toggleAdmin = () => {
             const dr = document.getElementById('admin-drawer');
             const ov = document.getElementById('admin-overlay');
             const open = !dr.classList.contains('open');
@@ -670,12 +717,12 @@
             ov.style.display = open ? 'block' : 'none';
             if(open) { renderAdmin(); lockBadge(); }
         };
-        window.toggleLock = () => { 
-            const locked = document.getElementById('lock-target-toggle').checked; 
+        window.toggleLock = () => {
+            const locked = document.getElementById('lock-target-toggle').checked;
             document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
             lockBadge();
         };
-        
+
         /* ★ Show lock state in header */
         const lockBadge = () => {
             const cb = document.getElementById('lock-target-toggle');
@@ -689,15 +736,15 @@
                 badge.className = 'text-[10px] font-semibold px-2 py-1 rounded border mr-2 inline-block bg-slate-800/50 text-slate-500 border-slate-700';
             }
         };
-        
+
         window.exportBoard = () => {
             document.getElementById('admin-drawer').classList.remove('open');
             document.getElementById('admin-overlay').style.display = 'none';
             const btns = document.querySelectorAll('button');
-            btns.forEach(b => b.style.opacity = '0'); 
+            btns.forEach(b => b.style.opacity = '0');
             try {
                 html2canvas(document.body, { backgroundColor: '#0b1120', scale: 2, useCORS: true }).then(canvas => {
-                    const a = document.createElement('a'); 
+                    const a = document.createElement('a');
                     const pageName = document.getElementById('page1').style.display === 'none' ? 'LimitPK' : 'KPIMatrix';
                     a.download = `MBS_${pageName}_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
                     btns.forEach(b => b.style.opacity = '1');
