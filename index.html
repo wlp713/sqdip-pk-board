@@ -797,7 +797,16 @@
             const btns = document.querySelectorAll('button');
             btns.forEach(b => b.style.opacity = '0');
             try {
-                html2canvas(document.body, { backgroundColor: '#0b1120', scale: 2, useCORS: true }).then(canvas => {
+                /* ★ onclone brightens the hidden clone — no flicker on real page */
+                html2canvas(document.body, {
+                    backgroundColor: '#080c14',
+                    scale: 2,
+                    useCORS: true,
+                    onclone: (doc) => {
+                        doc.body.style.filter = 'brightness(1.08) saturate(1.05)';
+                        doc.body.style.backgroundColor = '#080c14';
+                    }
+                }).then(canvas => {
                     const a = document.createElement('a');
                     const pageName = document.getElementById('page1').style.display === 'none' ? 'LimitPK' : 'KPIMatrix';
                     a.download = `MBS_${pageName}_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
