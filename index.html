@@ -794,29 +794,30 @@
         window.exportBoard = () => {
             document.getElementById('admin-drawer').classList.remove('open');
             document.getElementById('admin-overlay').style.display = 'none';
-            const btns = document.querySelectorAll('button');
-            btns.forEach(b => b.style.opacity = '0');
             try {
-                /* ★ onclone brightens the hidden clone — no flicker on real page */
-                html2canvas(document.body, {
-                    backgroundColor: '#080c14',
+                /* ★ Capture ONLY the current visible page — no admin drawer, no blank space */
+                const pageId = document.getElementById('page1').style.display === 'none' ? 'page2' : 'page1';
+                const el = document.getElementById(pageId);
+                html2canvas(el, {
+                    backgroundColor: '#0f172a',
                     scale: 2,
                     useCORS: true,
                     onclone: (doc) => {
-                        doc.body.style.filter = 'brightness(1.08) saturate(1.05)';
-                        doc.body.style.backgroundColor = '#080c14';
+                        const target = doc.getElementById(pageId);
+                        if(target) {
+                            target.style.filter = 'brightness(1.15) saturate(1.05)';
+                            target.style.backgroundColor = '#0f172a';
+                        }
                     }
                 }).then(canvas => {
                     const a = document.createElement('a');
-                    const pageName = document.getElementById('page1').style.display === 'none' ? 'LimitPK' : 'KPIMatrix';
+                    const pageName = pageId === 'page1' ? 'KPIMatrix' : 'LimitPK';
                     a.download = `MBS_${pageName}_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
-                    btns.forEach(b => b.style.opacity = '1');
                 }).catch(err => {
-                    alert("Export failed. Please ensure you are running on a local server (e.g. VSCode Live Server) rather than file:// protocol.");
-                    btns.forEach(b => b.style.opacity = '1');
+                    alert('Export failed: ' + err.message);
                 });
             } catch(e) {
-                btns.forEach(b => b.style.opacity = '1');
+                console.error('Export error:', e);
             }
         };
     </script>
