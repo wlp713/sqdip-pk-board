@@ -723,7 +723,7 @@
         };
 
         /* ★ Show lock state in header */
-        const lockBadge = () => {
+        function lockBadge() {
             const cb = document.getElementById('lock-target-toggle');
             const badge = document.getElementById('lock-badge');
             if(!cb || !badge) return;
