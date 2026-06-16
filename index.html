@@ -167,6 +167,7 @@
             <div id="sync-status" class="text-xs text-emerald-400 font-mono hidden mr-2 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> SYNCING...
             </div>
+            <span id="lock-badge" class="text-[10px] font-semibold hidden px-2 py-1 rounded border mr-2"></span>
             <button onclick="toggleAdmin()" class="px-4 py-2 bg-[#1e293b] hover:bg-slate-700 text-slate-300 text-xs font-bold rounded border border-slate-600 transition-colors flex items-center gap-2">
                 ⚙️ ADMIN
             </button>
@@ -195,7 +196,8 @@
                 
                 <div class="panel-card p-5 w-[25%] flex flex-col justify-center items-center text-center bg-gradient-to-b from-[#1e293b] to-[#0f172a] relative">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
-                    <p class="title-h3 text-slate-400 mb-4 text-[13px]">Daily Champion</p>
+                    <p class="title-h3 text-slate-400 mb-1 text-[13px]">Daily Champion</p>
+                    <span id="p1-header-date" class="text-[9px] text-slate-600 mb-3 block"></span>
                     <div id="p1-winner-text" class="text-4xl title-h2 text-white mb-5 text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400">--</div>
                     <div class="px-6 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex flex-col items-center gap-2 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]">
                         <span class="text-5xl">🏆</span>
@@ -305,6 +307,9 @@
         <span>MIDEA IT GMCC - AYUTTHAYA PLANT V6.5</span>
     </footer>
 
+    <!-- ★ Admin drawer overlay — click outside to close -->
+    <div id="admin-overlay" onclick="toggleAdmin()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:40;display:none;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)"></div>
+
     <div id="admin-drawer" class="admin-drawer">
         <div class="flex justify-between items-center p-5 border-b border-slate-700 bg-[#1e293b] shrink-0 shadow-md z-10">
             <h2 class="title-h2 text-sm text-slate-100 flex items-center gap-2">⚙️ DATA CONTROL</h2>
@@ -410,18 +415,25 @@
         const listenToFirebase = () => {
             if(dbRef) off(dbRef);
             dbRef = ref(db, `mbs_dm_board_data/${currentDate}`);
+            /* ★ Fire `onValue` with fallback: even if Firebase is slow/reachable,
+               the page renders immediately from localStorage/defaults */
+            const localData = localStorage.getItem(`mbs_state_${currentDate}`);
+            if (localData) mergeData(JSON.parse(localData));
+            renderAdmin();
+            updateUI();
+            /* ★ Firebase listener — when data arrives it updates the UI */
             onValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 initDefaultState();
                 if (data) {
                     mergeData(data);
                     localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
-                } else {
-                    const local = localStorage.getItem(`mbs_state_${currentDate}`);
-                    if (local) { mergeData(JSON.parse(local)); }
                 }
                 if (!document.getElementById('admin-drawer').classList.contains('open')) renderAdmin();
                 updateUI();
+            }, (err) => {
+                /* ★ Firebase error handler — silently keep local state */
+                console.warn('Firebase sync unavailable, using local data:', err.message);
             });
         };
 
@@ -539,7 +551,7 @@
             }).join('');
 
             scores.sort((a,b) => b.score - a.score);
-            document.getElementById('p1-winner-text').innerHTML = `${scores[0].name}`;
+            document.getElementById('p1-header-date').innerText = currentDate;            document.getElementById('p1-winner-text').innerHTML = `${scores[0].name}`;
             
             if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
             chartInstance.setOption({
@@ -635,7 +647,7 @@
             }
         };
 
-        const init = () => { setDateInit(); initDefaultState(); listenToFirebase(); window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); };
+        const init = () => { setDateInit(); initDefaultState(); listenToFirebase(); lockBadge(); window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); };
         init();
 
         window.switchTab = (idx) => {
@@ -650,16 +662,44 @@
             if(idx===1 && chartInstance) chartInstance.resize();
         };
 
-        window.toggleAdmin = () => { const dr = document.getElementById('admin-drawer'); dr.classList.toggle('open'); if(dr.classList.contains('open')) renderAdmin(); };
-        window.toggleLock = () => { const locked = document.getElementById('lock-target-toggle').checked; document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked); };
+        window.toggleAdmin = () => { 
+            const dr = document.getElementById('admin-drawer');
+            const ov = document.getElementById('admin-overlay');
+            const open = !dr.classList.contains('open');
+            dr.classList.toggle('open');
+            ov.style.display = open ? 'block' : 'none';
+            if(open) { renderAdmin(); lockBadge(); }
+        };
+        window.toggleLock = () => { 
+            const locked = document.getElementById('lock-target-toggle').checked; 
+            document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
+            lockBadge();
+        };
+        
+        /* ★ Show lock state in header */
+        const lockBadge = () => {
+            const cb = document.getElementById('lock-target-toggle');
+            const badge = document.getElementById('lock-badge');
+            if(!cb || !badge) return;
+            if(cb.checked) {
+                badge.innerHTML = '🔒 TGT LOCKED';
+                badge.className = 'text-[10px] font-semibold px-2 py-1 rounded border mr-2 inline-block bg-blue-500/10 text-blue-400 border-blue-500/20';
+            } else {
+                badge.innerHTML = '🔓 TGT OPEN';
+                badge.className = 'text-[10px] font-semibold px-2 py-1 rounded border mr-2 inline-block bg-slate-800/50 text-slate-500 border-slate-700';
+            }
+        };
         
         window.exportBoard = () => {
             document.getElementById('admin-drawer').classList.remove('open');
+            document.getElementById('admin-overlay').style.display = 'none';
             const btns = document.querySelectorAll('button');
             btns.forEach(b => b.style.opacity = '0'); 
             try {
                 html2canvas(document.body, { backgroundColor: '#0b1120', scale: 2, useCORS: true }).then(canvas => {
-                    const a = document.createElement('a'); a.download = `MBS_DM_Board_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
+                    const a = document.createElement('a'); 
+                    const pageName = document.getElementById('page1').style.display === 'none' ? 'LimitPK' : 'KPIMatrix';
+                    a.download = `MBS_${pageName}_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
                     btns.forEach(b => b.style.opacity = '1');
                 }).catch(err => {
                     alert("Export failed. Please ensure you are running on a local server (e.g. VSCode Live Server) rather than file:// protocol.");
