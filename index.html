@@ -523,6 +523,7 @@
                 activeBtn.classList.add('bg-blue-600','text-white','shadow-md');
             }
             updateUI();
+            renderAdmin();
         };
 
         const workshops = [
@@ -652,10 +653,30 @@
         };
 
         const renderAdmin = () => {
+            /* ── Compute cumulative summary for admin display ── */
+            const accT1 = pkPeriod !== 'day' ? accumulateT1(pkPeriod) : null;
+            const accT2 = pkPeriod !== 'day' ? accumulateT2(pkPeriod) : null;
+            const cumLabel = pkPeriod === 'week' ? '📆 WTD' : (pkPeriod === 'month' ? '📊 MTD' : '');
+
             const t1Cont = document.getElementById('admin-t1-inputs');
-            t1Cont.innerHTML = workshops.map(ws => `
+            t1Cont.innerHTML = workshops.map(ws => {
+                /* Build cumulative summary line for this workshop */
+                let cumHtml = '';
+                if (accT1 && accT1[ws.id]) {
+                    let sumT = 0, sumA = 0;
+                    dims.forEach(d => {
+                        if (accT1[ws.id][d.id]) {
+                            sumT += accT1[ws.id][d.id].t;
+                            sumA += accT1[ws.id][d.id].a;
+                        }
+                    });
+                    const ach = sumT > 0 ? ((sumA / sumT) * 100).toFixed(1) : '--';
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} TGT:${sumT} ACT:${sumA} ACH:${ach}%</div>`;
+                }
+                return `
                 <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm">
                     <div class="title-h3 text-slate-200 mb-3">${ws.label}</div>
+                    ${cumHtml}
                     <div class="space-y-2">
                         ${dims.map(d => `
                             <div class="flex items-center gap-3 bg-[#0f172a] p-2 rounded border border-slate-800">
@@ -668,11 +689,24 @@
                         `).join('')}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
-            const buildT2 = (wsName, obj) => `
+            /* ── Build admin T2 with cumulative summary ── */
+            const buildAdminT2 = (wsName, obj) => {
+                let cumHtml = '';
+                if (accT2 && accT2[wsName]) {
+                    let sumT = 0, sumA = 0;
+                    Object.keys(accT2[wsName]).forEach(l => {
+                        sumT += accT2[wsName][l].t;
+                        sumA += accT2[wsName][l].a;
+                    });
+                    const ach = sumT > 0 ? ((sumA / sumT) * 100).toFixed(1) : '--';
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} TGT:${sumT} ACT:${sumA} ACH:${ach}%</div>`;
+                }
+                return `
                 <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm mb-3">
                     <div class="title-h3 text-slate-200 mb-3">${wsName}</div>
+                    ${cumHtml}
                     <div class="space-y-2">
                         ${Object.keys(obj).map(l => `
                             <div class="flex items-center gap-3 bg-[#0f172a] p-2 rounded border border-slate-800">
@@ -686,7 +720,8 @@
                     </div>
                 </div>
             `;
-            document.getElementById('admin-t2-inputs').innerHTML = buildT2('PRO1', state.t2.PRO1) + buildT2('PRO2', state.t2.PRO2);
+            };
+            document.getElementById('admin-t2-inputs').innerHTML = buildAdminT2('PRO1', state.t2.PRO1) + buildAdminT2('PRO2', state.t2.PRO2);
 
             /* ★ Re-apply lock state after re-render */
             const lockCb = document.getElementById('lock-target-toggle');
