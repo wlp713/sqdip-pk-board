@@ -475,10 +475,21 @@
                     if (!data.t2[ws]) return;
                     Object.keys(data.t2[ws]).forEach(line => {
                         const entry = data.t2[ws][line];
-                        if (!entry || (typeof entry.t !== 'number' && !entry.t)) return;
-                        if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
-                        acc[ws][line].t += Number(entry.t) || 0;
-                        acc[ws][line].a += Number(entry.a) || 0;
+                        if (!entry) return;
+                        // Extract daily total (supports both new Day/Night and old flat format)
+                        if (entry.day !== undefined) {
+                            const dailyT = (Number(entry.day.t) || 0) + (Number(entry.night.t) || 0);
+                            const dailyA = (Number(entry.day.a) || 0) + (Number(entry.night.a) || 0);
+                            if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
+                            acc[ws][line].t += dailyT;
+                            acc[ws][line].a += dailyA;
+                        } else if (typeof entry.t === 'number' || entry.t) {
+                            if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
+                            acc[ws][line].t += Number(entry.t) || 0;
+                            acc[ws][line].a += Number(entry.a) || 0;
+                        } else {
+                            return;
+                        }
                         hasData = true;
                     });
                 });
@@ -560,9 +571,24 @@
                 ['PRO1', 'PRO2'].forEach(wsName => {
                     if (source.t2[wsName]) {
                         for (let l in state.t2[wsName]) {
-                            if (source.t2[wsName][l]) {
-                                state.t2[wsName][l].t = Number(source.t2[wsName][l].t) || 0;
-                                state.t2[wsName][l].a = Number(source.t2[wsName][l].a) || 0;
+                            const src = source.t2[wsName][l];
+                            if (src) {
+                                const dst = state.t2[wsName][l];
+                                if (src.day !== undefined) {
+                                    // New Day/Night format
+                                    dst.day.t = Number(src.day.t) || 0;
+                                    dst.day.a = Number(src.day.a) || 0;
+                                    dst.night.t = Number(src.night.t) || 0;
+                                    dst.night.a = Number(src.night.a) || 0;
+                                } else if (src.t !== undefined) {
+                                    // Old flat format — split 50/50
+                                    const halfT = Math.round((Number(src.t) || 0) / 2);
+                                    const halfA = Math.round((Number(src.a) || 0) / 2);
+                                    dst.day.t = halfT;
+                                    dst.day.a = halfA;
+                                    dst.night.t = (Number(src.t) || 0) - halfT;
+                                    dst.night.a = (Number(src.a) || 0) - halfA;
+                                }
                             }
                         }
                     }
@@ -574,13 +600,24 @@
             workshops.forEach(ws => {
                 state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
             });
-            state.t2.PRO1 = { S: { t: 1000, a: 980 }, H: { t: 1800, a: 1650 } };
-            state.t2.PRO2 = { A: { t: 5400, a: 5200 }, B: { t: 3300, a: 3350 }, C: { t: 3300, a: 3100 }, D: { t: 1200, a: 1150 } };
+            // Each line split 50/50 into Day & Night shifts
+            state.t2.PRO1 = {
+                S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } },
+                H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } }
+            };
+            state.t2.PRO2 = {
+                A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } },
+                B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } },
+                C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } },
+                D: { day: { t: 600, a: 575 }, night: { t: 600, a: 580 } }
+            };
         };
 
         const setDateInit = () => {
             const today = new Date();
-            currentDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const target = new Date(today);
+            target.setDate(target.getDate() - 1); // Default to yesterday (today's data only available tomorrow)
+            currentDate = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
             document.getElementById('global-date').value = currentDate;
         };
 
@@ -638,12 +675,16 @@
                     });
                 });
                 for(let l in state.t2.PRO1) {
-                    state.t2.PRO1[l].t = Number(document.getElementById(`inp-t2-PRO1-${l}-t`).value) || 0;
-                    state.t2.PRO1[l].a = Number(document.getElementById(`inp-t2-PRO1-${l}-a`).value) || 0;
+                    state.t2.PRO1[l].day.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-t`).value) || 0;
+                    state.t2.PRO1[l].day.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-a`).value) || 0;
+                    state.t2.PRO1[l].night.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-t`).value) || 0;
+                    state.t2.PRO1[l].night.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-a`).value) || 0;
                 }
                 for(let l in state.t2.PRO2) {
-                    state.t2.PRO2[l].t = Number(document.getElementById(`inp-t2-PRO2-${l}-t`).value) || 0;
-                    state.t2.PRO2[l].a = Number(document.getElementById(`inp-t2-PRO2-${l}-a`).value) || 0;
+                    state.t2.PRO2[l].day.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-t`).value) || 0;
+                    state.t2.PRO2[l].day.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-a`).value) || 0;
+                    state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
+                    state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
                 }
                 localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
                 if(firebaseReady && dbRef) firebaseModules.set(dbRef, state).then(() => { setTimeout(() => syncUI.classList.add('hidden'), 800); }).catch(() => console.warn('Firebase save failed'));
@@ -708,15 +749,23 @@
                     <div class="title-h3 text-slate-200 mb-3">${wsName}</div>
                     ${cumHtml}
                     <div class="space-y-2">
-                        ${Object.keys(obj).map(l => `
-                            <div class="flex items-center gap-3 bg-[#0f172a] p-2 rounded border border-slate-800">
-                                <span class="text-xs font-bold text-slate-400 w-10">${l}</span>
-                                <div class="form-input-wrapper">
-                                    <input type="number" id="inp-t2-${wsName}-${l}-t" value="${obj[l].t}" class="form-input input-target" placeholder="TGT" oninput="triggerSave()">
-                                    <input type="number" id="inp-t2-${wsName}-${l}-a" value="${obj[l].a}" class="form-input" placeholder="ACT" oninput="triggerSave()">
+                        ${Object.keys(obj).map(l => {
+                            const d = obj[l];
+                            return `
+                            <div class="bg-[#0f172a] p-2.5 rounded border border-slate-800">
+                                <div class="text-xs font-bold text-slate-300 mb-1.5 pl-1">${l} LINE</div>
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="text-[10px] text-slate-500 w-14 flex items-center gap-1">☀ Day</span>
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Day-t" value="${d.day.t}" class="form-input input-target flex-1" placeholder="TGT" oninput="triggerSave()">
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Day-a" value="${d.day.a}" class="form-input flex-1" placeholder="ACT" oninput="triggerSave()">
                                 </div>
-                            </div>
-                        `).join('')}
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-slate-500 w-14 flex items-center gap-1">🌙 Night</span>
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Night-t" value="${d.night.t}" class="form-input input-target flex-1" placeholder="TGT" oninput="triggerSave()">
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Night-a" value="${d.night.a}" class="form-input flex-1" placeholder="ACT" oninput="triggerSave()">
+                                </div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -841,15 +890,54 @@
                 const wsData = displayT2[wsName] || {};
                 for(let l in wsData) {
                     let d = wsData[l];
-                    sumT += d.t; sumA += d.a;
-                    let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
-                    let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
-                    html += `<tr>
-                        <td class="font-bold text-slate-300 text-[.95rem]">${l} Line</td>
-                        <td class="num-font num-muted text-[.95rem]">${d.t}</td>
-                        <td class="num-font num-light text-[.95rem]">${d.a}</td>
-                        <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
-                    </tr>`;
+                    if (d.day !== undefined) {
+                        // ★ Daily mode: show Day/Night split
+                        const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
+                        const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
+                        const lineT = dayT + nightT, lineA = dayA + nightA;
+                        sumT += lineT; sumA += lineA;
+
+                        const dayRate  = dayT === 0 ? 0 : (dayA/dayT)*100;
+                        const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
+                        const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
+
+                        const daySt  = dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴');
+                        const nightSt = nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴');
+                        const lineSt = lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴');
+
+                        // Line total row
+                        html += `<tr class="border-b border-slate-700/30">
+                            <td class="font-bold text-slate-200 text-[14px] pt-1.5 pb-0.5">${l} LINE</td>
+                            <td class="num-font num-muted text-[14px] pt-1.5 pb-0.5">${lineT}</td>
+                            <td class="num-font num-light text-[14px] pt-1.5 pb-0.5">${lineA}</td>
+                            <td class="pt-1.5 pb-0.5 status-cell">${lineSt} <span class="num-font num-hl text-[11px] text-slate-300">${lineRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                        // Day shift sub-row
+                        html += `<tr class="text-[11px]">
+                            <td class="pl-5 text-slate-400 leading-tight">☀ Day</td>
+                            <td class="num-font text-slate-500 leading-tight">${dayT}</td>
+                            <td class="num-font text-slate-300 leading-tight">${dayA}</td>
+                            <td class="leading-tight status-cell"><span class="status-emoji">${daySt}</span> <span class="num-font text-[10px] text-slate-500">${dayRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                        // Night shift sub-row
+                        html += `<tr class="text-[11px] border-b border-slate-800/40">
+                            <td class="pl-5 text-slate-400 pb-1 leading-tight">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-1 leading-tight">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-1 leading-tight">${nightA}</td>
+                            <td class="pb-1 leading-tight status-cell"><span class="status-emoji">${nightSt}</span> <span class="num-font text-[10px] text-slate-500">${nightRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                    } else {
+                        // ★ Cumulative mode: flat total (no shift split)
+                        sumT += d.t; sumA += d.a;
+                        let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
+                        let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
+                        html += `<tr>
+                            <td class="font-bold text-slate-300 text-[.95rem]">${l} Line</td>
+                            <td class="num-font num-muted text-[.95rem]">${d.t}</td>
+                            <td class="num-font num-light text-[.95rem]">${d.a}</td>
+                            <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
+                        </tr>`;
+                    }
                 }
                 document.getElementById(`${domPrefix}-lines`).innerHTML = html;
                 document.getElementById(`${domPrefix}-target-sum`).innerText = sumT.toLocaleString();
