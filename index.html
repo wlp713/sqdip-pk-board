@@ -438,9 +438,9 @@
                             <span class="ml-auto text-[8px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded-full" id="p3-pk-wins-label">PK: 0-0</span>
                         </div>
 
-                        <!-- Combined trend chart (Y range 40-100% for exaggerated visible fluctuation) -->
-                        <div class="flex-[0.6] min-h-0 mt-1">
-                            <div id="p3-trend-chart" class="w-full h-full min-h-[45px] bg-slate-900/30 rounded border border-slate-800/50 relative overflow-hidden"></div>
+                        <!-- Combined trend chart → fill remaining height (Y range 40-100% for visible fluctuation) -->
+                        <div class="flex-1 min-h-0 mt-1">
+                            <div id="p3-trend-chart" class="w-full h-full min-h-[50px] bg-slate-900/30 rounded border border-slate-800/50 relative overflow-hidden"></div>
                         </div>
                     </div>
                 </div>
@@ -1441,7 +1441,7 @@
                         ? `M${pts2[0].x},${baselineY} L${pStr2} L${pts2[pts2.length-1].x},${baselineY} Z`
                         : '';
 
-                    chartEl.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-height:40px">
+                    chartEl.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="min-height:40px">
                         <defs>
                             <linearGradient id="gP1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/></linearGradient>
                             <linearGradient id="gP2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/></linearGradient>
