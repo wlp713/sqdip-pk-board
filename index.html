@@ -357,61 +357,62 @@
 
         </div>
 
-        <!-- PAGE 3: CHAMPIONSHIP STANDINGS -->
+        <!-- PAGE 3: CHAMPIONSHIP STANDINGS (auto-scan from all dates) -->
         <div id="page3" class="w-full h-full hidden flex-col gap-3 fade-enter">
-            <!-- Header row: title + settle button -->
-            <div class="flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-4">
-                    <h1 class="title-h2 text-xl text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]">🏆 CHAMPIONSHIP STANDINGS</h1>
-                    <span id="p3-period-label" class="text-[11px] font-mono text-slate-400 bg-slate-800/50 px-2.5 py-1 rounded border border-slate-700">DAY</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span id="p3-settle-count" class="text-[10px] text-slate-500 font-mono">0 weeks recorded</span>
-                    <button onclick="settleWeek()" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded border border-amber-500 transition-colors flex items-center gap-1.5 shadow-[0_0_10px_rgba(251,191,36,0.2)]">
-                        📌 SETTLE WEEK
-                    </button>
-                </div>
+            <!-- Title -->
+            <div class="flex justify-between items-center shrink-0 pb-1">
+                <h1 class="title-h2 text-2xl font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)] tracking-wide">🏆 CHAMPIONSHIP STANDINGS</h1>
+                <span id="p3-data-status" class="text-xs font-mono text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">SCANNING...</span>
             </div>
 
-            <!-- Main content: two panels -->
-            <div class="flex-1 flex gap-3 min-h-0">
-                <!-- LEFT: Workshop SQDIP Rankings -->
-                <div class="flex-1 flex flex-col gap-3 min-w-0">
-                    <div class="panel-card flex-1 flex flex-col p-4 border-t-2 border-t-amber-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                        <div class="flex items-center gap-2 mb-3 border-b border-slate-700 pb-2">
-                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                            <h2 class="title-h3 text-[12px] text-amber-300 tracking-wider">WORKSHOP SQDIP RANKING</h2>
-                            <span class="ml-auto text-[9px] text-slate-600 font-mono">THIS PERIOD</span>
+            <div class="flex-1 flex gap-4 min-h-0">
+
+                <!-- LEFT: Workshop Champion Standings (big, bold) -->
+                <div class="flex-[3] flex flex-col gap-3 min-w-0">
+                    <!-- 👑 Current Period Champion Card -->
+                    <div id="p3-crown-card" class="panel-card px-6 py-4 border-t-4 border-t-amber-400 bg-gradient-to-br from-[#1e293b] via-[#0f172a] to-[#080c14] flex items-center gap-6">
+                        <div class="text-6xl drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">👑</div>
+                        <div class="flex-1">
+                            <div class="text-xs text-slate-500 tracking-widest mb-0.5">CURRENT PERIOD CHAMPION</div>
+                            <div id="p3-current-champ-name" class="text-3xl font-black text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">--</div>
+                            <div id="p3-current-champ-score" class="text-lg font-mono text-slate-400 mt-0.5">--</div>
                         </div>
-                        <div id="p3-rank-list" class="flex-1 flex flex-col justify-center gap-0"></div>
-                        <div class="mt-2 pt-2 border-t border-slate-800">
-                            <h3 class="title-h3 text-[10px] text-slate-500 mb-1.5 tracking-wide">🏆 ALL-TIME CHAMPION COUNT</h3>
-                            <div id="p3-champion-count" class="flex flex-wrap gap-x-6 gap-y-1"></div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-600">ALL-TIME</div>
+                            <div id="p3-current-champ-total" class="text-4xl font-black text-amber-500">0</div>
+                            <div class="text-[10px] text-amber-500/70">TITLES</div>
                         </div>
+                    </div>
+
+                    <!-- Workshop Medal Ranks -->
+                    <div class="panel-card flex-1 flex flex-col p-5 border-t-2 border-t-slate-600 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                        <div class="text-xs text-slate-500 tracking-wider mb-3">📊 ALL-TIME WORKSHOP CHAMPIONSHIP RANKINGS</div>
+                        <div id="p3-standings-list" class="flex-1 flex flex-col gap-1.5 justify-center"></div>
                     </div>
                 </div>
 
-                <!-- RIGHT: PRO Head to Head History -->
-                <div class="w-[40%] flex flex-col gap-3">
-                    <div class="panel-card flex-1 flex flex-col p-4 border-t-2 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                        <div class="flex items-center gap-2 mb-3 border-b border-slate-700 pb-2">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                            <h2 class="title-h3 text-[12px] text-indigo-300 tracking-wider">⚔️ PRO HEAD-TO-HEAD</h2>
-                            <span class="ml-auto text-[9px] text-slate-600 font-mono">HISTORY</span>
-                        </div>
-                        <div id="p3-pro-h2h" class="flex-1 overflow-y-auto">
-                            <table class="data-table h2h-table">
-                                <thead><tr><th class="w-[15%]">WEEK</th><th class="w-[22%]">PRO1</th><th class="w-[22%]">PRO2</th><th class="w-[41%]">WINNER</th></tr></thead>
-                                <tbody id="p3-h2h-body"></tbody>
-                            </table>
-                        </div>
-                        <div id="p3-h2h-record" class="mt-2 pt-2 border-t border-slate-800">
-                            <div class="flex justify-between items-center text-[11px]">
-                                <span class="text-blue-400 font-bold">PRO1: <span id="p3-w1">0</span>W - <span id="p3-l1">0</span>L</span>
-                                <span class="text-slate-400">|</span>
-                                <span class="text-indigo-400 font-bold">PRO2: <span id="p3-w2">0</span>W - <span id="p3-l2">0</span>L</span>
-                                <span class="text-slate-400">|</span>
-                                <span class="text-amber-400 font-bold" id="p3-streak">STREAK: --</span>
+                <!-- RIGHT: PRO PK Record -->
+                <div class="flex-[2] flex flex-col gap-3">
+                    <div class="panel-card flex-1 flex flex-col p-5 border-t-2 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                        <div class="text-xs text-slate-500 tracking-wider mb-4">⚔️ PRO1 vs PRO2 PK RECORD</div>
+                        <div id="p3-pk-card" class="flex-1 flex flex-col items-center justify-center gap-2">
+                            <!-- Side-by-side VS -->
+                            <div class="flex items-center gap-6 w-full justify-center">
+                                <div class="text-center flex flex-col items-center">
+                                    <div class="text-3xl font-black text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]">PRO1</div>
+                                    <div id="p3-pro1-wins" class="text-5xl font-black text-blue-300 mt-2">0</div>
+                                    <div class="text-sm text-blue-500/80 mt-1">WINS</div>
+                                </div>
+                                <div class="text-5xl font-black text-slate-600 drop-shadow-[0_0_15px_rgba(251,191,36,0.2)]">⚡</div>
+                                <div class="text-center flex flex-col items-center">
+                                    <div class="text-3xl font-black text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.4)]">PRO2</div>
+                                    <div id="p3-pro2-wins" class="text-5xl font-black text-indigo-300 mt-2">0</div>
+                                    <div class="text-sm text-indigo-500/80 mt-1">WINS</div>
+                                </div>
+                            </div>
+                            <!-- Result stamp -->
+                            <div id="p3-pk-result" class="mt-2 text-lg font-black tracking-widest bg-slate-800/60 px-6 py-1.5 rounded-full border border-slate-700 min-w-[200px] text-center">
+                                NO DATA YET
                             </div>
                         </div>
                     </div>
@@ -627,7 +628,7 @@
             { id: 'los', name: 'Loss', type: 'rev', colorClass: 'badge-los' }
         ];
 
-        let state = { t1: {}, t2: { PRO1: {}, PRO2: {} }, standings: [] };
+        let state = { t1: {}, t2: { PRO1: {}, PRO2: {} }, standings: {} };
 
         const mergeData = (source) => {
             if (!source) return;
@@ -1087,216 +1088,168 @@
             if (localData) {
                 try { mergeData(JSON.parse(localData)); } catch(e) {}
             }
-            /* ★ Load standings separately (cross-date) */
-            const savedStandings = localStorage.getItem('mbs_standings');
-            if (savedStandings) {
-                try { state.standings = JSON.parse(savedStandings); } catch(e) { state.standings = []; }
-            }
             renderAdmin();
             updateUI();
-            rdr3();
+            window.standingsRender();
             lockBadge(); 
             /* ★ Firebase sync (may or may not load) */
             if(firebaseReady) listenToFirebase();
             window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); 
         };
         
-        /* ★ Wrap rdr3 for call from upateUI's calcP2 context */
-        window.rdr3 = () => {
-            // ── 1. Compute current SQDIP scores (same formula as updateUI) ──
+        /* ★ standingsRender(): auto-scan all dates, compute workshop champ counts + PRO1/2 PK wins */
+        window.standingsRender = () => {
+            const statusEl = document.getElementById('p3-data-status');
+            if (statusEl) statusEl.textContent = '🔄 SCANNING...';
+
+            // ── Helper: compute max score date (find best day for each ws) ──
+            // But actually for standings we just need: on each day, who was #1 → count
+
+            let champCounts = {};   // workshop label → count of days ranked #1
+            let pro1Wins = 0, pro2Wins = 0;  // total PK wins across dates
+
+            // Scan all localStorage keys matching mbs_state_YYYY-MM-DD
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key || !key.startsWith('mbs_state_')) continue;
+                    const dateStr = key.replace('mbs_state_', '');
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
+
+                    // Load the day's raw data
+                    const dayData = loadDayData(dateStr);
+                    if (!dayData || !dayData.t1) continue;
+
+                    // ── Compute SQDIP champion for this day ──
+                    let dayScores = workshops.map(ws => {
+                        let sum = 0, count = 0;
+                        dims.forEach(d => {
+                            const cell = dayData.t1[ws.id] && dayData.t1[ws.id][d.id];
+                            const t = cell ? Number(cell.t) || 0 : 0;
+                            const a = cell ? Number(cell.a) || 0 : 0;
+                            const rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
+                            sum += rate; count++;
+                        });
+                        return { name: ws.label, score: count ? sum/count : 0 };
+                    });
+                    dayScores.sort((a,b) => b.score - a.score);
+                    if (dayScores.length && dayScores[0].score > 0) {
+                        champCounts[dayScores[0].name] = (champCounts[dayScores[0].name] || 0) + 1;
+                    }
+
+                    // ── Compute PRO PK winner for this day ──
+                    if (dayData.t2) {
+                        let p1T = 0, p1A = 0, p2T = 0, p2A = 0;
+                        ['PRO1','PRO2'].forEach((ws, idx) => {
+                            const wsData = dayData.t2[ws] || {};
+                            for (let l in wsData) {
+                                const d = wsData[l];
+                                if (d && d.day !== undefined) {
+                                    const t = (Number(d.day.t)||0) + (Number(d.night.t)||0);
+                                    const a = (Number(d.day.a)||0) + (Number(d.night.a)||0);
+                                    if (idx === 0) { p1T += t; p1A += a; } else { p2T += t; p2A += a; }
+                                } else if (d && d.t !== undefined) {
+                                    if (idx === 0) { p1T += Number(d.t)||0; p1A += Number(d.a)||0; }
+                                    else { p2T += Number(d.t)||0; p2A += Number(d.a)||0; }
+                                }
+                            }
+                        });
+                        if (p1T > 0 && p2T > 0) {
+                            const r1 = p1A/p1T, r2 = p2A/p2T;
+                            if (r1 > r2) pro1Wins++;
+                            else if (r2 > r1) pro2Wins++;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn('standings scan error:', e);
+            }
+
+            // ── Cache results ──
+            state.standings = { champCounts, pro1Wins, pro2Wins };
+
+            // ── Render ──
+
+            // Current period champion (from current state, not historical)
             let t1Src = pkPeriod === 'day' ? state.t1 : (accumulateT1(pkPeriod) || state.t1);
             let currentScores = workshops.map(ws => {
                 let sum = 0, count = 0;
                 dims.forEach(d => {
-                    let t = t1Src[ws.id] && t1Src[ws.id][d.id] ? t1Src[ws.id][d.id].t : 0;
-                    let a = t1Src[ws.id] && t1Src[ws.id][d.id] ? t1Src[ws.id][d.id].a : 0;
-                    let rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
+                    const t = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].t)||0 : 0;
+                    const a = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].a)||0 : 0;
+                    const rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
                     sum += rate; count++;
                 });
                 return { name: ws.label, score: count ? sum/count : 0 };
             });
             currentScores.sort((a,b) => b.score - a.score);
-            const champScore = currentScores.length ? currentScores[0].score : 100;
+            const currKing = currentScores.length && currentScores[0].score > 0 ? currentScores[0] : null;
 
-            // ── 2. Compute current PRO rates (same formula as calcP2) ──
-            let t2Src = pkPeriod === 'day' ? state.t2 : (accumulateT2(pkPeriod) || state.t2);
-            let pro1Rate = 0, pro2Rate = 0;
-            ['PRO1','PRO2'].forEach((ws,i) => {
-                let sumT = 0, sumA = 0;
-                const wsData = t2Src[ws] || {};
-                for(let l in wsData) {
-                    let d = wsData[l];
-                    if (d.day !== undefined) {
-                        sumT += (Number(d.day.t)||0) + (Number(d.night.t)||0);
-                        sumA += (Number(d.day.a)||0) + (Number(d.night.a)||0);
-                    } else if (d.t !== undefined) {
-                        sumT += Number(d.t) || 0;
-                        sumA += Number(d.a) || 0;
-                    }
-                }
-                if (i === 0) pro1Rate = sumT ? (sumA/sumT)*100 : 0;
-                else pro2Rate = sumT ? (sumA/sumT)*100 : 0;
-            });
-
-            // ── 3. Get last settled entry for comparison ──
-            const lastSettled = state.standings.length ? state.standings[state.standings.length-1] : null;
-
-            // ── 4. Period label ──
-            const p3Label = document.getElementById('p3-period-label');
-            if (p3Label) p3Label.textContent = getPeriodLabel(pkPeriod);
-
-            // ── 5. Workshop ranking ──
-            const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-            const rankRowColors = ['bg-amber-500/10','bg-slate-300/8','bg-amber-800/8','bg-slate-700/8','bg-slate-800/8'];
-            const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
-
-            let rankHTML = currentScores.map((s, i) => {
-                let trend = '→', trendCls = 'text-slate-500'; let gap = champScore - s.score;
-                let gapText = gap > 0.1 ? `<span class="text-slate-600 text-[9px] font-mono ml-1">GAP ${gap.toFixed(1)}pp</span>` : `<span class="text-emerald-500 text-[9px] font-mono ml-1">LEAD</span>`;
-                if (lastSettled) {
-                    const prev = lastSettled.scores.find(x => x.name === s.name);
-                    if (prev) {
-                        const diff = s.score - prev.score;
-                        if (diff > 0.3) { trend = `↑ +${diff.toFixed(1)}`; trendCls = 'text-emerald-400'; }
-                        else if (diff < -0.3) { trend = `↓ ${diff.toFixed(1)}`; trendCls = 'text-red-400'; }
-                        else { trend = '→'; trendCls = 'text-slate-500'; }
-                    }
-                }
-                const barW = champScore > 0 ? Math.max((s.score/champScore)*100, 3) : 0;
-                const barClr = i === 0 ? 'bg-amber-500' : (i < 3 ? 'bg-blue-500/60' : 'bg-slate-600/40');
-                return `<div class="flex items-center py-[2px] px-1 rounded-sm ${rankRowColors[i]}">
-                    <span class="text-sm mr-1.5 w-[20px] text-center">${medals[i]||(i+1+'th')}</span>
-                    <span class="text-[12px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
-                    <span class="text-[12px] num-hl ${nameColors[i]} w-[50px] text-right">${s.score.toFixed(1)}%</span>
-                    <span class="text-[9px] font-mono ${trendCls} w-[58px] text-right mx-1">${trend}</span>
-                    ${gapText}
-                    <div class="w-[70px] h-1.5 bg-slate-800 rounded-full overflow-hidden ml-auto">
-                        <div class="h-full ${barClr} rounded-full" style="width:${barW}%"></div>
-                    </div>
-                </div>`;
-            }).join('');
-            const rankList = document.getElementById('p3-rank-list');
-            if (rankList) rankList.innerHTML = rankHTML || '<div class="text-slate-600 text-[10px] text-center py-4">No workshop data</div>';
-
-            // ── 6. All-time champion count ──
-            const countMap = {};
-            state.standings.forEach(s => {
-                if (s.scores && s.scores.length) {
-                    const champ = s.scores[0].name;
-                    countMap[champ] = (countMap[champ] || 0) + 1;
-                }
-            });
-            const cEntries = Object.entries(countMap).sort((a,b) => b[1] - a[1]);
-            const maxC = cEntries.length ? Math.max(...cEntries.map(e=>e[1])) : 1;
-            const ccHtml = cEntries.map(([name, count]) => {
-                const barW2 = (count/maxC)*100;
-                return `<div class="flex items-center gap-2 text-[10px]">
-                    <span class="text-slate-300 font-bold w-[54px] truncate">${name}</span>
-                    <div class="w-[80px] h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-amber-500 rounded-full" style="width:${barW2}%"></div>
-                    </div>
-                    <span class="text-amber-400 font-bold num-hl">${count}x</span>
-                </div>`;
-            }).join('');
-            const ccEl = document.getElementById('p3-champion-count');
-            if (ccEl) ccEl.innerHTML = ccHtml || '<span class="text-slate-600 text-[10px]">Settle a week to record champions</span>';
-
-            // ── 7. PRO Head-to-Head history table ──
-            const h2hData = state.standings.filter(s => s.pro1Rate !== undefined);
-            const h2hRows = [...h2hData].reverse().map(s => {
-                const g1 = s.pro1Rate.toFixed(1), g2 = s.pro2Rate.toFixed(1);
-                const gapStr = Math.abs(s.pro1Rate - s.pro2Rate).toFixed(1);
-                const winLabel = s.winner === 'PRO1' ? '<span class="text-blue-400 font-bold">PRO1 🏆</span>' :
-                                (s.winner === 'PRO2' ? '<span class="text-indigo-400 font-bold">PRO2 🏆</span>' :
-                                 '<span class="text-slate-500">DRAW</span>');
-                return `<tr class="border-b border-slate-800/30">
-                    <td class="text-slate-400 font-mono text-[9px]">${s.period}</td>
-                    <td class="num-font text-blue-300 text-[10px]">${g1}%</td>
-                    <td class="num-font text-indigo-300 text-[10px]">${g2}%</td>
-                    <td class="text-[10px]">${winLabel} <span class="text-[8px] text-slate-600 font-mono ml-1">${gapStr}pp</span></td>
-                </tr>`;
-            }).join('');
-            const h2hBody = document.getElementById('p3-h2h-body');
-            if (h2hBody) h2hBody.innerHTML = h2hRows || '<tr><td colspan="4" class="text-slate-600 text-[9px] text-center py-2">Settle a week to see PRO vs PRO history</td></tr>';
-
-            // ── 8. Head-to-head record ──
-            const w1 = h2hData.filter(s => s.winner === 'PRO1').length;
-            const w2 = h2hData.filter(s => s.winner === 'PRO2').length;
-            ['w1','w2','l1','l2','streak'].forEach(id => {
-                const el = document.getElementById('p3-'+id);
-                if (!el) return;
-                if (id === 'w1') el.textContent = w1;
-                else if (id === 'w2') el.textContent = w2;
-                else if (id === 'l1') el.textContent = w2;
-                else if (id === 'l2') el.textContent = w1;
-                else if (id === 'streak') {
-                    if (!h2hData.length) { el.textContent = 'STREAK: --'; return; }
-                    let streak = 1, team = h2hData[h2hData.length-1].winner;
-                    for (let i = h2hData.length-2; i >= 0; i--) {
-                        if (h2hData[i].winner === team) streak++;
-                        else break;
-                    }
-                    el.textContent = team !== 'DRAW' ? `STREAK: ${team} 🔥 ${streak}` : 'STREAK: --';
-                }
-            });
-
-            // ── 9. Settle count ──
-            const sc = document.getElementById('p3-settle-count');
-            if (sc) sc.textContent = `${state.standings.length} weeks recorded`;
-        };
-
-        window.settleWeek = () => {
-            // Compute scores (same as rdr3)
-            let t1Src = pkPeriod === 'day' ? state.t1 : (accumulateT1(pkPeriod) || state.t1);
-            let scores = workshops.map(ws => {
-                let sum = 0, count = 0;
-                dims.forEach(d => {
-                    let t = t1Src[ws.id] && t1Src[ws.id][d.id] ? t1Src[ws.id][d.id].t : 0;
-                    let a = t1Src[ws.id] && t1Src[ws.id][d.id] ? t1Src[ws.id][d.id].a : 0;
-                    let rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
-                    sum += rate; count++;
-                });
-                return { name: ws.label, score: count ? sum/count : 0 };
-            });
-            scores.sort((a,b) => b.score - a.score);
-
-            let t2Src = pkPeriod === 'day' ? state.t2 : (accumulateT2(pkPeriod) || state.t2);
-            let pro1Rate = 0, pro2Rate = 0;
-            ['PRO1','PRO2'].forEach((ws,i) => {
-                let sumT = 0, sumA = 0;
-                const wsData = t2Src[ws] || {};
-                for(let l in wsData) {
-                    let d = wsData[l];
-                    if (d.day !== undefined) {
-                        sumT += (Number(d.day.t)||0) + (Number(d.night.t)||0);
-                        sumA += (Number(d.day.a)||0) + (Number(d.night.a)||0);
-                    } else if (d.t !== undefined) {
-                        sumT += Number(d.t) || 0;
-                        sumA += Number(d.a) || 0;
-                    }
-                }
-                if (i === 0) pro1Rate = sumT ? (sumA/sumT)*100 : 0;
-                else pro2Rate = sumT ? (sumA/sumT)*100 : 0;
-            });
-
-            const periodLabel = getPeriodLabel(pkPeriod);
-            const existingIdx = state.standings.findIndex(s => s.period === periodLabel);
-            const entry = {
-                period: periodLabel,
-                date: currentDate,
-                scores: scores,
-                pro1Rate: pro1Rate,
-                pro2Rate: pro2Rate,
-                winner: pro1Rate > pro2Rate ? 'PRO1' : (pro2Rate > pro1Rate ? 'PRO2' : 'DRAW')
-            };
-            if (existingIdx >= 0) {
-                state.standings[existingIdx] = entry;
+            // 👑 Crown card
+            const cName = document.getElementById('p3-current-champ-name');
+            const cScore = document.getElementById('p3-current-champ-score');
+            const cTotal = document.getElementById('p3-current-champ-total');
+            if (currKing) {
+                cName.textContent = currKing.name;
+                cScore.textContent = `${currKing.score.toFixed(1)}% SQDIP`;
+                cTotal.textContent = (champCounts[currKing.name] || 0);
             } else {
-                state.standings.push(entry);
+                cName.textContent = 'NO DATA TODAY';
+                cScore.textContent = 'Enter data in Page 1/2';
+                cTotal.textContent = '0';
             }
-            state.standings.sort((a,b) => a.date.localeCompare(b.date));
-            localStorage.setItem('mbs_standings', JSON.stringify(state.standings));
-            rdr3();
+
+            // 📊 All-time workshop standings
+            const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
+            const colors = [
+                'text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]',
+                'text-slate-200 drop-shadow-[0_0_6px_rgba(148,163,184,0.2)]',
+                'text-amber-100/70',
+                'text-slate-400',
+                'text-slate-500',
+                'text-slate-600'
+            ];
+            const sorted = Object.entries(champCounts).sort((a,b) => b[1] - a[1]);
+            const maxCount = sorted.length ? Math.max(...sorted.map(e=>e[1])) : 1;
+            const listHTML = sorted.map(([name, count], i) => {
+                const pct = (count/maxCount)*100;
+                return `<div class="flex items-center py-1 px-2 rounded-lg ${i===0?'bg-amber-500/10':(i<3?'bg-slate-700/20':'bg-slate-800/30')}">
+                    <span class="text-2xl mr-3">${medals[i]||(i+1+'.')}</span>
+                    <span class="text-xl font-bold ${colors[i]} flex-1">${name}</span>
+                    <div class="w-[150px] h-4 bg-slate-800 rounded-full overflow-hidden mx-3">
+                        <div class="h-full ${i===0?'bg-amber-500':(i<3?'bg-blue-500/60':'bg-slate-600/40')} rounded-full transition-all" style="width:${pct}%"></div>
+                    </div>
+                    <span class="text-2xl font-black ${i===0?'text-amber-400':'text-slate-400'} num-hl">${count}</span>
+                    <span class="text-xs text-slate-600 ml-1">🏆</span>
+                </div>`;
+            }).join('');
+            const listEl = document.getElementById('p3-standings-list');
+            if (listEl) listEl.innerHTML = listHTML || '<div class="text-center text-lg text-slate-600 py-6">No data yet — enter KPI data in Page 1 to build standings</div>';
+
+            // ⚔️ PRO PK Record
+            document.getElementById('p3-pro1-wins').textContent = pro1Wins;
+            document.getElementById('p3-pro2-wins').textContent = pro2Wins;
+            const resultEl = document.getElementById('p3-pk-result');
+            const totalPK = pro1Wins + pro2Wins;
+            if (totalPK === 0) {
+                resultEl.textContent = '⚔️ NO PK DATA YET';
+                resultEl.className = 'mt-2 text-lg font-black tracking-widest bg-slate-800/60 px-6 py-1.5 rounded-full border border-slate-700 min-w-[200px] text-center text-slate-500';
+            } else if (pro1Wins > pro2Wins) {
+                resultEl.textContent = `🏆 PRO1 LEADS ${pro1Wins} - ${pro2Wins}`;
+                resultEl.className = 'mt-2 text-lg font-black tracking-widest bg-blue-900/40 px-6 py-1.5 rounded-full border border-blue-500/50 min-w-[200px] text-center text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
+            } else if (pro2Wins > pro1Wins) {
+                resultEl.textContent = `🏆 PRO2 LEADS ${pro2Wins} - ${pro1Wins}`;
+                resultEl.className = 'mt-2 text-lg font-black tracking-widest bg-indigo-900/40 px-6 py-1.5 rounded-full border border-indigo-500/50 min-w-[200px] text-center text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]';
+            } else {
+                resultEl.textContent = `🔥 TIED ${pro1Wins} - ${pro2Wins}`;
+                resultEl.className = 'mt-2 text-lg font-black tracking-widest bg-amber-900/40 px-6 py-1.5 rounded-full border border-amber-500/50 min-w-[200px] text-center text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.2)]';
+            }
+
+            // Status
+            if (statusEl) {
+                const totalDays = Object.keys(champCounts).reduce((s, k) => s + champCounts[k], 0);
+                statusEl.textContent = `📊 ${totalDays} DAYS · ${Object.keys(champCounts).length} WORKSHOPS`;
+            }
         };
 
         /* ★ Start Firebase loading in background, then render immediately */
@@ -1309,7 +1262,7 @@
             void p1.offsetWidth; void p2.offsetWidth; void p3.offsetWidth;
             p1.style.display = idx===1 ? 'flex' : 'none'; if(idx===1) p1.classList.add('fade-enter');
             p2.style.display = idx===2 ? 'flex' : 'none'; if(idx===2) p2.classList.add('fade-enter');
-            p3.style.display = idx===3 ? 'flex' : 'none'; if(idx===3) { p3.classList.add('fade-enter'); rdr3(); }
+            p3.style.display = idx===3 ? 'flex' : 'none'; if(idx===3) { p3.classList.add('fade-enter'); window.standingsRender(); }
 
             const makeClass = (i, c) => `px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 ${c===i ? 'shadow-md ' : ''}${c===i ? colorMap[i].active : 'text-slate-500 hover:text-slate-300'}`;
             const colorMap = {1:{active:'bg-blue-600 text-white'},2:{active:'bg-indigo-600 text-white'},3:{active:'bg-amber-600 text-white'}};
