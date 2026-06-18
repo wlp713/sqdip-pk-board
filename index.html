@@ -412,34 +412,35 @@
                             <div id="p3-tow-divider" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] transition-all duration-500 ease-out" style="left:50%"></div>
                         </div>
 
-                        <!-- Compact score cards -->
-                        <div class="flex gap-2 shrink-0">
-                            <!-- PRO1 Card (compact) -->
-                            <div id="p3-pro1-card" class="flex-[1.2] rounded-md px-2.5 py-1.5 border border-blue-800/50 bg-blue-950/20 flex items-center gap-1.5">
-                                <span class="text-[11px] font-black text-blue-300 shrink-0">PRO1</span>
-                                <span id="p3-pro1-rate" class="text-base font-black num-hl text-blue-300 drop-shadow-[0_0_6px_rgba(59,130,246,0.25)]">--</span>
-                                <span id="p3-pro1-status" class="text-[8px] font-bold ml-auto text-right leading-tight"></span>
+                        <!-- Score cards → two cards side by side, rate prominent, status below -->
+                        <div class="flex gap-3 shrink-0 mt-1">
+                            <div id="p3-pro1-card" class="flex-1 rounded-lg px-3 py-2 border border-blue-800/40 bg-blue-950/15 shadow-[inset_0_0_15px_rgba(59,130,246,0.05)]">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-[12px] font-black text-blue-300 tracking-wide">PRO1</span>
+                                    <span id="p3-pro1-rate" class="text-2xl font-black num-hl text-blue-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]">--</span>
+                                </div>
+                                <div id="p3-pro1-status" class="text-[9px] font-bold mt-0.5 leading-tight"></div>
                             </div>
-                            <!-- PRO2 Card (compact) -->
-                            <div id="p3-pro2-card" class="flex-[1.2] rounded-md px-2.5 py-1.5 border border-red-800/50 bg-red-950/20 flex items-center gap-1.5">
-                                <span class="text-[11px] font-black text-red-300 shrink-0">PRO2</span>
-                                <span id="p3-pro2-rate" class="text-base font-black num-hl text-red-300 drop-shadow-[0_0_6px_rgba(220,38,38,0.25)]">--</span>
-                                <span id="p3-pro2-status" class="text-[8px] font-bold ml-auto text-right leading-tight"></span>
-                            </div>
-                            <!-- Wins badge -->
-                            <div class="flex items-center px-2 bg-slate-800/60 rounded-md border border-slate-700/50 text-[9px] font-mono text-slate-400">
-                                <span id="p3-pk-wins-label">0-0</span>
+                            <div id="p3-pro2-card" class="flex-1 rounded-lg px-3 py-2 border border-red-800/40 bg-red-950/15 shadow-[inset_0_0_15px_rgba(220,38,38,0.05)]">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-[12px] font-black text-red-300 tracking-wide">PRO2</span>
+                                    <span id="p3-pro2-rate" class="text-2xl font-black num-hl text-red-300 drop-shadow-[0_0_8px_rgba(220,38,38,0.3)]">--</span>
+                                </div>
+                                <div id="p3-pro2-status" class="text-[9px] font-bold mt-0.5 leading-tight"></div>
                             </div>
                         </div>
 
-                        <!-- Combined ACH% Trend Chart (fills remaining vertical space) -->
-                        <div class="flex-1 min-h-0 border-t border-slate-800 pt-1.5 mt-1.5 flex flex-col">
-                            <div class="text-[9px] text-slate-600 mb-1 flex items-center gap-2">
-                                <span>📈 ACH% TREND</span>
-                                <span class="text-blue-400 text-[7px]">━ PRO1</span>
-                                <span class="text-red-400 text-[7px]">╴╴ PRO2</span>
-                            </div>
-                            <div id="p3-trend-chart" class="flex-1 w-full min-h-[60px] bg-slate-900/30 rounded border border-slate-800/50 relative overflow-hidden"></div>
+                        <!-- Trend chart header (separator + legend + wins) -->
+                        <div class="flex items-center gap-2 shrink-0 mt-2 pt-1.5 border-t border-slate-800">
+                            <span class="text-[9px] text-slate-600 font-bold tracking-wider">📈 TREND</span>
+                            <span class="w-3 h-[2px] rounded bg-blue-500"></span><span class="text-[8px] text-blue-400/80">P1</span>
+                            <span class="w-3 h-0 border-t border-dashed border-red-500"></span><span class="text-[8px] text-red-400/80">P2</span>
+                            <span class="ml-auto text-[8px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded-full" id="p3-pk-wins-label">PK: 0-0</span>
+                        </div>
+
+                        <!-- Combined trend chart (Y range 40-100% for exaggerated visible fluctuation) -->
+                        <div class="flex-[0.6] min-h-0 mt-1">
+                            <div id="p3-trend-chart" class="w-full h-full min-h-[45px] bg-slate-900/30 rounded border border-slate-800/50 relative overflow-hidden"></div>
                         </div>
                     </div>
                 </div>
@@ -1387,70 +1388,77 @@
             // ── Combined ACH% Trend Chart (PRO1 + PRO2 on one SVG) ──
             const chartEl = document.getElementById('p3-trend-chart');
             if (chartEl) {
-                const lastN = proDaily.slice(-14); // last 14 days max
+                const lastN = proDaily.slice(-14);
                 if (lastN.length >= 2) {
                     const v1 = lastN.map(d => d.p1rate);
                     const v2 = lastN.map(d => d.p2rate);
-                    const allV = v1.concat(v2);
-                    const maxV = Math.max(...allV, 10);
-                    const minV = Math.min(...allV, 0);
-                    const range = maxV - minV || 1;
-                    const W = 600, H = 160;  // viewBox dimensions
-                    const padL = 38, padR = 10, padT = 12, padB = 22;
+                    // Y-axis: 40% → 100% (放大波动, 避免平坦)
+                    const yMin = 40, yMax = 100, yRange = yMax - yMin;
+                    const W = 600, H = 120;
+                    const padL = 38, padR = 8, padT = 10, padB = 20;
                     const cw = W - padL - padR, ch = H - padT - padB;
 
-                    // Grid lines (every 10% or 25% depending on range)
-                    const step = range > 50 ? 25 : (range > 20 ? 10 : 5);
-                    const gStart = Math.floor(minV / step) * step;
-                    const gEnd = Math.ceil(maxV / step) * step;
+                    // Fixed grid lines at 40, 50, 60, 70, 80, 90, 100
+                    const gridVals = [40,50,60,70,80,90,100];
                     let gridHtml = '', yLblHtml = '';
-                    for (let gv = gStart; gv <= gEnd; gv += step) {
-                        const gy = padT + ch - ((gv - minV) / range) * ch;
-                        gridHtml += `<line x1="${padL}" y1="${gy}" x2="${padL+cw}" y2="${gy}" stroke="#1e293b" stroke-width="0.5"/>`;
-                        yLblHtml += `<text x="${padL-4}" y="${gy+3}" text-anchor="end" fill="#475569" font-size="7">${gv}%</text>`;
-                    }
-
-                    // X-axis date labels
-                    const xLabelStep = lastN.length > 10 ? 2 : 1;
-                    let xLblHtml = '';
-                    lastN.forEach((d, i) => {
-                        if (i % xLabelStep !== 0) return;
-                        const lx = padL + (i / (lastN.length-1)) * cw;
-                        xLblHtml += `<text x="${lx}" y="${H-4}" text-anchor="middle" fill="#475569" font-size="6" transform="rotate(-25,${lx},${H-4})">${d.date.slice(5)}</text>`;
+                    gridVals.forEach(gv => {
+                        const gy = padT + ch - ((gv - yMin) / yRange) * ch;
+                        const isZero = gv === 40 || gv === 100;
+                        gridHtml += `<line x1="${padL}" y1="${gy}" x2="${padL+cw}" y2="${gy}" stroke="#1e293b" stroke-width="${isZero?0.8:0.4}"/>`;
+                        yLblHtml += `<text x="${padL-4}" y="${gy+3}" text-anchor="end" fill="${isZero?'#94a3b8':'#475569'}" font-size="${isZero?7:6}">${gv}%</text>`;
                     });
 
-                    // Build points
-                    const pts1 = v1.map((v, i) => ({ x: padL + (i/(v1.length-1||1))*cw, y: padT + ch - ((v-minV)/range)*ch }));
-                    const pts2 = v2.map((v, i) => ({ x: padL + (i/(v2.length-1||1))*cw, y: padT + ch - ((v-minV)/range)*ch }));
+                    // X-axis date labels
+                    const xLabelStep = lastN.length > 8 ? 2 : 1;
+                    let xLblHtml = '', xLineHtml = '';
+                    lastN.forEach((d, i) => {
+                        const lx = padL + (i / (lastN.length-1)) * cw;
+                        if (i % xLabelStep === 0) {
+                            xLblHtml += `<text x="${lx}" y="${H-3}" text-anchor="middle" fill="#475569" font-size="6">${d.date.slice(5)}</text>`;
+                        }
+                        xLineHtml += `<line x1="${lx}" y1="${padT}" x2="${lx}" y2="${padT+ch}" stroke="#1e293b" stroke-width="0.25"/>`;
+                    });
 
+                    // Build points (clamped to yMin..yMax)
+                    const clamp = v => Math.max(yMin, Math.min(yMax, v));
+                    const pts1 = v1.map((v, i) => ({
+                        x: padL + (i/(v1.length-1||1))*cw,
+                        y: padT + ch - ((clamp(v)-yMin)/yRange)*ch
+                    }));
+                    const pts2 = v2.map((v, i) => ({
+                        x: padL + (i/(v2.length-1||1))*cw,
+                        y: padT + ch - ((clamp(v)-yMin)/yRange)*ch
+                    }));
                     const pStr1 = pts1.map(p => `${p.x},${p.y}`).join(' ');
                     const pStr2 = pts2.map(p => `${p.x},${p.y}`).join(' ');
 
-                    // Fill areas (gradient underneath)
+                    // Area fill under each line (extend to baseline = yMin line)
+                    const baselineY = padT + ch - ((40 - yMin) / yRange) * ch;
                     const areaFill1 = pts1.length >= 2
-                        ? `M${pts1[0].x},${padT+ch} L${pStr1} L${pts1[pts1.length-1].x},${padT+ch} Z`
+                        ? `M${pts1[0].x},${baselineY} L${pStr1} L${pts1[pts1.length-1].x},${baselineY} Z`
                         : '';
                     const areaFill2 = pts2.length >= 2
-                        ? `M${pts2[0].x},${padT+ch} L${pStr2} L${pts2[pts2.length-1].x},${padT+ch} Z`
+                        ? `M${pts2[0].x},${baselineY} L${pStr2} L${pts2[pts2.length-1].x},${baselineY} Z`
                         : '';
 
-                    chartEl.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-height:60px">
+                    chartEl.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-height:40px">
                         <defs>
-                            <linearGradient id="gP1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.01"/></linearGradient>
-                            <linearGradient id="gP2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.2"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.01"/></linearGradient>
+                            <linearGradient id="gP1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/></linearGradient>
+                            <linearGradient id="gP2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/></linearGradient>
                         </defs>
-                        <!-- Last day highlight -->
-                        <rect x="${padL+cw-1}" y="${padT}" width="${padR}" height="${ch}" fill="#1e293b" opacity="0.3" rx="1"/>
                         ${gridHtml}
+                        ${xLineHtml}
                         ${yLblHtml}
                         ${xLblHtml}
                         ${areaFill1 ? `<path d="${areaFill1}" fill="url(#gP1)"/>` : ''}
                         ${areaFill2 ? `<path d="${areaFill2}" fill="url(#gP2)"/>` : ''}
-                        <polyline points="${pStr1}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-                        <polyline points="${pStr2}" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3,2"/>
-                        <!-- Data dots on last point -->
-                        <circle cx="${pts1[pts1.length-1].x}" cy="${pts1[pts1.length-1].y}" r="2.5" fill="#3b82f6" stroke="#0f172a" stroke-width="1"/>
-                        <circle cx="${pts2[pts2.length-1].x}" cy="${pts2[pts2.length-1].y}" r="2.5" fill="#ef4444" stroke="#0f172a" stroke-width="1"/>
+                        <!-- PRO1: solid blue 2px -->
+                        <polyline points="${pStr1}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                        <!-- PRO2: dashed red 2px -->
+                        <polyline points="${pStr2}" fill="none" stroke="#ef4444" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4,3"/>
+                        <!-- Data dots each point (last point bigger) -->
+                        ${pts1.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts1.length-1?3:1.5}" fill="${i===pts1.length-1?'#3b82f6':'#60a5fa'}" stroke="#0f172a" stroke-width="0.8"/>`).join('')}
+                        ${pts2.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts2.length-1?3:1.5}" fill="${i===pts2.length-1?'#ef4444':'#f87171'}" stroke="#0f172a" stroke-width="0.8"/>`).join('')}
                     </svg>`;
                 } else {
                     chartEl.innerHTML = '<div class="flex items-center justify-center h-full text-[9px] text-slate-600">Need ≥2 days of PK data</div>';
