@@ -412,37 +412,34 @@
                             <div id="p3-tow-divider" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] transition-all duration-500 ease-out" style="left:50%"></div>
                         </div>
 
-                        <!-- Score cards side by side -->
-                        <div class="flex gap-3 flex-1 shrink-0 min-h-0">
-                            <!-- PRO1 Card -->
-                            <div id="p3-pro1-card" class="flex-1 rounded-lg px-3 py-2 border border-blue-800/50 bg-blue-950/20 flex flex-col items-center text-center relative overflow-hidden">
-                                <div class="relative z-10">
-                                    <div class="text-[13px] font-black text-blue-300 tracking-wide">PRO1</div>
-                                    <div id="p3-pro1-rate" class="text-3xl font-black num-hl text-blue-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]">--</div>
-                                    <div id="p3-pro1-status" class="text-[10px] mt-1 font-bold"></div>
-                                </div>
+                        <!-- Compact score cards -->
+                        <div class="flex gap-2 shrink-0">
+                            <!-- PRO1 Card (compact) -->
+                            <div id="p3-pro1-card" class="flex-[1.2] rounded-md px-2.5 py-1.5 border border-blue-800/50 bg-blue-950/20 flex items-center gap-1.5">
+                                <span class="text-[11px] font-black text-blue-300 shrink-0">PRO1</span>
+                                <span id="p3-pro1-rate" class="text-base font-black num-hl text-blue-300 drop-shadow-[0_0_6px_rgba(59,130,246,0.25)]">--</span>
+                                <span id="p3-pro1-status" class="text-[8px] font-bold ml-auto text-right leading-tight"></span>
                             </div>
-
-                            <!-- PRO2 Card -->
-                            <div id="p3-pro2-card" class="flex-1 rounded-lg px-3 py-2 border border-red-800/50 bg-red-950/20 flex flex-col items-center text-center relative overflow-hidden">
-                                <div class="relative z-10">
-                                    <div class="text-[13px] font-black text-red-300 tracking-wide">PRO2</div>
-                                    <div id="p3-pro2-rate" class="text-3xl font-black num-hl text-red-300 drop-shadow-[0_0_8px_rgba(220,38,38,0.3)]">--</div>
-                                    <div id="p3-pro2-status" class="text-[10px] mt-1 font-bold"></div>
-                                </div>
+                            <!-- PRO2 Card (compact) -->
+                            <div id="p3-pro2-card" class="flex-[1.2] rounded-md px-2.5 py-1.5 border border-red-800/50 bg-red-950/20 flex items-center gap-1.5">
+                                <span class="text-[11px] font-black text-red-300 shrink-0">PRO2</span>
+                                <span id="p3-pro2-rate" class="text-base font-black num-hl text-red-300 drop-shadow-[0_0_6px_rgba(220,38,38,0.25)]">--</span>
+                                <span id="p3-pro2-status" class="text-[8px] font-bold ml-auto text-right leading-tight"></span>
+                            </div>
+                            <!-- Wins badge -->
+                            <div class="flex items-center px-2 bg-slate-800/60 rounded-md border border-slate-700/50 text-[9px] font-mono text-slate-400">
+                                <span id="p3-pk-wins-label">0-0</span>
                             </div>
                         </div>
 
-                        <!-- Sparklines section -->
-                        <div class="mt-auto pt-2 border-t border-slate-800 shrink-0">
-                            <div class="text-[9px] text-slate-600 mb-1 flex gap-2">
-                                <span>📈 DAILY TREND</span>
-                                <span class="ml-auto" id="p3-pk-wins-label">PRO1:0 - PRO2:0</span>
+                        <!-- Combined ACH% Trend Chart (fills remaining vertical space) -->
+                        <div class="flex-1 min-h-0 border-t border-slate-800 pt-1.5 mt-1.5 flex flex-col">
+                            <div class="text-[9px] text-slate-600 mb-1 flex items-center gap-2">
+                                <span>📈 ACH% TREND</span>
+                                <span class="text-blue-400 text-[7px]">━ PRO1</span>
+                                <span class="text-red-400 text-[7px]">╴╴ PRO2</span>
                             </div>
-                            <div class="flex gap-1.5 items-end">
-                                <div id="p3-spark-pro1" class="flex-1 h-8 bg-slate-900/50 rounded border border-slate-800/50 relative overflow-hidden"></div>
-                                <div id="p3-spark-pro2" class="flex-1 h-8 bg-slate-900/50 rounded border border-slate-800/50 relative overflow-hidden"></div>
-                            </div>
+                            <div id="p3-trend-chart" class="flex-1 w-full min-h-[60px] bg-slate-900/30 rounded border border-slate-800/50 relative overflow-hidden"></div>
                         </div>
                     </div>
                 </div>
@@ -1387,33 +1384,78 @@
             const winsLabel = document.getElementById('p3-pk-wins-label');
             if (winsLabel) winsLabel.textContent = `PRO1:${pro1Wins} - PRO2:${pro2Wins}`;
 
-            // ── Sparklines ──
-            function renderSparkline(elId, data, color, label) {
-                const el = document.getElementById(elId);
-                if (!el) return;
-                const lastN = data.slice(-7);
-                if (lastN.length < 2) {
-                    el.innerHTML = `<div class="flex items-center justify-center h-full text-[9px] text-slate-600">${label} ${lastN.length} day(s)</div>`;
-                    return;
+            // ── Combined ACH% Trend Chart (PRO1 + PRO2 on one SVG) ──
+            const chartEl = document.getElementById('p3-trend-chart');
+            if (chartEl) {
+                const lastN = proDaily.slice(-14); // last 14 days max
+                if (lastN.length >= 2) {
+                    const v1 = lastN.map(d => d.p1rate);
+                    const v2 = lastN.map(d => d.p2rate);
+                    const allV = v1.concat(v2);
+                    const maxV = Math.max(...allV, 10);
+                    const minV = Math.min(...allV, 0);
+                    const range = maxV - minV || 1;
+                    const W = 600, H = 160;  // viewBox dimensions
+                    const padL = 38, padR = 10, padT = 12, padB = 22;
+                    const cw = W - padL - padR, ch = H - padT - padB;
+
+                    // Grid lines (every 10% or 25% depending on range)
+                    const step = range > 50 ? 25 : (range > 20 ? 10 : 5);
+                    const gStart = Math.floor(minV / step) * step;
+                    const gEnd = Math.ceil(maxV / step) * step;
+                    let gridHtml = '', yLblHtml = '';
+                    for (let gv = gStart; gv <= gEnd; gv += step) {
+                        const gy = padT + ch - ((gv - minV) / range) * ch;
+                        gridHtml += `<line x1="${padL}" y1="${gy}" x2="${padL+cw}" y2="${gy}" stroke="#1e293b" stroke-width="0.5"/>`;
+                        yLblHtml += `<text x="${padL-4}" y="${gy+3}" text-anchor="end" fill="#475569" font-size="7">${gv}%</text>`;
+                    }
+
+                    // X-axis date labels
+                    const xLabelStep = lastN.length > 10 ? 2 : 1;
+                    let xLblHtml = '';
+                    lastN.forEach((d, i) => {
+                        if (i % xLabelStep !== 0) return;
+                        const lx = padL + (i / (lastN.length-1)) * cw;
+                        xLblHtml += `<text x="${lx}" y="${H-4}" text-anchor="middle" fill="#475569" font-size="6" transform="rotate(-25,${lx},${H-4})">${d.date.slice(5)}</text>`;
+                    });
+
+                    // Build points
+                    const pts1 = v1.map((v, i) => ({ x: padL + (i/(v1.length-1||1))*cw, y: padT + ch - ((v-minV)/range)*ch }));
+                    const pts2 = v2.map((v, i) => ({ x: padL + (i/(v2.length-1||1))*cw, y: padT + ch - ((v-minV)/range)*ch }));
+
+                    const pStr1 = pts1.map(p => `${p.x},${p.y}`).join(' ');
+                    const pStr2 = pts2.map(p => `${p.x},${p.y}`).join(' ');
+
+                    // Fill areas (gradient underneath)
+                    const areaFill1 = pts1.length >= 2
+                        ? `M${pts1[0].x},${padT+ch} L${pStr1} L${pts1[pts1.length-1].x},${padT+ch} Z`
+                        : '';
+                    const areaFill2 = pts2.length >= 2
+                        ? `M${pts2[0].x},${padT+ch} L${pStr2} L${pts2[pts2.length-1].x},${padT+ch} Z`
+                        : '';
+
+                    chartEl.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-height:60px">
+                        <defs>
+                            <linearGradient id="gP1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.01"/></linearGradient>
+                            <linearGradient id="gP2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.2"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.01"/></linearGradient>
+                        </defs>
+                        <!-- Last day highlight -->
+                        <rect x="${padL+cw-1}" y="${padT}" width="${padR}" height="${ch}" fill="#1e293b" opacity="0.3" rx="1"/>
+                        ${gridHtml}
+                        ${yLblHtml}
+                        ${xLblHtml}
+                        ${areaFill1 ? `<path d="${areaFill1}" fill="url(#gP1)"/>` : ''}
+                        ${areaFill2 ? `<path d="${areaFill2}" fill="url(#gP2)"/>` : ''}
+                        <polyline points="${pStr1}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+                        <polyline points="${pStr2}" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3,2"/>
+                        <!-- Data dots on last point -->
+                        <circle cx="${pts1[pts1.length-1].x}" cy="${pts1[pts1.length-1].y}" r="2.5" fill="#3b82f6" stroke="#0f172a" stroke-width="1"/>
+                        <circle cx="${pts2[pts2.length-1].x}" cy="${pts2[pts2.length-1].y}" r="2.5" fill="#ef4444" stroke="#0f172a" stroke-width="1"/>
+                    </svg>`;
+                } else {
+                    chartEl.innerHTML = '<div class="flex items-center justify-center h-full text-[9px] text-slate-600">Need ≥2 days of PK data</div>';
                 }
-                const vals = lastN.map(d => d.rate);
-                const maxV = Math.max(...vals, 10);
-                const minV = Math.min(...vals, 0);
-                const range = maxV - minV || 1;
-                const w = 100, h = 28;
-                const pts = vals.map((v, i) => {
-                    const x = (i / (vals.length-1)) * (w-2) + 1;
-                    const y = h-2 - ((v-minV)/range) * (h-4);
-                    return x + ',' + y;
-                }).join(' ');
-                el.innerHTML = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" class="overflow-visible">
-                    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-                    <text x="3" y="9" fill="${color}" font-size="6" opacity="0.6">${maxV.toFixed(0)}%</text>
-                    <text x="3" y="25" fill="${color}" font-size="6" opacity="0.4">${minV.toFixed(0)}%</text>
-                </svg>`;
             }
-            renderSparkline('p3-spark-pro1', proDaily, '#60a5fa', 'PRO1');
-            renderSparkline('p3-spark-pro2', proDaily, '#f87171', 'PRO2');
 
             // ── Status ──
             if (statusEl) {
