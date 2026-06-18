@@ -409,14 +409,7 @@
                                 <div id="p3-tow-p1" class="h-full transition-all duration-500 ease-out flex items-center justify-end pr-1 text-[10px] font-bold text-white/80" style="flex:1;background:linear-gradient(90deg,#1e40af,#3b82f6)">P1</div>
                                 <div id="p3-tow-p2" class="h-full transition-all duration-500 ease-out flex items-center justify-start pl-1 text-[10px] font-bold text-white/80" style="flex:1;background:linear-gradient(90deg,#dc2626,#b91c1c)">P2</div>
                             </div>
-                            <div id="p3-tow-divider" class="absolute top-0 bottom-0 flex flex-col items-center justify-between pointer-events-none z-10 transition-all duration-500 ease-out" style="left:50%">
-                                <!-- Top glow triangle -->
-                                <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[10px] border-t-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]"></div>
-                                <!-- Center glowing line -->
-                                <div class="flex-1 w-[3px] rounded-full" style="background:linear-gradient(to bottom, #fbbf24, #f59e0b, #fbbf24);box-shadow:0 0 10px rgba(251,191,36,0.9),0 0 24px rgba(251,191,36,0.3)"></div>
-                                <!-- Bottom glow triangle -->
-                                <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[10px] border-b-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]"></div>
-                            </div>
+                            <div id="p3-tow-divider" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] transition-all duration-500 ease-out" style="left:50%"></div>
                         </div>
 
                         <!-- Score cards → two cards side by side, rate prominent, status below -->
@@ -1259,12 +1252,9 @@
                 const order = [top3[1], top3[0], top3[2]];
                 const heights = ['h-[80%]', 'h-full', 'h-[60%]'];
                 const colors = [
-                    // 🥈 2nd: metallic silver (bright, reflective)
-                    {bg:'bg-gradient-to-t from-slate-300 to-white', border:'border-slate-200', txt:'text-slate-800', glow:'drop-shadow-[0_0_14px_rgba(203,213,225,0.5)]'},
-                    // 🥇 1st: blazing gold
-                    {bg:'bg-gradient-to-t from-amber-400 to-yellow-200', border:'border-amber-300', txt:'text-amber-900', glow:'drop-shadow-[0_0_18px_rgba(251,191,36,0.7)]'},
-                    // 🥉 3rd: bright copper/orange
-                    {bg:'bg-gradient-to-t from-orange-500 to-amber-300', border:'border-orange-300', txt:'text-orange-900', glow:'drop-shadow-[0_0_10px_rgba(251,146,60,0.5)]'}
+                    {bg:'bg-gradient-to-t from-slate-700 to-slate-500', border:'border-slate-400', txt:'text-slate-200', glow:'drop-shadow-[0_0_10px_rgba(148,163,184,0.4)]'},
+                    {bg:'bg-gradient-to-t from-amber-800 to-amber-500', border:'border-amber-400', txt:'text-amber-200', glow:'drop-shadow-[0_0_12px_rgba(251,191,36,0.5)]'},
+                    {bg:'bg-gradient-to-t from-amber-900 to-amber-700', border:'border-amber-600', txt:'text-amber-100/70', glow:'drop-shadow-[0_0_6px_rgba(180,83,9,0.3)]'}
                 ];
                 const medals3 = ['🥈','🥇','🥉'];
                 const labels = ['2ND','CHAMPION','3RD'];
@@ -1318,16 +1308,16 @@
                 // Gap to #1
                 const gap = sortedAll[0].score - ws.score;
                 const gapText = i === 0
-                    ? '<span class="text-amber-400 text-[13px] font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]">\u{1F451} LEADER</span>'
-                    : `<span class="text-red-400 text-[12px] font-black drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]">GAP&nbsp;${gap.toFixed(1)}pp</span>`;
+                    ? '<span class="text-amber-400 text-[11px] font-black">👑 LEADER</span>'
+                    : `<span class="text-yellow-400 text-[11px] font-black animate-pulse">\u{26A0} GAP ${gap.toFixed(1)}pp</span>`;
 
                 // Last place warning
                 const lastWarn = i === sortedAll.length-1 && sortedAll.length > 1
-                    ? ' <span class="text-red-500 text-[10px] animate-pulse font-bold">\u{26A0}\uFE0F LAST</span>'
+                    ? ' <span class="text-red-500 text-[9px] animate-pulse">⚠️ LIMIT WARNING</span>'
                     : '';
 
-                // Gap visual bar: fill from current to leader
-                const gapBarPct = i === 0 ? 0 : Math.min(gap * 2.5, 100);
+                const barW = Math.min((ws.score / sortedAll[0].score) * 100, 100);
+                const barClr = i === 0 ? 'bg-amber-500' : (i === 1 ? 'bg-blue-400/60' : (i === 2 ? 'bg-amber-700/60' : 'bg-slate-600/30'));
 
                 return `<div class="flex items-center py-1.5 px-2 rounded-sm ${rankColors[i]||''} ${i===sortedAll.length-1?'animate-pulse-border':''}">
                     <span class="text-base mr-2 w-[24px] text-center">${rankMedals[i]||(i+1)}</span>
@@ -1337,8 +1327,10 @@
                     </div>
                     <span class="text-base font-black num-hl text-white w-[72px] text-right mr-2">${ws.score.toFixed(1)}%</span>
                     <span class="text-[11px] font-mono ${trendClr} w-[62px] text-right">${trend} ${pp}</span>
-                    <span class="ml-2">${gapText}${lastWarn}</span>
-                    ${i === 0 ? '' : `<div class="w-[50px] h-3 bg-slate-800/80 rounded-full overflow-hidden ml-1 shrink-0 border border-slate-700/50"><div class="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400" style="width:${gapBarPct}%;box-shadow:0 0 4px rgba(239,68,68,0.3)"></div></div>`}
+                    <span class="ml-2 text-[11px] font-black">${gapText}${lastWarn}</span>
+                    <div class="w-[60px] h-1.5 bg-slate-800 rounded-full overflow-hidden ml-auto mr-0.5 shrink-0">
+                        <div class="h-full ${barClr} rounded-full" style="width:${barW}%"></div>
+                    </div>
                 </div>`;
             }).join('');
             const listEl = document.getElementById('p3-standings-list');
@@ -1372,43 +1364,27 @@
             if (p1RateEl) p1RateEl.textContent = currP1Rate > 0 ? currP1Rate.toFixed(1)+'%' : '--';
             if (p2RateEl) p2RateEl.textContent = currP2Rate > 0 ? currP2Rate.toFixed(1)+'%' : '--';
 
-            // ── Estimate remaining hours in current period ──
-            function calcRemainingHours() {
-                const now = new Date();
-                if (pkPeriod === 'day') {
-                    // Assume 08:00-18:00 workday
-                    const h = now.getHours() + now.getMinutes() / 60;
-                    return Math.max(0, 18 - h);
-                }
-                // Week / Month: remaining calendar days × 10 working hours
-                const range = getDateRange(pkPeriod, currentDate);
-                const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-                const idx = range.indexOf(todayStr);
-                if (idx === -1) { const last = range[range.length-1]; return last > todayStr ? 10 : 0; }
-                return Math.max(0, range.length - 1 - idx) * 10;
-            }
-
             // Defender / Challenger
             const winner = currP1Rate > currP2Rate ? 'P1' : (currP2Rate > currP1Rate ? 'P2' : null);
             if (winner === 'P1') {
-                if (p1Status) p1Status.innerHTML = '<span class="text-blue-300 text-[10px] font-bold">\u{1F6E1}\uFE0F DEFENDER</span>';
+                if (p1Status) p1Status.innerHTML = '<span class="text-blue-300">\u{1F6E1}\uFE0F DEFENDER</span>';
                 if (p2Status) {
+                    // Gap in units: how many units PRO2 needs to catch up
+                    // total units difference:
+                    const totalUnits = currP1A + currP2A;
                     const gapUnits = Math.abs(currP1A - currP2A);
-                    const remHrs = calcRemainingHours();
-                    const uph = remHrs > 0 ? Math.ceil(gapUnits / remHrs) : 0;
-                    p2Status.innerHTML = `<span class="text-red-400 text-[10px]">\u{26A0}\uFE0F Need +${gapUnits.toLocaleString()} units (Target UPH: ${uph})</span>`;
+                    const avgDailyTarget = currP2T > 0 ? Math.round(currP2T / Math.max(1, currP2T/100)) : 0;
+                    p2Status.innerHTML = `<span class="text-red-400 text-[10px]">\u{26A0}\uFE0F Need +${gapUnits.toLocaleString()} units to overtake</span>`;
                 }
             } else if (winner === 'P2') {
-                if (p2Status) p2Status.innerHTML = '<span class="text-red-300 text-[10px] font-bold">\u{1F6E1}\uFE0F DEFENDER</span>';
+                if (p2Status) p2Status.innerHTML = '<span class="text-red-300">\u{1F6E1}\uFE0F DEFENDER</span>';
                 if (p1Status) {
                     const gapUnits = Math.abs(currP2A - currP1A);
-                    const remHrs = calcRemainingHours();
-                    const uph = remHrs > 0 ? Math.ceil(gapUnits / remHrs) : 0;
-                    p1Status.innerHTML = `<span class="text-blue-300 text-[10px]">\u{26A0}\uFE0F Need +${gapUnits.toLocaleString()} units (Target UPH: ${uph})</span>`;
+                    p1Status.innerHTML = `<span class="text-blue-300 text-[10px]">\u{26A0}\uFE0F Need +${gapUnits.toLocaleString()} units to overtake</span>`;
                 }
             } else {
-                if (p1Status) p1Status.innerHTML = '<span class="text-slate-500 text-[10px] font-bold">TIED</span>';
-                if (p2Status) p2Status.innerHTML = '<span class="text-slate-500 text-[10px] font-bold">TIED</span>';
+                if (p1Status) p1Status.innerHTML = '<span class="text-slate-500 text-[10px]">TIED</span>';
+                if (p2Status) p2Status.innerHTML = '<span class="text-slate-500 text-[10px]">TIED</span>';
             }
 
             // ── PK wins label ──
@@ -1452,24 +1428,25 @@
                 const cw = VW - padL - padR;
                 const ch = VH - padT - padB;
 
-                // Grid lines: ONLY 40/60/80/100 — dim dashed
-                const yFSize = 11, xFSize = 9;
+                // Grid lines: 40/50/60/70/80/90/100
+                const yFSize = 9, xFSize = 7;
                 let gridHtml = '', yLblHtml = '';
-                [40,60,80,100].forEach(gv => {
+                [40,50,60,70,80,90,100].forEach(gv => {
                     const gy = padT + ch - ((gv - yMin) / yRange) * ch;
-                    const isEdge = gv === 40 || gv === 100;
-                    gridHtml += `<line x1="${padL}" y1="${gy}" x2="${padL+cw}" y2="${gy}" stroke="#334155" stroke-width="${isEdge?0.8:0.3}" stroke-dasharray="${isEdge?'0':','}" opacity="${isEdge?0.5:0.3}"/>`;
-                    yLblHtml += `<text x="${padL-5}" y="${gy+5}" text-anchor="end" fill="${isEdge?'#94a3b8':'#475569'}" font-size="${yFSize}" font-weight="bold">${gv}%</text>`;
+                    const b = gv === 40 || gv === 100;
+                    gridHtml += `<line x1="${padL}" y1="${gy}" x2="${padL+cw}" y2="${gy}" stroke="#1e293b" stroke-width="${b?1:0.4}"/>`;
+                    yLblHtml += `<text x="${padL-5}" y="${gy+4}" text-anchor="end" fill="${b?'#94a3b8':'#475569'}" font-size="${yFSize}">${gv}%</text>`;
                 });
 
-                // X-axis date labels (brighter, larger)
-                const xLabelStep = trendDays.length > 7 ? Math.ceil(trendDays.length / 6) : 1;
+                // X-axis date labels (auto-spaced)
+                const xLabelStep = trendDays.length > 8 ? Math.ceil(trendDays.length / 7) : 1;
                 let xLblHtml = '', xLineHtml = '';
                 trendDays.forEach((d, i) => {
                     const lx = padL + (i / (trendDays.length - 1)) * cw;
                     if (i % xLabelStep === 0) {
-                        xLblHtml += `<text x="${lx}" y="${VH-6}" text-anchor="middle" fill="#94a3b8" font-size="${xFSize}" font-weight="bold">${d.date.slice(5)}</text>`;
+                        xLblHtml += `<text x="${lx}" y="${VH-5}" text-anchor="middle" fill="#64748b" font-size="${xFSize}">${d.date.slice(5)}</text>`;
                     }
+                    xLineHtml += `<line x1="${lx}" y1="${padT}" x2="${lx}" y2="${padT+ch}" stroke="#1e293b" stroke-width="0.2"/>`;
                 });
 
                 // Build data points
@@ -1503,13 +1480,13 @@
                     ${xLblHtml}
                     ${area1 ? `<path d="${area1}" fill="url(#g1)"/>` : ''}
                     ${area2 ? `<path d="${area2}" fill="url(#g2)"/>` : ''}
-                    <polyline points="${pStr1}" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-                    <polyline points="${pStr2}" fill="none" stroke="#ef4444" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8,5"/>
+                    <polyline points="${pStr1}" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                    <polyline points="${pStr2}" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="6,4"/>
                     <!-- Last day highlight bar -->
                     <rect x="${lastX-1}" y="${padT}" width="${padR+1}" height="${ch}" fill="#1e293b" opacity="0.3" rx="1"/>
-                    <!-- Data dots (bigger for 3-5m visibility) -->
-                    ${pts1.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts1.length-1?5:2.5}" fill="${i===pts1.length-1?'#3b82f6':'#60a5fa'}" stroke="#0f172a" stroke-width="1.5"/>`).join('')}
-                    ${pts2.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts2.length-1?5:2.5}" fill="${i===pts2.length-1?'#ef4444':'#f87171'}" stroke="#0f172a" stroke-width="1.5"/>`).join('')}
+                    <!-- Data dots -->
+                    ${pts1.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts1.length-1?3.5:1.8}" fill="${i===pts1.length-1?'#3b82f6':'#60a5fa'}" stroke="#0f172a" stroke-width="1"/>`).join('')}
+                    ${pts2.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="${i===pts2.length-1?3.5:1.8}" fill="${i===pts2.length-1?'#ef4444':'#f87171'}" stroke="#0f172a" stroke-width="1"/>`).join('')}
                 </svg>`;
             } else if (chartEl) {
                 chartEl.innerHTML = '<div class="flex items-center justify-center h-full text-[9px] text-slate-600">Need ≥2 days of PK data for ' + (pkPeriod==='day'?'daily':pkPeriod==='week'?'weekly':'monthly') + ' trend</div>';
