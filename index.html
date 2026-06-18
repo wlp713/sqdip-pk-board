@@ -68,7 +68,7 @@
             border-bottom: 1px solid rgba(255,255,255,0.15);
         }
         .data-table td {
-            padding: 0.35rem 0.3rem;
+            padding: 0.25rem 0.25rem;
             font-size: 0.68rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background-color 0.2s ease;
@@ -298,7 +298,6 @@
 
                     <div class="w-full panel-card border-slate-600 bg-slate-800/80 rounded-xl p-4 text-center backdrop-blur-sm shadow-xl">
                         <span id="t2-center-date" class="text-base font-bold text-white border-b border-slate-700 pb-2 mb-2 block tracking-wider">YYYY-MM-DD</span>
-                        <span id="t2-period-mode" class="text-[9px] font-mono text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-700/40 block mb-2">DAY</span>
                         <span class="text-xs text-slate-400 font-mono block mb-3 bg-slate-900 py-1.5 rounded">Limit: ≥ 90.0%</span>
 
                         <div id="t2-referee-result" class="text-lg font-black text-white mb-1 uppercase tracking-wide min-h-[60px] flex items-center justify-center text-center leading-tight">
@@ -795,8 +794,7 @@
             /* ── Update period labels ── */
             const p1Label = document.getElementById('p1-period-label');
             if (p1Label) p1Label.textContent = getPeriodLabel(pkPeriod);
-            const p2Label = document.getElementById('t2-period-mode');
-            if (p2Label) p2Label.textContent = getPeriodLabel(pkPeriod);
+            // (t2-period-mode removed per user request)
 
             /* ── Update center date display ── */
             const dateSpan = document.getElementById('t2-center-date');
@@ -907,25 +905,25 @@
 
                         // Line total row
                         html += `<tr class="border-b border-slate-700/20">
-                            <td class="font-bold text-slate-200 text-[12px] py-[8px]">${l} LINE</td>
-                            <td class="num-font num-muted text-[12px] py-[8px]">${lineT}</td>
-                            <td class="num-font num-light text-[12px] py-[8px]">${lineA}</td>
-                            <td class="py-[8px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
+                            <td class="font-bold text-slate-200 text-[12px] py-[6px]">${l} LINE</td>
+                            <td class="num-font num-muted text-[12px] py-[6px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[6px]">${lineA}</td>
+                            <td class="py-[6px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Day shift sub-row
                         html += `<tr class="text-[9px]">
-                            <td class="pl-4 text-slate-500 py-[4px] leading-[18px]">☀ Day</td>
-                            <td class="num-font text-slate-500 py-[4px] leading-[18px]">${dayT}</td>
-                            <td class="num-font text-slate-300 py-[4px] leading-[18px]">${dayA}</td>
-                            <td class="py-[4px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
+                            <td class="pl-4 text-slate-500 py-[2px] leading-[18px]">☀ Day</td>
+                            <td class="num-font text-slate-500 py-[2px] leading-[18px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-[2px] leading-[18px]">${dayA}</td>
+                            <td class="py-[2px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
                         if (l !== 'D' && (nightT > 0 || nightA > 0)) {
                         html += `<tr class="text-[9px] border-b border-slate-800/30">
-                            <td class="pl-4 text-slate-500 pb-[6px] leading-[18px]">🌙 Night</td>
-                            <td class="num-font text-slate-500 pb-[6px] leading-[18px]">${nightT}</td>
-                            <td class="num-font text-slate-300 pb-[6px] leading-[18px]">${nightA}</td>
-                            <td class="pb-[6px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
+                            <td class="pl-4 text-slate-500 pb-[4px] leading-[18px]">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-[4px] leading-[18px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[4px] leading-[18px]">${nightA}</td>
+                            <td class="pb-[4px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                         }
                     } else {
@@ -934,9 +932,9 @@
                         let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
                         let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
                         html += `<tr class="border-b border-slate-700/20">
-                            <td class="font-bold text-slate-300 text-[14px] py-[8px]">${l} Line</td>
-                            <td class="num-font num-muted text-[14px] py-[8px]">${d.t}</td>
-                            <td class="num-font num-light text-[14px] py-[8px]">${d.a}</td>
+                            <td class="font-bold text-slate-300 text-[14px] py-[6px]">${l} Line</td>
+                            <td class="num-font num-muted text-[14px] py-[6px]">${d.t}</td>
+                            <td class="num-font num-light text-[14px] py-[6px]">${d.a}</td>
                             <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
                         </tr>`;
                     }
