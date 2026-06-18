@@ -68,7 +68,7 @@
             border-bottom: 1px solid rgba(255,255,255,0.15);
         }
         .data-table td {
-            padding: 0.25rem 0.25rem;
+            padding: 0.35rem 0.3rem;
             font-size: 0.68rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background-color 0.2s ease;
@@ -282,7 +282,7 @@
                     <span id="t2-p1-actual-sum" class="num-hl text-[9px] text-blue-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 overflow-y-auto">
                     <table class="data-table">
                         <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
                         <tbody id="t2-p1-lines"></tbody>
@@ -333,7 +333,7 @@
                     <span id="t2-p2-actual-sum" class="num-hl text-[9px] text-indigo-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 overflow-y-auto">
                     <table class="data-table">
                         <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
                         <tbody id="t2-p2-lines"></tbody>
@@ -907,25 +907,25 @@
 
                         // Line total row
                         html += `<tr class="border-b border-slate-700/20">
-                            <td class="font-bold text-slate-200 text-[12px] py-[4px]">${l} LINE</td>
-                            <td class="num-font num-muted text-[12px] py-[4px]">${lineT}</td>
-                            <td class="num-font num-light text-[12px] py-[4px]">${lineA}</td>
-                            <td class="py-[4px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
+                            <td class="font-bold text-slate-200 text-[12px] py-[10px]">${l} LINE</td>
+                            <td class="num-font num-muted text-[12px] py-[10px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[10px]">${lineA}</td>
+                            <td class="py-[10px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Day shift sub-row
                         html += `<tr class="text-[9px]">
-                            <td class="pl-4 text-slate-500 py-[1px] leading-[15px]">☀ Day</td>
-                            <td class="num-font text-slate-500 py-[1px] leading-[15px]">${dayT}</td>
-                            <td class="num-font text-slate-300 py-[1px] leading-[15px]">${dayA}</td>
-                            <td class="py-[1px] leading-[15px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
+                            <td class="pl-4 text-slate-500 py-[6px] leading-[18px]">☀ Day</td>
+                            <td class="num-font text-slate-500 py-[6px] leading-[18px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-[6px] leading-[18px]">${dayA}</td>
+                            <td class="py-[6px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
                         if (l !== 'D' && (nightT > 0 || nightA > 0)) {
                         html += `<tr class="text-[9px] border-b border-slate-800/30">
-                            <td class="pl-4 text-slate-500 pb-[4px] leading-[15px]">🌙 Night</td>
-                            <td class="num-font text-slate-500 pb-[4px] leading-[15px]">${nightT}</td>
-                            <td class="num-font text-slate-300 pb-[4px] leading-[15px]">${nightA}</td>
-                            <td class="pb-[4px] leading-[15px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
+                            <td class="pl-4 text-slate-500 pb-[10px] leading-[18px]">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-[10px] leading-[18px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[10px] leading-[18px]">${nightA}</td>
+                            <td class="pb-[10px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                         }
                     } else {
@@ -934,9 +934,9 @@
                         let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
                         let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
                         html += `<tr class="border-b border-slate-700/20">
-                            <td class="font-bold text-slate-300 text-[14px] py-[4px]">${l} Line</td>
-                            <td class="num-font num-muted text-[14px] py-[4px]">${d.t}</td>
-                            <td class="num-font num-light text-[14px] py-[4px]">${d.a}</td>
+                            <td class="font-bold text-slate-300 text-[14px] py-[10px]">${l} Line</td>
+                            <td class="num-font num-muted text-[14px] py-[10px]">${d.t}</td>
+                            <td class="num-font num-light text-[14px] py-[10px]">${d.a}</td>
                             <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
                         </tr>`;
                     }
