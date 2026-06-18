@@ -54,10 +54,10 @@
             width: 100%;
             table-layout: fixed;
         }
-        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 21%; }
+        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 25%; }
         .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 27%; text-align: right; }
         .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 27%; text-align: right; }
-        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 25%; text-align: right; }
+        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 21%; text-align: right; }
 
         .data-table th {
             padding: 0.3rem 0.3rem;
@@ -76,7 +76,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .data-table td:nth-child(1) { overflow: visible; text-overflow: clip; white-space: normal; }
+        .data-table td:nth-child(1) { overflow: visible; text-overflow: clip; white-space: nowrap; }
         .data-table tbody tr:hover td { background-color: rgba(255,255,255,0.03); }
         .data-table tbody tr:last-child td { border-bottom: none; }
         .data-table td.status-cell { white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 0.65rem; line-height: 1.15; }
