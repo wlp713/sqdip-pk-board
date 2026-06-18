@@ -54,21 +54,21 @@
             width: 100%;
             table-layout: fixed;
         }
-        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 30%; }
-        .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 18%; text-align: right; }
-        .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 18%; text-align: right; }
-        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 34%; text-align: right; }
+        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 28%; }
+        .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 23%; text-align: right; }
+        .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 23%; text-align: right; }
+        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 26%; text-align: right; }
 
         .data-table th {
-            padding: 0.4rem 0.2rem;
-            font-size: 0.65rem;
+            padding: 0.3rem 0.3rem;
+            font-size: 0.6rem;
             color: #94a3b8;
             font-weight: 700;
             text-transform: uppercase;
             border-bottom: 1px solid rgba(255,255,255,0.15);
         }
         .data-table td {
-            padding: 0.4rem 0.2rem;
+            padding: 0.35rem 0.3rem;
             font-size: 0.75rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background-color 0.2s ease;
@@ -259,30 +259,30 @@
         <div id="page2" class="w-full h-full hidden flex gap-3 fade-enter">
 
             <!-- 加入 ID:t2-p1-card,用于胜利红框绑定 -->
-            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col p-6 border-t-4 border-t-blue-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
+            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-blue-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
                     <div>
-                        <h2 id="t2-p1-title" class="text-4xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2">PRO1 <span id="t2-p1-trophy" class="text-3xl hidden animate-pulse">🏆</span></h2>
-                        <span class="text-sm text-slate-400 font-medium block mt-1">PIC: MS. PIYA 钱大为</span>
+                        <h2 id="t2-p1-title" class="text-3xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2">PRO1 <span id="t2-p1-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MS. PIYA 钱大为</span>
                     </div>
-                    <div class="text-right bg-[#0b1120] px-4 py-2 rounded border border-slate-800">
-                        <p class="title-h3 mb-1">Target Sum</p>
-                        <p id="t2-p1-target-sum" class="num-hl text-2xl text-slate-200 num-light">0</p>
+                    <div class="text-right bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <p class="title-h3 text-[10px] mb-0.5">Target Sum</p>
+                        <p id="t2-p1-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
                     </div>
                 </div>
 
-                <div class="mb-6 flex flex-col bg-[#0b1120]/50 p-5 rounded-lg border border-slate-800">
-                    <div class="flex justify-between mb-3 items-end">
-                        <span class="title-h3 text-blue-300 text-[13px]">Total ACH%</span>
-                        <span id="t2-p1-rate-text" class="num-hl text-3xl text-white">0.0%</span>
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-blue-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p1-rate-text" class="num-hl text-lg text-white">0.0%</span>
                     </div>
-                    <div class="w-full bg-slate-800 h-5 rounded-full overflow-hidden mb-2 border border-slate-700">
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
                         <div id="t2-p1-progress" class="bg-blue-500 h-full transition-all duration-500 progress-glow-blue" style="width: 0%"></div>
                     </div>
-                    <span id="t2-p1-actual-sum" class="num-hl text-sm text-blue-400 block text-right tracking-wider">ACT: 0</span>
+                    <span id="t2-p1-actual-sum" class="num-hl text-[9px] text-blue-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
-                <div class="flex-1 min-w-0 overflow-hidden">
+                <div class="flex-1 min-w-0">
                     <table class="data-table">
                         <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
                         <tbody id="t2-p1-lines"></tbody>
@@ -310,30 +310,30 @@
             </div>
 
             <!-- 加入 ID:t2-p2-card,用于胜利红框绑定 -->
-            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col p-6 border-t-4 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-5">
+            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
                     <div>
-                        <h2 id="t2-p2-title" class="text-4xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2">PRO2 <span id="t2-p2-trophy" class="text-3xl hidden animate-pulse">🏆</span></h2>
-                        <span class="text-sm text-slate-400 font-medium block mt-1">PIC: MR. SUDTHIPAN 潘文星</span>
+                        <h2 id="t2-p2-title" class="text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2">PRO2 <span id="t2-p2-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MR. SUDTHIPAN 潘文星</span>
                     </div>
-                    <div class="text-right bg-[#0b1120] px-4 py-2 rounded border border-slate-800">
-                        <p class="title-h3 mb-1">Target Sum</p>
-                        <p id="t2-p2-target-sum" class="num-hl text-2xl text-slate-200 num-light">0</p>
+                    <div class="text-right bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <p class="title-h3 text-[10px] mb-0.5">Target Sum</p>
+                        <p id="t2-p2-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
                     </div>
                 </div>
 
-                <div class="mb-6 flex flex-col bg-[#0b1120]/50 p-5 rounded-lg border border-slate-800">
-                    <div class="flex justify-between mb-3 items-end">
-                        <span class="title-h3 text-indigo-300 text-[13px]">Total ACH%</span>
-                        <span id="t2-p2-rate-text" class="num-hl text-3xl text-white">0.0%</span>
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-indigo-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p2-rate-text" class="num-hl text-lg text-white">0.0%</span>
                     </div>
-                    <div class="w-full bg-slate-800 h-5 rounded-full overflow-hidden mb-2 border border-slate-700">
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
                         <div id="t2-p2-progress" class="bg-indigo-500 h-full transition-all duration-500 progress-glow-indigo" style="width: 0%"></div>
                     </div>
-                    <span id="t2-p2-actual-sum" class="num-hl text-sm text-indigo-400 block text-right tracking-wider">ACT: 0</span>
+                    <span id="t2-p2-actual-sum" class="num-hl text-[9px] text-indigo-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
-                <div class="flex-1 min-w-0 overflow-hidden">
+                <div class="flex-1 min-w-0">
                     <table class="data-table">
                         <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
                         <tbody id="t2-p2-lines"></tbody>
@@ -906,25 +906,25 @@
                         const lineSt = lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴');
 
                         // Line total row
-                        html += `<tr class="border-b border-slate-700/30">
-                            <td class="font-bold text-slate-200 text-[14px] pt-1.5 pb-0.5">${l} LINE</td>
-                            <td class="num-font num-muted text-[14px] pt-1.5 pb-0.5">${lineT}</td>
-                            <td class="num-font num-light text-[14px] pt-1.5 pb-0.5">${lineA}</td>
-                            <td class="pt-1.5 pb-0.5 status-cell">${lineSt} <span class="num-font num-hl text-[11px] text-slate-300">${lineRate.toFixed(1)}%</span></td>
+                        html += `<tr class="border-b border-slate-700/20">
+                            <td class="font-bold text-slate-200 text-[13px] pt-1 pb-0">${l} LINE</td>
+                            <td class="num-font num-muted text-[13px] pt-1 pb-0">${lineT}</td>
+                            <td class="num-font num-light text-[13px] pt-1 pb-0">${lineA}</td>
+                            <td class="pt-1 pb-0 status-cell">${lineSt} <span class="num-font num-hl text-[10px] text-slate-300">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Day shift sub-row
-                        html += `<tr class="text-[11px]">
-                            <td class="pl-5 text-slate-400 leading-tight">☀ Day</td>
-                            <td class="num-font text-slate-500 leading-tight">${dayT}</td>
-                            <td class="num-font text-slate-300 leading-tight">${dayA}</td>
-                            <td class="leading-tight status-cell"><span class="status-emoji">${daySt}</span> <span class="num-font text-[10px] text-slate-500">${dayRate.toFixed(1)}%</span></td>
+                        html += `<tr class="text-[10px]">
+                            <td class="pl-4 text-slate-500 py-0 leading-snug">☀ Day</td>
+                            <td class="num-font text-slate-500 py-0 leading-snug">${dayT}</td>
+                            <td class="num-font text-slate-300 py-0 leading-snug">${dayA}</td>
+                            <td class="py-0 leading-snug status-cell"><span class="status-emoji">${daySt}</span> <span class="num-font text-[9px] text-slate-500">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Night shift sub-row
-                        html += `<tr class="text-[11px] border-b border-slate-800/40">
-                            <td class="pl-5 text-slate-400 pb-1 leading-tight">🌙 Night</td>
-                            <td class="num-font text-slate-500 pb-1 leading-tight">${nightT}</td>
-                            <td class="num-font text-slate-300 pb-1 leading-tight">${nightA}</td>
-                            <td class="pb-1 leading-tight status-cell"><span class="status-emoji">${nightSt}</span> <span class="num-font text-[10px] text-slate-500">${nightRate.toFixed(1)}%</span></td>
+                        html += `<tr class="text-[10px] border-b border-slate-800/30">
+                            <td class="pl-4 text-slate-500 pb-1 leading-snug">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-1 leading-snug">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-1 leading-snug">${nightA}</td>
+                            <td class="pb-1 leading-snug status-cell"><span class="status-emoji">${nightSt}</span> <span class="num-font text-[9px] text-slate-500">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                     } else {
                         // ★ Cumulative mode: flat total (no shift split)
