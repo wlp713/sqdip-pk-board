@@ -1107,6 +1107,11 @@
                 else { resBox.innerHTML = "<span class='text-slate-300 text-xl font-black'>DRAW</span>"; }
                 prizeBox.style.display = 'block';
             }
+            // If Page 3 is visible, refresh standings with the current period
+            const p3 = document.getElementById('page3');
+            if (p3 && p3.style.display !== 'none' && p3.style.display !== '') {
+                if (typeof window.standingsRender === 'function') window.standingsRender();
+            }
         };
 
         const init = () => { 
