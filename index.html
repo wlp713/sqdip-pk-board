@@ -266,9 +266,15 @@
                         <h2 id="t2-p1-title" class="text-3xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2">PRO1 <span id="t2-p1-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
                         <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MS. PIYA 钱大为</span>
                     </div>
-                    <div class="text-right bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
-                        <p class="title-h3 text-[10px] mb-0.5">Target Sum</p>
-                        <p id="t2-p1-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p1-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p1-actual-sum" class="num-hl text-xl text-blue-400">0</p>
+                        </div>
                     </div>
                 </div>
 
@@ -280,7 +286,6 @@
                     <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
                         <div id="t2-p1-progress" class="bg-blue-500 h-full transition-all duration-500 progress-glow-blue" style="width: 0%"></div>
                     </div>
-                    <span id="t2-p1-actual-sum" class="num-hl text-[9px] text-blue-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
                 <div class="flex-1 min-w-0 overflow-y-auto">
@@ -316,9 +321,15 @@
                         <h2 id="t2-p2-title" class="text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2">PRO2 <span id="t2-p2-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
                         <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MR. SUDTHIPAN 潘文星</span>
                     </div>
-                    <div class="text-right bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
-                        <p class="title-h3 text-[10px] mb-0.5">Target Sum</p>
-                        <p id="t2-p2-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p2-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p2-actual-sum" class="num-hl text-xl text-indigo-400">0</p>
+                        </div>
                     </div>
                 </div>
 
@@ -330,7 +341,6 @@
                     <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
                         <div id="t2-p2-progress" class="bg-indigo-500 h-full transition-all duration-500 progress-glow-indigo" style="width: 0%"></div>
                     </div>
-                    <span id="t2-p2-actual-sum" class="num-hl text-[9px] text-indigo-400 block text-right tracking-wider">ACTUAL: 0</span>
                 </div>
 
                 <div class="flex-1 min-w-0 overflow-y-auto">
@@ -942,7 +952,7 @@
                 }
                 document.getElementById(`${domPrefix}-lines`).innerHTML = html;
                 document.getElementById(`${domPrefix}-target-sum`).innerText = sumT.toLocaleString();
-                document.getElementById(`${domPrefix}-actual-sum`).innerText = `ACTUAL: ${sumA.toLocaleString()}`;
+                document.getElementById(`${domPrefix}-actual-sum`).innerText = sumA.toLocaleString();
 
                 let rate = sumT === 0 ? 0 : (sumA/sumT)*100;
                 document.getElementById(`${domPrefix}-rate-text`).innerText = rate.toFixed(1) + '%';
