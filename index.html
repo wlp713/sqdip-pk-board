@@ -54,10 +54,10 @@
             width: 100%;
             table-layout: fixed;
         }
-        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 28%; }
-        .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 23%; text-align: right; }
-        .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 23%; text-align: right; }
-        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 26%; text-align: right; }
+        .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 21%; }
+        .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 27%; text-align: right; }
+        .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 27%; text-align: right; }
+        .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 25%; text-align: right; }
 
         .data-table th {
             padding: 0.3rem 0.3rem;
@@ -68,8 +68,8 @@
             border-bottom: 1px solid rgba(255,255,255,0.15);
         }
         .data-table td {
-            padding: 0.35rem 0.3rem;
-            font-size: 0.75rem;
+            padding: 0.25rem 0.25rem;
+            font-size: 0.68rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             transition: background-color 0.2s ease;
             white-space: nowrap;
@@ -78,8 +78,8 @@
         }
         .data-table tbody tr:hover td { background-color: rgba(255,255,255,0.03); }
         .data-table tbody tr:last-child td { border-bottom: none; }
-        .data-table td.status-cell { white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 0.7rem; line-height: 1.2; }
-        .data-table td.status-cell .status-emoji { font-size: 1rem; line-height: 1; display: inline-block; vertical-align: middle; }
+        .data-table td.status-cell { white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 0.65rem; line-height: 1.15; }
+        .data-table td.status-cell .status-emoji { font-size: 0.85rem; line-height: 1; display: inline-block; vertical-align: middle; }
 
         .text-good { color: #10b981; }
         .text-bad { color: #ef4444; }
@@ -609,7 +609,7 @@
                 A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } },
                 B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } },
                 C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } },
-                D: { day: { t: 600, a: 575 }, night: { t: 600, a: 580 } }
+                D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } }
             };
         };
 
@@ -901,31 +901,33 @@
                         const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
                         const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
 
-                        const daySt  = dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴');
-                        const nightSt = nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴');
-                        const lineSt = lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴');
+                        const daySt  = '<span class="status-emoji">' + (dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const nightSt = '<span class="status-emoji">' + (nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const lineSt = '<span class="status-emoji">' + (lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴')) + '</span>';
 
                         // Line total row
                         html += `<tr class="border-b border-slate-700/20">
-                            <td class="font-bold text-slate-200 text-[13px] pt-1 pb-0">${l} LINE</td>
-                            <td class="num-font num-muted text-[13px] pt-1 pb-0">${lineT}</td>
-                            <td class="num-font num-light text-[13px] pt-1 pb-0">${lineA}</td>
-                            <td class="pt-1 pb-0 status-cell">${lineSt} <span class="num-font num-hl text-[10px] text-slate-300">${lineRate.toFixed(1)}%</span></td>
+                            <td class="font-bold text-slate-200 text-[12px] py-[2px]">${l} LINE</td>
+                            <td class="num-font num-muted text-[12px] py-[2px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[2px]">${lineA}</td>
+                            <td class="py-[2px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Day shift sub-row
-                        html += `<tr class="text-[10px]">
-                            <td class="pl-4 text-slate-500 py-0 leading-snug">☀ Day</td>
-                            <td class="num-font text-slate-500 py-0 leading-snug">${dayT}</td>
-                            <td class="num-font text-slate-300 py-0 leading-snug">${dayA}</td>
-                            <td class="py-0 leading-snug status-cell"><span class="status-emoji">${daySt}</span> <span class="num-font text-[9px] text-slate-500">${dayRate.toFixed(1)}%</span></td>
+                        html += `<tr class="text-[9px]">
+                            <td class="pl-4 text-slate-500 py-0 leading-[14px]">☀ Day</td>
+                            <td class="num-font text-slate-500 py-0 leading-[14px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-0 leading-[14px]">${dayA}</td>
+                            <td class="py-0 leading-[14px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
-                        // Night shift sub-row
-                        html += `<tr class="text-[10px] border-b border-slate-800/30">
-                            <td class="pl-4 text-slate-500 pb-1 leading-snug">🌙 Night</td>
-                            <td class="num-font text-slate-500 pb-1 leading-snug">${nightT}</td>
-                            <td class="num-font text-slate-300 pb-1 leading-snug">${nightA}</td>
-                            <td class="pb-1 leading-snug status-cell"><span class="status-emoji">${nightSt}</span> <span class="num-font text-[9px] text-slate-500">${nightRate.toFixed(1)}%</span></td>
+                        // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
+                        if (nightT > 0 || nightA > 0) {
+                        html += `<tr class="text-[9px] border-b border-slate-800/30">
+                            <td class="pl-4 text-slate-500 pb-[3px] leading-[14px]">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-[3px] leading-[14px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[3px] leading-[14px]">${nightA}</td>
+                            <td class="pb-[3px] leading-[14px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
+                        }
                     } else {
                         // ★ Cumulative mode: flat total (no shift split)
                         sumT += d.t; sumA += d.a;
