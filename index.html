@@ -586,13 +586,13 @@
                     Object.keys(data.t2[ws]).forEach(line => {
                         const entry = data.t2[ws][line];
                         if (!entry) return;
-                        // Extract daily total (supports both new Day/Night and old flat format)
+                        // ★ Preserve Day/Night structure for accumulated periods
                         if (entry.day !== undefined) {
-                            const dailyT = (Number(entry.day.t) || 0) + (Number(entry.night.t) || 0);
-                            const dailyA = (Number(entry.day.a) || 0) + (Number(entry.night.a) || 0);
-                            if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
-                            acc[ws][line].t += dailyT;
-                            acc[ws][line].a += dailyA;
+                            if (!acc[ws][line]) acc[ws][line] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
+                            acc[ws][line].day.t += Number(entry.day.t) || 0;
+                            acc[ws][line].day.a += Number(entry.day.a) || 0;
+                            acc[ws][line].night.t += Number(entry.night.t) || 0;
+                            acc[ws][line].night.a += Number(entry.night.a) || 0;
                         } else if (typeof entry.t === 'number' || entry.t) {
                             if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
                             acc[ws][line].t += Number(entry.t) || 0;
@@ -657,19 +657,22 @@
         const dims = [
             { id: 'saf', name: 'Safety & 5S', type: 'std', colorClass: 'badge-saf' },
             { id: 'pro', name: 'UPPH', type: 'std', colorClass: 'badge-pro' },
-            { id: 'qua', name: 'Quality', type: 'std', colorClass: 'badge-qua' },
+            { id: 'qua', name: 'Quality', type: 'qua', colorClass: 'badge-qua' },
             { id: 'los', name: 'Loss', type: 'rev', colorClass: 'badge-los' }
         ];
 
         let state = { t1: {}, t2: { PRO1: {}, PRO2: {} }, standings: {} };
 
+        /* ★ Safe merge: creates missing entries instead of relying on prior initDefaultState() */
         const mergeData = (source) => {
             if (!source) return;
             if (source.t1) {
                 workshops.forEach(ws => {
                     if (source.t1[ws.id]) {
+                        if (!state.t1[ws.id]) state.t1[ws.id] = {};
                         dims.forEach(d => {
                             if (source.t1[ws.id][d.id]) {
+                                if (!state.t1[ws.id][d.id]) state.t1[ws.id][d.id] = { t: 0, a: 0 };
                                 state.t1[ws.id][d.id].t = Number(source.t1[ws.id][d.id].t) || 0;
                                 state.t1[ws.id][d.id].a = Number(source.t1[ws.id][d.id].a) || 0;
                             }
@@ -680,18 +683,19 @@
             if (source.t2) {
                 ['PRO1', 'PRO2'].forEach(wsName => {
                     if (source.t2[wsName]) {
-                        for (let l in state.t2[wsName]) {
+                        if (!state.t2[wsName]) state.t2[wsName] = {};
+                        // ★ Iterate source keys, not state keys (state might be empty)
+                        Object.keys(source.t2[wsName]).forEach(l => {
                             const src = source.t2[wsName][l];
                             if (src) {
+                                if (!state.t2[wsName][l]) state.t2[wsName][l] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
                                 const dst = state.t2[wsName][l];
                                 if (src.day !== undefined) {
-                                    // New Day/Night format
                                     dst.day.t = Number(src.day.t) || 0;
                                     dst.day.a = Number(src.day.a) || 0;
                                     dst.night.t = Number(src.night.t) || 0;
                                     dst.night.a = Number(src.night.a) || 0;
                                 } else if (src.t !== undefined) {
-                                    // Old flat format — split 50/50
                                     const halfT = Math.round((Number(src.t) || 0) / 2);
                                     const halfA = Math.round((Number(src.a) || 0) / 2);
                                     dst.day.t = halfT;
@@ -700,7 +704,7 @@
                                     dst.night.a = (Number(src.a) || 0) - halfA;
                                 }
                             }
-                        }
+                        });
                     }
                 });
             }
@@ -735,10 +739,9 @@
             if(!firebaseReady || !fbDb) return;
             if(dbRef) firebaseModules.off(dbRef);
             dbRef = firebaseModules.ref(fbDb, `mbs_dm_board_data/${currentDate}`);
-            /* ★ Firebase listener — updates UI when cloud data arrives */
+            /* ★ Firebase listener — merges cloud data into current state (does NOT call initDefaultState!) */
             firebaseModules.onValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
-                initDefaultState();
                 if (data) {
                     mergeData(data);
                     localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
@@ -807,7 +810,7 @@
             /* ── Compute cumulative summary for admin display ── */
             const accT1 = pkPeriod !== 'day' ? accumulateT1(pkPeriod) : null;
             const accT2 = pkPeriod !== 'day' ? accumulateT2(pkPeriod) : null;
-            const cumLabel = pkPeriod === 'week' ? '📆 WTD' : (pkPeriod === 'month' ? '📊 MTD' : '');
+            const cumLabel = pkPeriod === 'week' ? '\u{1F4C6} WTD' : (pkPeriod === 'month' ? '\u{1F4CA} MTD' : '');
 
             const t1Cont = document.getElementById('admin-t1-inputs');
             t1Cont.innerHTML = workshops.map(ws => {
@@ -889,6 +892,14 @@
             }
         };
 
+        /* ★ Rate calculator: handles std/qua/rev types */
+        const calcDimRate = (d, t, a) => {
+            if (t <= 0) return 0;
+            if (d.type === 'std') return (a / t) * 100;        // Safety & 5S / UPPH: actual/target, no cap
+            if (d.type === 'qua') return (t / a) * 100;         // Quality: target/actual, no cap (lower loss = better)
+            return Math.min((t / a) * 100, 100);               // Loss: target/actual, capped at 100%
+        };
+
         const updateUI = () => {
             /* ── Determine data source: daily vs cumulative ── */
             let displayT1, displayT2;
@@ -924,7 +935,7 @@
                 let rows = dims.map(d => {
                     let t = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0;
                     let a = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].a : 0;
-                    let rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
+                    let rate = calcDimRate(d, t, a);
                     sum += rate; count++;
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr>
@@ -982,15 +993,40 @@
 
             if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
             chartInstance.setOption({
-                grid: { top: 30, bottom: 20, left: 30, right: 15 },
+                grid: { top: 25, bottom: 20, left: 35, right: 15 },
                 tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
-                xAxis: { type: 'category', data: scores.map(s=>s.name), axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }, axisLine: { lineStyle: { color: '#334155' } } },
-                yAxis: { type: 'value', min: 80, max: 110, axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }, splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } } },
+                xAxis: { type: 'category', data: scores.map(s=>s.name),
+                    axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' },
+                    axisLine: { lineStyle: { color: '#334155' } },
+                    axisTick: { show: false }
+                },
+                yAxis: { type: 'value', min: 50, max: 100,
+                    axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
+                    splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                    axisLine: { show: false }
+                },
                 series: [{
                     data: scores.map(s=>parseFloat(s.score.toFixed(1))),
-                    type: 'bar', barWidth: '45%',
-                    itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#3b82f6'}, {offset: 1, color: '#1e3a8a'}]), borderRadius: [3, 3, 0, 0] },
-                    label: { show: true, position: 'top', color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' }
+                    type: 'bar', barWidth: '40%',
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            {offset: 0, color: '#3b82f6'},
+                            {offset: 1, color: '#1e3a8a'}
+                        ]),
+                        borderRadius: [4, 4, 0, 0]
+                    },
+                    label: {
+                        show: true, position: 'top',
+                        color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
+                        formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
+                    },
+                    markLine: {
+                        silent: true,
+                        symbol: 'none',
+                        label: { show: true, position: 'start', color: '#fbbf24', fontSize: 10, formatter: '\u{1F3C6} 90% TARGET' },
+                        lineStyle: { color: '#fbbf24', type: 'dashed', width: 1.5 },
+                        data: [{ yAxis: 90 }]
+                    }
                 }]
             });
 
@@ -1163,7 +1199,7 @@
                             const cell = dayData.t1[ws.id] && dayData.t1[ws.id][d.id];
                             const t = cell ? Number(cell.t)||0 : 0;
                             const a = cell ? Number(cell.a)||0 : 0;
-                            const rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
+                            const rate = calcDimRate(d, t, a);
                             sum += rate; count++;
                         });
                         return { name: ws.label, score: count ? sum/count : 0 };
@@ -1211,7 +1247,7 @@
                 dims.forEach(d => {
                     const t = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].t)||0 : 0;
                     const a = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].a)||0 : 0;
-                    const rate = t > 0 ? (d.type === 'std' ? (a/t)*100 : (a===0?100:(t/a)*100)) : 0;
+                    const rate = calcDimRate(d, t, a);
                     sum += rate; count++;
                 });
                 return { name: ws.label, score: count ? sum/count : 0 };
