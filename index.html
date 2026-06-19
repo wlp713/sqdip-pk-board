@@ -195,6 +195,9 @@
                 <button id="btn-tab3" onclick="switchTab(3)" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-1 flex items-center gap-2">
                     🏆 STANDINGS
                 </button>
+                <button id="btn-tab4" onclick="switchTab(4)" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-1 flex items-center gap-2">
+                    🏁 DIM RANK
+                </button>
             </div>
         </div>
 
@@ -450,6 +453,36 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════ PAGE 4: DIMENSION RED FLAG · BLACK FLAG RANKING ═══════════════ -->
+        <div id="page4" class="w-full h-full hidden flex-col gap-3 fade-enter">
+            <div class="flex justify-between items-center shrink-0">
+                <h1 class="title-h2 text-2xl font-black text-white drop-shadow-[0_0_12px_rgba(251,191,36,0.4)] tracking-wide">🏁 DIMENSION RED FLAG · BLACK FLAG</h1>
+                <span id="p4-period-tag" class="text-[11px] font-mono text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">CURRENT PERIOD</span>
+            </div>
+
+            <!-- 🚩 Top banner: Red Flag champions (best in each dimension) -->
+            <div id="p4-flag-banner" class="panel-card px-5 py-3 border-l-4 border-l-red-500 bg-gradient-to-r from-red-950/30 to-transparent shrink-0 flex items-center gap-6">
+                <span class="text-xl">🚩</span>
+                <span class="text-xs font-bold text-slate-400 tracking-wider uppercase">Red Flag Champions</span>
+                <div id="p4-champion-badges" class="flex gap-4 flex-1"></div>
+            </div>
+
+            <!-- ⚫ Bottom banner: Black Flag losers (worst in each dimension) -->
+            <div id="p4-flag-banner-black" class="panel-card px-5 py-3 border-l-4 border-l-slate-600 bg-gradient-to-r from-slate-900/40 to-transparent shrink-0 flex items-center gap-6">
+                <span class="text-xl">⚫</span>
+                <span class="text-xs font-bold text-slate-400 tracking-wider uppercase">Black Flag Losers</span>
+                <div id="p4-loser-badges" class="flex gap-4 flex-1"></div>
+            </div>
+
+            <!-- 2x2 grid: full ranking per dimension -->
+            <div class="flex-1 grid grid-cols-2 gap-3 min-h-0">
+                <div id="p4-card-saf" class="panel-card flex flex-col p-3 border-t-2 border-t-emerald-500/60 min-h-0 overflow-y-auto"></div>
+                <div id="p4-card-pro" class="panel-card flex flex-col p-3 border-t-2 border-t-blue-500/60 min-h-0 overflow-y-auto"></div>
+                <div id="p4-card-qua" class="panel-card flex flex-col p-3 border-t-2 border-t-purple-500/60 min-h-0 overflow-y-auto"></div>
+                <div id="p4-card-los" class="panel-card flex flex-col p-3 border-t-2 border-t-amber-500/60 min-h-0 overflow-y-auto"></div>
             </div>
         </div>
     </main>
@@ -1020,13 +1053,7 @@
                         color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
                         formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
                     },
-                    markLine: {
-                        silent: true,
-                        symbol: 'none',
-                        label: { show: true, position: 'start', color: '#fbbf24', fontSize: 10, formatter: '\u{1F3C6} 90% TARGET' },
-                        lineStyle: { color: '#fbbf24', type: 'dashed', width: 1.5 },
-                        data: [{ yAxis: 90 }]
-                    }
+
                 }]
             });
 
@@ -1152,6 +1179,128 @@
             if (p3 && p3.style.display !== 'none' && p3.style.display !== '') {
                 if (typeof window.standingsRender === 'function') window.standingsRender();
             }
+        };
+
+        /* ★ PAGE 4: Dimension Red Flag / Black Flag ranking */
+        window.renderDimRank = () => {
+            /* ── Determine data source ── */
+            let t1Src;
+            if (pkPeriod === 'day') {
+                t1Src = state.t1;
+            } else {
+                t1Src = accumulateT1(pkPeriod) || state.t1;
+            }
+
+            const range = getDateRange(pkPeriod, currentDate);
+            const periodLabel = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
+            document.getElementById('p4-period-tag').innerText = periodLabel;
+
+            /* ── Compute per-dimension rankings ── */
+            const dimMeta = {
+                saf: { name: 'Safety & 5S', icon: '🛡️', color: 'emerald', bg: 'bg-emerald-900/10', border: 'border-emerald-500/30', text: 'text-emerald-300' },
+                pro: { name: 'UPPH',          icon: '⚡',   color: 'blue',    bg: 'bg-blue-900/10', border: 'border-blue-500/30', text: 'text-blue-300' },
+                qua: { name: 'Quality',       icon: '💎',   color: 'purple',  bg: 'bg-purple-900/10', border: 'border-purple-500/30', text: 'text-purple-300' },
+                los: { name: 'Loss',          icon: '📉',   color: 'amber',   bg: 'bg-amber-900/10', border: 'border-amber-500/30', text: 'text-amber-300' }
+            };
+
+            /* Build ranking for each dimension */
+            const dimRankings = {};
+            dims.forEach(d => {
+                const entries = [];
+                workshops.forEach(ws => {
+                    const data = t1Src[ws.id] && t1Src[ws.id][d.id];
+                    if (data && data.t > 0) {
+                        const score = calcDimRate(d, data.t, data.a);
+                        entries.push({ ws: ws, score: score, t: data.t, a: data.a });
+                    }
+                });
+                /* Sort: for std type higher is better, for qua/rev type higher is also better (the formula already converts) */
+                entries.sort((a, b) => b.score - a.score);
+                dimRankings[d.id] = entries;
+            });
+
+            /* ── Render champion / loser banners ── */
+            const championBadges = document.getElementById('p4-champion-badges');
+            const loserBadges = document.getElementById('p4-flag-banner-black');
+
+            let champHtml = '';
+            dims.forEach(d => {
+                const meta = dimMeta[d.id];
+                const entries = dimRankings[d.id];
+                const best = entries[0];
+                const worst = entries.length > 1 ? entries[entries.length - 1] : null;
+                if (best) {
+                    champHtml += `<div class="flex items-center gap-2 bg-${meta.color}-900/15 px-3 py-1.5 rounded border border-${meta.color}-500/30">
+                        <span class="text-${meta.color}-300 text-[11px] font-bold">${meta.icon} ${meta.name}</span>
+                        <span class="text-white text-[12px] font-bold">${best.ws.label}</span>
+                        <span class="num-hl text-${meta.color}-300 text-[11px]">${best.score.toFixed(1)}%</span>
+                    </div>`;
+                }
+            });
+            championBadges.innerHTML = champHtml;
+
+            /* ── Render 4 dimension cards ── */
+            dims.forEach(d => {
+                const meta = dimMeta[d.id];
+                const entries = dimRankings[d.id];
+                const card = document.getElementById(`p4-card-${d.id}`);
+                if (!card) return;
+
+                if (!entries || entries.length === 0) {
+                    card.innerHTML = `<div class="flex items-center gap-2 mb-2 shrink-0">
+                        <span class="w-2 h-2 rounded-full bg-${meta.color}-500"></span>
+                        <span class="text-[11px] text-slate-500 tracking-widest font-bold">${meta.icon} ${meta.name}</span>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center text-slate-600 text-xs">No data</div>`;
+                    return;
+                }
+
+                const totalWS = entries.length;
+                let rows = '';
+                entries.forEach((e, i) => {
+                    const isBest = i === 0;
+                    const isWorst = i === totalWS - 1 && totalWS > 1;
+                    const rankEmoji = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
+                    const flag = isBest ? ' 🚩' : (isWorst ? ' ⚫' : '');
+                    const rowBg = isBest ? 'bg-emerald-900/20' : (isWorst ? 'bg-red-900/20' : (i % 2 === 0 ? 'bg-white/[0.02]' : ''));
+                    const rowColor = isBest ? 'text-emerald-300' : (isWorst ? 'text-red-400' : 'text-slate-300');
+                    const scoreColor = e.score >= 100 ? 'text-emerald-400' : (e.score >= 90 ? 'text-yellow-400' : 'text-red-400');
+
+                    rows += `<div class="flex items-center gap-2 py-1.5 px-2 rounded ${rowBg} ${rowColor} text-[12px]">
+                        <span class="w-6 text-center text-[11px] shrink-0">${rankEmoji}</span>
+                        <span class="flex-1 font-bold">${e.ws.label}</span>
+                        <span class="num-hl ${scoreColor} text-[11px]">${e.score.toFixed(1)}%</span>
+                        <span class="text-[10px] text-slate-500 font-mono">${e.t}→${e.a}</span>
+                        <span class="text-[13px] shrink-0">${flag}</span>
+                    </div>`;
+                });
+
+                card.innerHTML = `<div class="flex items-center gap-2 mb-2 shrink-0">
+                    <span class="w-2 h-2 rounded-full bg-${meta.color}-500"></span>
+                    <span class="text-[11px] text-slate-500 tracking-widest font-bold">${meta.icon} ${meta.name}</span>
+                    <span class="ml-auto text-[10px] text-slate-600 font-mono">BEST: ${entries[0].score.toFixed(1)}%</span>
+                </div>
+                <div class="flex-1 flex flex-col gap-px min-h-0">${rows}</div>`;
+            });
+
+            /* ── Black Flag banner ── */
+            let loserHtml = '';
+            dims.forEach(d => {
+                const meta = dimMeta[d.id];
+                const entries = dimRankings[d.id];
+                const worst = entries.length > 1 ? entries[entries.length - 1] : (entries.length === 1 ? entries[0] : null);
+                if (worst && entries.length > 1) {
+                    loserHtml += `<div class="flex items-center gap-2 bg-slate-900/30 px-3 py-1.5 rounded border border-slate-600/50">
+                        <span class="text-slate-400 text-[11px] font-bold">${meta.icon} ${meta.name}</span>
+                        <span class="text-white text-[12px] font-bold">${worst.ws.label}</span>
+                        <span class="num-hl text-red-400 text-[11px]">${worst.score.toFixed(1)}%</span>
+                    </div>`;
+                }
+            });
+            const blackBanner = document.getElementById('p4-flag-banner-black');
+            blackBanner.innerHTML = `<span class="text-xl">⚫</span>
+                <span class="text-xs font-bold text-slate-400 tracking-wider uppercase">Black Flag Losers</span>
+                <div class="flex gap-4 flex-1">${loserHtml}</div>`;
         };
 
         const init = () => { 
@@ -1540,19 +1689,19 @@
         init();
 
         window.switchTab = (idx) => {
-            const p1 = document.getElementById('page1'), p2 = document.getElementById('page2'), p3 = document.getElementById('page3');
-            p1.classList.remove('fade-enter'); p2.classList.remove('fade-enter'); p3.classList.remove('fade-enter');
-            void p1.offsetWidth; void p2.offsetWidth; void p3.offsetWidth;
+            const p1 = document.getElementById('page1'), p2 = document.getElementById('page2'), p3 = document.getElementById('page3'), p4 = document.getElementById('page4');
+            [p1,p2,p3,p4].forEach(p => { p.classList.remove('fade-enter'); void p.offsetWidth; });
             p1.style.display = idx===1 ? 'flex' : 'none'; if(idx===1) p1.classList.add('fade-enter');
             p2.style.display = idx===2 ? 'flex' : 'none'; if(idx===2) p2.classList.add('fade-enter');
             p3.style.display = idx===3 ? 'flex' : 'none'; if(idx===3) { p3.classList.add('fade-enter'); window.standingsRender(); }
+            p4.style.display = idx===4 ? 'flex' : 'none'; if(idx===4) { p4.classList.add('fade-enter'); renderDimRank(); }
 
             const makeClass = (i, c) => `px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 ${c===i ? 'shadow-md ' : ''}${c===i ? colorMap[i].active : 'text-slate-500 hover:text-slate-300'}`;
-            const colorMap = {1:{active:'bg-blue-600 text-white'},2:{active:'bg-indigo-600 text-white'},3:{active:'bg-amber-600 text-white'}};
-            const ml = idx>1 ? 'ml-1' : '';
-            document.getElementById('btn-tab1').className = makeClass(idx,1) + ml;
+            const colorMap = {1:{active:'bg-blue-600 text-white'},2:{active:'bg-indigo-600 text-white'},3:{active:'bg-amber-600 text-white'},4:{active:'bg-rose-600 text-white'}};
+            document.getElementById('btn-tab1').className = makeClass(idx,1);
             document.getElementById('btn-tab2').className = makeClass(idx,2) + ' ml-1';
             document.getElementById('btn-tab3').className = makeClass(idx,3) + ' ml-1';
+            document.getElementById('btn-tab4').className = makeClass(idx,4) + ' ml-1';
             if(idx===1 && chartInstance) chartInstance.resize();
         };
 
