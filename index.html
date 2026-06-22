@@ -561,6 +561,11 @@
         let chartInstance = null;
         let pkPeriod = 'day'; // 'day' | 'week' | 'month'
 
+        /* ★ Write counter: prevents Firebase onValue cache from rolling back user's latest write (MEMORY.md v2.16 fix) */
+        let _localWriteCounter = parseInt(localStorage.getItem('_mbs_write_seq') || '0');
+        /* ★ Generation counter: prevents stale Firebase callbacks from corrupting state after date switch */
+        let _dateGen = 0;
+
         /* ═══════════════════════════════════════════════
            CUMULATIVE DATA HELPERS
            ═══════════════════════════════════════════════ */
@@ -694,11 +699,25 @@
             { id: 'los', name: 'Loss', type: 'rev', colorClass: 'badge-los' }
         ];
 
+        /* ★ Unique client ID (persisted): used with writeCounter to detect own cache data vs other clients' data */
+        let _clientId = localStorage.getItem('_mbs_client_id');
+        if (!_clientId) {
+            _clientId = 'c' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+            localStorage.setItem('_mbs_client_id', _clientId);
+        }
+
         let state = { t1: {}, t2: { PRO1: {}, PRO2: {} }, standings: {} };
 
-        /* ★ Safe merge: creates missing entries instead of relying on prior initDefaultState() */
-        const mergeData = (source) => {
+        /* ★ Safe merge: creates missing entries instead of relying on prior initDefaultState().
+           If source contains write tracking info, skip merge when it's our own stale cache data.
+           Use force=true to bypass counter check (e.g. when switching dates and loading from localStorage). */
+        const mergeData = (source, force) => {
             if (!source) return;
+            /* ★ Write counter check: if source is from ourselves and counter <= local counter, it's stale cache → skip.
+               force=true overrides this (needed for date switch / initial localStorage load). */
+            if (!force && source._clientId === _clientId && typeof source._writeCounter === 'number') {
+                if (source._writeCounter <= _localWriteCounter) return; // stale cache, don't rollback
+            }
             if (source.t1) {
                 workshops.forEach(ws => {
                     if (source.t1[ws.id]) {
@@ -772,17 +791,28 @@
             if(!firebaseReady || !fbDb) return;
             if(dbRef) firebaseModules.off(dbRef);
             dbRef = firebaseModules.ref(fbDb, `mbs_dm_board_data/${currentDate}`);
+            /* ★ Capture current generation to detect stale callbacks after date switch */
+            const thisGen = ++_dateGen;
+            const thisDate = currentDate;
             /* ★ Firebase listener — merges cloud data into current state (does NOT call initDefaultState!) */
             firebaseModules.onValue(dbRef, (snapshot) => {
+                /* ★ Stale generation check: skip if date was switched since this listener was created */
+                if (_dateGen !== thisGen) return;
                 const data = snapshot.val();
                 if (data) {
                     mergeData(data);
-                    localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
+                    /* ★ Only persist to localStorage if date hasn't changed during async callback */
+                    if (currentDate === thisDate) {
+                        localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
+                    }
                 }
-                if (!document.getElementById('admin-drawer').classList.contains('open')) renderAdmin();
-                updateUI();
+                /* ★ Only update UI if date hasn't changed (stale callback guard) */
+                if (currentDate === thisDate) {
+                    if (!document.getElementById('admin-drawer').classList.contains('open')) renderAdmin();
+                    updateUI();
+                }
             }, (err) => {
-                console.warn('Firebase sync error:', err.message);
+                if (_dateGen === thisGen) console.warn('Firebase sync error:', err.message);
             });
         };
 
@@ -790,7 +820,8 @@
             currentDate = document.getElementById('global-date').value; 
             initDefaultState();
             const local = localStorage.getItem(`mbs_state_${currentDate}`);
-            if (local) { try { mergeData(JSON.parse(local)); } catch(e) {} }
+            /* ★ force=true: bypass write counter check (localStorage data is authoritative for date switch) */
+            if (local) { try { mergeData(JSON.parse(local), true); } catch(e) {} }
             renderAdmin();
             updateUI();
             if(firebaseReady) listenToFirebase(); 
@@ -802,7 +833,8 @@
             document.getElementById('global-date').value = currentDate;
             initDefaultState();
             const local = localStorage.getItem(`mbs_state_${currentDate}`);
-            if (local) { try { mergeData(JSON.parse(local)); } catch(e) {} }
+            /* ★ force=true: bypass write counter check (localStorage data is authoritative for date switch) */
+            if (local) { try { mergeData(JSON.parse(local), true); } catch(e) {} }
             renderAdmin();
             updateUI();
             if(firebaseReady) listenToFirebase();
@@ -832,9 +864,28 @@
                     state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
                     state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
                 }
-                localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(state));
-                if(firebaseReady && dbRef) firebaseModules.set(dbRef, state).then(() => { setTimeout(() => syncUI.classList.add('hidden'), 800); }).catch(() => console.warn('Firebase save failed'));
-                else setTimeout(() => syncUI.classList.add('hidden'), 800);
+                /* ★ Increment write counter before saving: prevents Firebase cache rollback */
+                _localWriteCounter++;
+                localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                /* ★ Build payload with write tracking metadata */
+                var savePayload = JSON.parse(JSON.stringify(state));
+                savePayload._writeCounter = _localWriteCounter;
+                savePayload._clientId = _clientId;
+                savePayload._updatedAt = Date.now();
+
+                localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(savePayload));
+                if(firebaseReady && dbRef) {
+                    firebaseModules.set(dbRef, savePayload).then(() => {
+                        setTimeout(() => syncUI.classList.add('hidden'), 800);
+                    }).catch(function(e) {
+                        /* ★ Save failed: decrement counter so retry gets a fresh number */
+                        _localWriteCounter--;
+                        localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                        console.warn('Firebase save failed:', e.message);
+                    });
+                } else {
+                    setTimeout(() => syncUI.classList.add('hidden'), 800);
+                }
                 updateUI();
             }, 800);
         };
@@ -1306,10 +1357,10 @@
         const init = () => { 
             setDateInit(); 
             initDefaultState(); 
-            /* ★ Always render immediately from localStorage */
+            /* ★ Always render immediately from localStorage (force=true to bypass write counter check on initial load) */
             const localData = localStorage.getItem(`mbs_state_${currentDate}`);
             if (localData) {
-                try { mergeData(JSON.parse(localData)); } catch(e) {}
+                try { mergeData(JSON.parse(localData), true); } catch(e) {}
             }
             renderAdmin();
             updateUI();
