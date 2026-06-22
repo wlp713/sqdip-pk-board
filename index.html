@@ -707,26 +707,38 @@
         function accumulateT2(mode) {
             const dates = getDateRange(mode, currentDate);
             const acc = { PRO1: {}, PRO2: {} };
+            const cnt = { PRO1: {}, PRO2: {} };  /* per (ws, line, shift) date counter */
             let hasData = false;
             dates.forEach(ds => {
                 const data = loadDayData(ds);
                 if (!data || !data.t2) return;
                 ['PRO1','PRO2'].forEach(ws => {
                     if (!data.t2[ws]) return;
+                    if (!cnt[ws]) cnt[ws] = {};
                     Object.keys(data.t2[ws]).forEach(line => {
                         const entry = data.t2[ws][line];
                         if (!entry) return;
+                        if (!cnt[ws][line]) cnt[ws][line] = {};
                         // ★ Preserve Day/Night structure for accumulated periods
                         if (entry.day !== undefined) {
                             if (!acc[ws][line]) acc[ws][line] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
-                            acc[ws][line].day.t += Number(entry.day.t) || 0;
-                            acc[ws][line].day.a += Number(entry.day.a) || 0;
-                            acc[ws][line].night.t += Number(entry.night.t) || 0;
-                            acc[ws][line].night.a += Number(entry.night.a) || 0;
+                            const dT = Number(entry.day.t) || 0;
+                            const dA = Number(entry.day.a) || 0;
+                            const nT = Number(entry.night.t) || 0;
+                            const nA = Number(entry.night.a) || 0;
+                            acc[ws][line].day.t += dT;
+                            acc[ws][line].day.a += dA;
+                            acc[ws][line].night.t += nT;
+                            acc[ws][line].night.a += nA;
+                            cnt[ws][line]._day = (cnt[ws][line]._day || 0) + 1;
+                            cnt[ws][line]._night = (cnt[ws][line]._night || 0) + 1;
                         } else if (typeof entry.t === 'number' || entry.t) {
                             if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
-                            acc[ws][line].t += Number(entry.t) || 0;
-                            acc[ws][line].a += Number(entry.a) || 0;
+                            const vT = Number(entry.t) || 0;
+                            const vA = Number(entry.a) || 0;
+                            acc[ws][line].t += vT;
+                            acc[ws][line].a += vA;
+                            cnt[ws][line]._flat = (cnt[ws][line]._flat || 0) + 1;
                         } else {
                             return;
                         }
@@ -734,30 +746,66 @@
                     });
                 });
             });
+            /* ★ Convert sum → average per date */
+            if (hasData) {
+                ['PRO1','PRO2'].forEach(ws => {
+                    if (!cnt[ws]) return;
+                    Object.keys(acc[ws]).forEach(line => {
+                        const e = acc[ws][line];
+                        if (e.day !== undefined) {
+                            const dc = (cnt[ws][line]._day || 1);
+                            const nc = (cnt[ws][line]._night || 1);
+                            e.day.t = e.day.t / dc;
+                            e.day.a = e.day.a / dc;
+                            e.night.t = e.night.t / nc;
+                            e.night.a = e.night.a / nc;
+                        } else if (typeof e.t === 'number') {
+                            const c = (cnt[ws][line]._flat || 1);
+                            e.t = e.t / c;
+                            e.a = e.a / c;
+                        }
+                    });
+                });
+            }
             return hasData ? acc : null;
         }
 
-        /* ── Accumulate T1 (KPI dimensions) across dates ── */
+        /* ── Accumulate T1 (KPI dimensions) across dates → AVERAGE ── */
         function accumulateT1(mode) {
             const dates = getDateRange(mode, currentDate);
             const acc = {};
+            const cnt = {};  /* per (ws, dim) date counter */
             let hasData = false;
             dates.forEach(ds => {
                 const data = loadDayData(ds);
                 if (!data || !data.t1) return;
                 workshops.forEach(ws => {
                     if (!data.t1[ws.id]) return;
-                    if (!acc[ws.id]) acc[ws.id] = {};
+                    if (!acc[ws.id]) { acc[ws.id] = {}; cnt[ws.id] = {}; }
                     dims.forEach(d => {
                         const entry = data.t1[ws.id][d.id];
                         if (!entry) return;
-                        if (!acc[ws.id][d.id]) acc[ws.id][d.id] = { t: 0, a: 0 };
-                        acc[ws.id][d.id].t += Number(entry.t) || 0;
-                        acc[ws.id][d.id].a += Number(entry.a) || 0;
+                        const vT = Number(entry.t) || 0;
+                        const vA = Number(entry.a) || 0;
+                        if (!acc[ws.id][d.id]) { acc[ws.id][d.id] = { t: 0, a: 0 }; cnt[ws.id][d.id] = 0; }
+                        acc[ws.id][d.id].t += vT;
+                        acc[ws.id][d.id].a += vA;
+                        cnt[ws.id][d.id]++;
                         hasData = true;
                     });
                 });
             });
+            /* ★ Convert sum → average per date */
+            if (hasData) {
+                workshops.forEach(ws => {
+                    if (!cnt[ws.id]) return;
+                    dims.forEach(d => {
+                        if (!cnt[ws.id][d.id] || cnt[ws.id][d.id] === 0) return;
+                        acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
+                        acc[ws.id][d.id].a = acc[ws.id][d.id].a / cnt[ws.id][d.id];
+                    });
+                });
+            }
             return hasData ? acc : null;
         }
 
@@ -1037,15 +1085,7 @@
                 /* Build cumulative summary line for this workshop */
                 let cumHtml = '';
                 if (accT1 && accT1[ws.id]) {
-                    let sumT = 0, sumA = 0;
-                    dims.forEach(d => {
-                        if (accT1[ws.id][d.id]) {
-                            sumT += accT1[ws.id][d.id].t;
-                            sumA += accT1[ws.id][d.id].a;
-                        }
-                    });
-                    const ach = sumT > 0 ? ((sumA / sumT) * 100).toFixed(1) : '--';
-                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} TGT:${sumT} ACT:${sumA} ACH:${ach}%</div>`;
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} · (AVG / date)</div>`;
                 }
                 return `
                 <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm">
@@ -1069,13 +1109,7 @@
             const buildAdminT2 = (wsName, obj) => {
                 let cumHtml = '';
                 if (accT2 && accT2[wsName]) {
-                    let sumT = 0, sumA = 0;
-                    Object.keys(accT2[wsName]).forEach(l => {
-                        sumT += accT2[wsName][l].t;
-                        sumA += accT2[wsName][l].a;
-                    });
-                    const ach = sumT > 0 ? ((sumA / sumT) * 100).toFixed(1) : '--';
-                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} TGT:${sumT} ACT:${sumA} ACH:${ach}%</div>`;
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} · (AVG / date)</div>`;
                 }
                 return `
                 <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm mb-3">
