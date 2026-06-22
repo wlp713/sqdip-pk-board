@@ -166,14 +166,14 @@
         .rank-item.bronze { background: rgba(180,83,9,0.08); border-left: 2px solid #b45309; }
 
         /* ═══ DIM RANK 视觉效果优化 ═══ */
-        /* ═══ DIM RANK: 红旗（最佳）═══ */
+        /* ═══ DIM RANK: 红旗(最佳)═══ */
         .rank-best {
             background: linear-gradient(90deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.04) 100%);
             border-left: 3px solid #ef4444;
             box-shadow: inset 0 0 12px rgba(239,68,68,0.08);
         }
         .rank-best .rank-flag { filter: drop-shadow(0 0 6px rgba(239,68,68,0.6)); }
-        /* ═══ DIM RANK: 黑旗（最差）═══ */
+        /* ═══ DIM RANK: 黑旗(最差)═══ */
         .rank-worst {
             background: linear-gradient(90deg, rgba(71,85,105,0.25) 0%, rgba(71,85,105,0.04) 100%);
             border-left: 3px solid #475569;
@@ -190,14 +190,14 @@
         .rank-flag-loser { filter: drop-shadow(0 0 4px rgba(148,163,184,0.4)); }
         .rank-best .num-hl { filter: drop-shadow(0 0 4px rgba(239,68,68,0.25)); }
 
-        /* ═══ 冠军标牌：金+红 配色 ═══ */
+        /* ═══ 冠军标牌:金+红 配色 ═══ */
         .champion-card-golden {
             background: linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(239,68,68,0.08) 50%, rgba(15,23,42,0.3) 100%);
             box-shadow: 0 0 24px rgba(234,179,8,0.15), inset 0 0 20px rgba(234,179,8,0.04);
             border: 1px solid rgba(234,179,8,0.25);
             border-left: 4px solid #ef4444;
         }
-        /* ═══ 黑旗标牌：深灰+暗红警告 ═══ */
+        /* ═══ 黑旗标牌:深灰+暗红警告 ═══ */
         .banner-black-flag {
             background: linear-gradient(135deg, rgba(51,65,85,0.3) 0%, rgba(15,23,42,0.5) 100%);
             border: 1px solid rgba(71,85,105,0.3);
@@ -286,7 +286,7 @@
 
                 <div class="panel-card champion-card p-3 w-[25%] flex flex-col items-center text-center relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
-                    
+
                     <!-- ★ Champion visual: trophy + name + score -->
                     <div class="flex items-center gap-2 mt-3">
                         <div class="trophy-float text-[2.2rem]">🏆</div>
@@ -509,7 +509,7 @@
                 <span id="p4-period-tag" class="text-[10px] font-mono text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full border border-slate-700">CURRENT PERIOD</span>
             </div>
 
-            <!-- 🚩 Top banner: 红旗（最佳） -->
+            <!-- 🚩 Top banner: 红旗(最佳) -->
             <div id="p4-flag-banner" class="panel-card px-3 py-2 champion-card-golden shrink-0 flex items-center gap-3">
                 <img class="rank-flag-winner" style="width:40px;height:auto" src="data:image/png;base64,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">
                 <div class="flex flex-col">
@@ -519,7 +519,7 @@
                 <div id="p4-champion-badges" class="flex gap-1.5 flex-1 flex-wrap"></div>
             </div>
 
-            <!-- ⚫ Bottom banner: 黑旗（最差） -->
+            <!-- ⚫ Bottom banner: 黑旗(最差) -->
             <div id="p4-flag-banner-black" class="panel-card px-3 py-2 banner-black-flag shrink-0 flex items-center gap-3">
                 <img class="rank-flag" style="width:40px;height:auto" src="data:image/png;base64,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">
                 <div class="flex flex-col">
@@ -565,10 +565,10 @@
                 <div id="admin-t1-inputs" class="space-y-4"></div>
             </section>
             <div class="mt-4 pt-2 border-t border-slate-700/50">
-                <button onclick="copyT1ToAllDates()" class="w-full py-2 px-3 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold rounded transition flex items-center justify-center gap-2" title="将当前页面的T1目标值（不含实际数据）复制到所有已有数据的日期中">
+                <button onclick="copyT1ToAllDates()" class="w-full py-2 px-3 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold rounded transition flex items-center justify-center gap-2" title="将当前页面的T1目标值(不含实际数据)复制到所有已有数据的日期中">
                     <i class="fa-solid fa-copy"></i> 📋 应用当前T1目标到所有日期
                 </button>
-                <p class="text-[9px] text-slate-600 text-center mt-1">仅复制目标值，不影响实际产出数据</p>
+                <p class="text-[9px] text-slate-600 text-center mt-1">仅复制目标值,不影响实际产出数据</p>
             </div>
             <section>
                 <h3 class="title-h3 text-indigo-400 mb-4 border-b border-slate-800 pb-2 mt-6">MOD 2: OUTPUT (QTY)</h3>
@@ -594,6 +594,40 @@
             }
             /* ★ Initialize Firebase if loaded */
             if (firebaseReady) initFirebase();
+            /* ★ Sync saved defaults from Firebase (cross-machine) */
+            if (firebaseReady) initFirebaseConfigSync();
+        }
+
+        /* ★ Load default T1 targets from Firebase config node (for cross-machine consistency) */
+        function initFirebaseConfigSync() {
+            try {
+                var configRef = firebaseModules.ref(fbDb, '_config/defaultT1Targets');
+                firebaseModules.onValue(configRef, function(snapshot) {
+                    var data = snapshot.val();
+                    if (data && typeof data === 'object') {
+                        /* Save to localStorage for mergeData() override to pick up */
+                        localStorage.setItem('_defaultT1Targets', JSON.stringify(data));
+                        /* Re-apply to current state immediately */
+                        try {
+                            workshops.forEach(function(ws) {
+                                if (data[ws.id]) {
+                                    if (!state.t1[ws.id]) state.t1[ws.id] = {};
+                                    dims.forEach(function(d) {
+                                        if (data[ws.id][d.id] !== undefined) {
+                                            if (!state.t1[ws.id][d.id]) state.t1[ws.id][d.id] = { t: 0, a: 0 };
+                                            state.t1[ws.id][d.id].t = Number(data[ws.id][d.id]) || 0;
+                                        }
+                                    });
+                                }
+                            });
+                            renderAdmin();
+                            updateUI();
+                        } catch(e) {}
+                    }
+                }, function(err) {
+                    console.warn('Firebase config sync error:', err.message);
+                });
+            } catch(e) {}
         }
 
         var firebaseConfig = {
@@ -790,18 +824,18 @@
                     }
                 });
             }
-            /* ★ Apply saved default T1 targets (set by user via '应用当前T1目标到所有日期' button) */
+            /* ★ Apply saved default T1 targets (set by user via 'apply to all dates' button) */
             try {
-                var defT1 = localStorage.getItem('_defaultT1Targets');
-                if (defT1) {
-                    var parsed = JSON.parse(defT1);
+                var _d = localStorage.getItem('_defaultT1Targets');
+                if (_d) {
+                    var _dp = JSON.parse(_d);
                     workshops.forEach(function(ws) {
-                        if (parsed[ws.id]) {
+                        if (_dp[ws.id]) {
                             if (!state.t1[ws.id]) state.t1[ws.id] = {};
                             dims.forEach(function(d) {
-                                if (parsed[ws.id][d.id] !== undefined) {
+                                if (_dp[ws.id][d.id] !== undefined) {
                                     if (!state.t1[ws.id][d.id]) state.t1[ws.id][d.id] = { t: 0, a: 0 };
-                                    state.t1[ws.id][d.id].t = Number(parsed[ws.id][d.id]) || 0;
+                                    state.t1[ws.id][d.id].t = Number(_dp[ws.id][d.id]) || 0;
                                 }
                             });
                         }
@@ -892,7 +926,7 @@
             /* ★ Capture current generation to detect stale callbacks after date switch */
             const thisGen = ++_dateGen;
             const thisDate = currentDate;
-            /* ★ Firebase listener — merges cloud data into current state (does NOT call initDefaultState!) */
+            /* ★ Firebase listener - merges cloud data into current state (does NOT call initDefaultState!) */
             firebaseModules.onValue(dbRef, (snapshot) => {
                 /* ★ Stale generation check: skip if date was switched since this listener was created */
                 if (_dateGen !== thisGen) return;
@@ -921,6 +955,8 @@
             /* ★ force=true: bypass write counter check (localStorage data is authoritative for date switch) */
             if (local) { try { mergeData(JSON.parse(local), true); } catch(e) {} }
             renderAdmin();
+            /* ★ Restore lock state after renderAdmin (which reads checkbox) */
+            restoreLockState();
             updateUI();
             if(firebaseReady) listenToFirebase(); 
         };
@@ -934,8 +970,10 @@
             /* ★ force=true: bypass write counter check (localStorage data is authoritative for date switch) */
             if (local) { try { mergeData(JSON.parse(local), true); } catch(e) {} }
             renderAdmin();
+            /* ★ Restore lock state after renderAdmin (which reads checkbox) */
+            restoreLockState();
             updateUI();
-            if(firebaseReady) listenToFirebase();
+            if(firebaseReady) listenToFirebase(); 
         };
 
         let saveTimer;
@@ -1451,9 +1489,9 @@
             blackBanner.querySelector('#p4-loser-badges').innerHTML = loserInner;
         };
 
-        const init = () => { 
-            setDateInit(); 
-            initDefaultState(); 
+        const init = () => {
+            setDateInit();
+            initDefaultState();
             /* ★ Always render immediately from localStorage (force=true to bypass write counter check on initial load) */
             const localData = localStorage.getItem(`mbs_state_${currentDate}`);
             if (localData) {
@@ -1462,12 +1500,14 @@
             renderAdmin();
             updateUI();
             window.standingsRender();
-            lockBadge(); 
+            lockBadge();
+            /* ★ Restore target lock state from localStorage */
+            restoreLockState();
             /* ★ Firebase sync (may or may not load) */
             if(firebaseReady) listenToFirebase();
-            window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); }); 
+            window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); });
         };
-        
+
         /* ★ standingsRender(): auto-scan all dates, compute workshop champ counts + PRO1/2 PK wins */
         window.standingsRender = () => {
             const statusEl = document.getElementById('p3-data-status');
@@ -1880,14 +1920,24 @@
                 });
             });
             if (!hasTargets) {
-                alert('当前T1所有目标值均为0，请先设置目标值再操作。');
+                alert('当前T1所有目标值均为0,请先设置目标值再操作。');
                 return;
             }
 
-            if (!confirm('确定将当前T1目标值应用到所有已有数据的日期？\n\n仅复制目标值（t），不影响实际数据（a）。')) return;
+            if (!confirm('确定将当前T1目标值应用到所有已有数据的日期?\n\n仅复制目标值(t),不影响实际数据(a)。')) return;
 
             // ★ Step 3: Save as permanent default - mergeData() will use these for every date
             localStorage.setItem('_defaultT1Targets', JSON.stringify(targets));
+
+            // ★ Step 3b: Also sync to Firebase for cross-machine consistency
+            if (firebaseReady && fbDb) {
+                try {
+                    var configRef = firebaseModules.ref(fbDb, '_config/defaultT1Targets');
+                    firebaseModules.set(configRef, targets).catch(function(e) {
+                        console.warn('Firebase config save failed:', e.message);
+                    });
+                } catch(e) {}
+            }
 
             // ★ Step 4: Collect all date strings that have data
             var allDates = {};
@@ -1969,22 +2019,22 @@
                     });
                     if (afFirebase > 0) {
                         var total = afLocal + afFirebase;
-                        alert('已完成！\n' +
+                        alert('已完成!\n' +
                             '• localStorage: ' + afLocal + ' 个日期\n' +
                             '• Firebase追加: ' + afFirebase + ' 个日期\n' +
                             '• 合计: ' + total + ' 个日期已更新\n\n' +
-                            '默认目标已保存，以后新建日期自动使用此值。');
+                            '默认目标已保存,以后新建日期自动使用此值。');
                     }
                 }, function(err) {
                     console.warn('Firebase list query failed:', err.message);
-                    var msg = '已完成！已更新 ' + afLocal + ' 个日期的数据（localStorage）。';
+                    var msg = '已完成!已更新 ' + afLocal + ' 个日期的数据(localStorage)。';
                     if (afLocal === 0) msg = '没有找到其他日期的数据。';
-                    msg += '\n\n⚠️ Firebase查询失败: ' + err.message + '\n但默认目标已保存，加载已有日期时会自动应用。';
+                    msg += '\n\n⚠️ Firebase查询失败: ' + err.message + '\n但默认目标已保存,加载已有日期时会自动应用。';
                     alert(msg);
                 }, { onlyOnce: true });
             } else {
-                var msg = '已完成！已更新 ' + afLocal + ' 个日期的数据。\n默认目标已保存，新建日期自动使用此值。';
-                if (afLocal === 0) msg = '没有找到其他日期的数据（localStorage中无 mbs_state_* 键）。目标已保存为默认值。';
+                var msg = '已完成!已更新 ' + afLocal + ' 个日期的数据。\n默认目标已保存,新建日期自动使用此值。';
+                if (afLocal === 0) msg = '没有找到其他日期的数据(localStorage中无 mbs_state_* 键)。目标已保存为默认值。';
                 alert(msg);
             }
         };
@@ -1993,7 +2043,25 @@
             const locked = document.getElementById('lock-target-toggle').checked;
             document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
             lockBadge();
+            /* ★ Persist lock state across browser sessions */
+            try { localStorage.setItem('_tgtLocked', JSON.stringify(locked)); } catch(e) {}
         };
+
+        /* ★ Restore target lock state from localStorage on page load */
+        function restoreLockState() {
+            try {
+                var raw = localStorage.getItem('_tgtLocked');
+                if (raw !== null) {
+                    var locked = JSON.parse(raw);
+                    var cb = document.getElementById('lock-target-toggle');
+                    if (cb) {
+                        cb.checked = locked;
+                        document.querySelectorAll('.input-target').forEach(function(el) { el.readOnly = locked; });
+                        lockBadge();
+                    }
+                }
+            } catch(e) {}
+        }
 
         /* ★ Show lock state in header */
         function lockBadge() {
@@ -2013,7 +2081,7 @@
             document.getElementById('admin-drawer').classList.remove('open');
             document.getElementById('admin-overlay').style.display = 'none';
             try {
-                /* ★ Capture ONLY the current visible page — no admin drawer, no blank space */
+                /* ★ Capture ONLY the current visible page - no admin drawer, no blank space */
                 const pageId = document.getElementById('page1').style.display === 'none' ? 'page2' : 'page1';
                 const el = document.getElementById(pageId);
                 html2canvas(el, {
