@@ -790,6 +790,25 @@
                     }
                 });
             }
+            /* ★ Apply saved default T1 targets (set by user via '应用当前T1目标到所有日期' button) */
+            try {
+                var defT1 = localStorage.getItem('_defaultT1Targets');
+                if (defT1) {
+                    var parsed = JSON.parse(defT1);
+                    workshops.forEach(function(ws) {
+                        if (parsed[ws.id]) {
+                            if (!state.t1[ws.id]) state.t1[ws.id] = {};
+                            dims.forEach(function(d) {
+                                if (parsed[ws.id][d.id] !== undefined) {
+                                    if (!state.t1[ws.id][d.id]) state.t1[ws.id][d.id] = { t: 0, a: 0 };
+                                    state.t1[ws.id][d.id].t = Number(parsed[ws.id][d.id]) || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch(e) {}
+
             if (source.t2) {
                 ['PRO1', 'PRO2'].forEach(wsName => {
                     if (source.t2[wsName]) {
@@ -1867,23 +1886,31 @@
 
             if (!confirm('确定将当前T1目标值应用到所有已有数据的日期？\n\n仅复制目标值（t），不影响实际数据（a）。')) return;
 
-            // ★ Step 3: Save as default for future dates
+            // ★ Step 3: Save as permanent default - mergeData() will use these for every date
             localStorage.setItem('_defaultT1Targets', JSON.stringify(targets));
 
-            // ★ Step 4: Iterate all existing date keys in localStorage
-            var affected = 0;
-            for (var i = 0; i < localStorage.length; i++) {
-                var key = localStorage.key(i);
-                if (!key || !key.startsWith('mbs_state_')) continue;
-                var dateStr = key.replace('mbs_state_', '');
-                if (dateStr === currentDate) continue; // current date already has these values
+            // ★ Step 4: Collect all date strings that have data
+            var allDates = {};
 
+            // 4a: Dates from localStorage
+            for (var i = 0; i < localStorage.length; i++) {
+                var localKey = localStorage.key(i);
+                if (localKey && localKey.startsWith('mbs_state_')) {
+                    allDates[localKey.replace('mbs_state_', '')] = true;
+                }
+            }
+            delete allDates[currentDate]; // current date already has these values
+
+            // ★ Step 5: Update each date in localStorage + Firebase
+            var afLocal = 0;
+            var dateKeys = Object.keys(allDates);
+            dateKeys.forEach(function(dateStr) {
                 try {
-                    var raw = localStorage.getItem(key);
-                    if (!raw) continue;
+                    var raw = localStorage.getItem('mbs_state_' + dateStr);
+                    if (!raw) return;
                     var data = JSON.parse(raw);
 
-                    // ★ Step 5: Ensure data structure, update only T1 target values
+                    // Ensure data structure, update only T1 target values
                     if (!data.t1) data.t1 = {};
                     workshops.forEach(function(ws) {
                         if (!data.t1[ws.id]) data.t1[ws.id] = {};
@@ -1893,29 +1920,73 @@
                         });
                     });
 
-                    // ★ Step 6: Save back to localStorage
-                    localStorage.setItem(key, JSON.stringify(data));
+                    // Save back to localStorage
+                    localStorage.setItem('mbs_state_' + dateStr, JSON.stringify(data));
 
-                    // ★ Step 7: Sync to Firebase if available
+                    // ★ Sync to Firebase using the CORRECT path
                     if (firebaseReady && fbDb) {
-                        var dateRef = firebaseModules.ref(fbDb, 'state/' + dateStr);
+                        var dateRef = firebaseModules.ref(fbDb, 'mbs_dm_board_data/' + dateStr);
                         firebaseModules.set(dateRef, data).catch(function(e) {
                             console.warn('Firebase save failed for', dateStr, ':', e.message);
                         });
                     }
 
-                    affected++;
+                    afLocal++;
                 } catch(e) {
                     console.warn('Failed to process', dateStr, ':', e.message);
                 }
+            });
+
+            // ★ Step 6: Also try to fetch all dates from Firebase (catches dates from other machines)
+            if (firebaseReady && fbDb) {
+                var rootRef = firebaseModules.ref(fbDb, 'mbs_dm_board_data');
+                firebaseModules.onValue(rootRef, function(snapshot) {
+                    var fbAll = snapshot.val();
+                    if (!fbAll) return;
+                    var afFirebase = 0;
+                    Object.keys(fbAll).forEach(function(dateStr) {
+                        if (dateStr === currentDate || allDates[dateStr]) return; // already handled
+                        var fbData = fbAll[dateStr];
+                        if (!fbData || typeof fbData !== 'object') return;
+                        if (!fbData.t1) fbData.t1 = {};
+                        workshops.forEach(function(ws) {
+                            if (!fbData.t1[ws.id]) fbData.t1[ws.id] = {};
+                            dims.forEach(function(d) {
+                                if (!fbData.t1[ws.id][d.id]) fbData.t1[ws.id][d.id] = { t: 0, a: 0 };
+                                fbData.t1[ws.id][d.id].t = targets[ws.id][d.id];
+                            });
+                        });
+                        // Write back to Firebase
+                        var dateRef = firebaseModules.ref(fbDb, 'mbs_dm_board_data/' + dateStr);
+                        firebaseModules.set(dateRef, fbData).catch(function(e) {
+                            console.warn('Firebase update failed for', dateStr, ':', e.message);
+                        });
+                        // Also save to localStorage for next visit
+                        try {
+                            localStorage.setItem('mbs_state_' + dateStr, JSON.stringify(fbData));
+                        } catch(lsErr) {}
+                        afFirebase++;
+                    });
+                    if (afFirebase > 0) {
+                        var total = afLocal + afFirebase;
+                        alert('已完成！\n' +
+                            '• localStorage: ' + afLocal + ' 个日期\n' +
+                            '• Firebase追加: ' + afFirebase + ' 个日期\n' +
+                            '• 合计: ' + total + ' 个日期已更新\n\n' +
+                            '默认目标已保存，以后新建日期自动使用此值。');
+                    }
+                }, function(err) {
+                    console.warn('Firebase list query failed:', err.message);
+                    var msg = '已完成！已更新 ' + afLocal + ' 个日期的数据（localStorage）。';
+                    if (afLocal === 0) msg = '没有找到其他日期的数据。';
+                    msg += '\n\n⚠️ Firebase查询失败: ' + err.message + '\n但默认目标已保存，加载已有日期时会自动应用。';
+                    alert(msg);
+                }, { onlyOnce: true });
+            } else {
+                var msg = '已完成！已更新 ' + afLocal + ' 个日期的数据。\n默认目标已保存，新建日期自动使用此值。';
+                if (afLocal === 0) msg = '没有找到其他日期的数据（localStorage中无 mbs_state_* 键）。目标已保存为默认值。';
+                alert(msg);
             }
-
-            // Step 3 already saved defaults to localStorage (_defaultT1Targets)
-            // initDefaultState() reads from there automatically
-
-            var msg = '已完成！已将当前T1目标值应用到 ' + affected + ' 个日期的数据。\n同时已保存为默认目标值，新建日期的T1目标将自动使用此值。';
-            if (affected === 0) msg = '没有找到其他日期的数据（localStorage中无 mbs_state_* 键）。目标已保存为默认值，后续新建日期时将自动应用。';
-            alert(msg);
         };
 
         window.toggleLock = () => {
