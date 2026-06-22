@@ -166,43 +166,49 @@
         .rank-item.bronze { background: rgba(180,83,9,0.08); border-left: 2px solid #b45309; }
 
         /* ═══ DIM RANK 视觉效果优化 ═══ */
+        /* ═══ DIM RANK: 红旗（最佳）═══ */
         .rank-best {
-            background: linear-gradient(90deg, rgba(16,185,129,0.3) 0%, rgba(16,185,129,0.06) 100%);
-            border-left: 3px solid #10b981;
-            box-shadow: inset 0 0 14px rgba(16,185,129,0.12);
-        }
-        .rank-best .rank-flag { filter: drop-shadow(0 0 6px rgba(234,179,8,0.7)); }
-        .rank-worst {
-            background: linear-gradient(90deg, rgba(239,68,68,0.3) 0%, rgba(239,68,68,0.06) 100%);
+            background: linear-gradient(90deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.04) 100%);
             border-left: 3px solid #ef4444;
-            box-shadow: inset 0 0 14px rgba(239,68,68,0.12);
+            box-shadow: inset 0 0 12px rgba(239,68,68,0.08);
+        }
+        .rank-best .rank-flag { filter: drop-shadow(0 0 6px rgba(239,68,68,0.6)); }
+        /* ═══ DIM RANK: 黑旗（最差）═══ */
+        .rank-worst {
+            background: linear-gradient(90deg, rgba(71,85,105,0.25) 0%, rgba(71,85,105,0.04) 100%);
+            border-left: 3px solid #475569;
+            box-shadow: inset 0 0 12px rgba(71,85,105,0.08);
         }
         .rank-worst .rank-flag {
-            animation: rank-pulse-red 1.8s ease-in-out infinite;
+            animation: rank-pulse-warn 2s ease-in-out infinite;
         }
-        @keyframes rank-pulse-red {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.15); }
+        @keyframes rank-pulse-warn {
+            0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 2px rgba(100,116,139,0.3)); }
+            50% { opacity: 0.6; transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(100,116,139,0.5)); }
         }
-        .rank-flag-winner { filter: drop-shadow(0 0 8px rgba(234,179,8,0.6)); }
-        .rank-pulse-winner {
-            animation: rank-glow-winner 2s ease-in-out infinite;
-        }
-        @keyframes rank-glow-winner {
-            0%, 100% { box-shadow: inset 0 0 10px rgba(251,191,36,0.1); }
-            50% { box-shadow: inset 0 0 20px rgba(251,191,36,0.25); }
-        }
+        .rank-flag-winner { filter: drop-shadow(0 0 8px rgba(251,191,36,0.6)); }
+        .rank-flag-loser { filter: drop-shadow(0 0 4px rgba(148,163,184,0.4)); }
+        .rank-best .num-hl { filter: drop-shadow(0 0 4px rgba(239,68,68,0.25)); }
+
+        /* ═══ 冠军标牌：金+红 配色 ═══ */
         .champion-card-golden {
-            box-shadow: 0 0 20px rgba(234,179,8,0.2), inset 0 0 15px rgba(234,179,8,0.05);
-            border: 1px solid rgba(234,179,8,0.3);
+            background: linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(239,68,68,0.08) 50%, rgba(15,23,42,0.3) 100%);
+            box-shadow: 0 0 24px rgba(234,179,8,0.15), inset 0 0 20px rgba(234,179,8,0.04);
+            border: 1px solid rgba(234,179,8,0.25);
+            border-left: 4px solid #ef4444;
         }
-        .black-flag-flash {
-            animation: black-flag-warn 1.5s ease-in-out infinite;
-            border: 1px solid rgba(239,68,68,0.2);
+        /* ═══ 黑旗标牌：深灰+暗红警告 ═══ */
+        .banner-black-flag {
+            background: linear-gradient(135deg, rgba(51,65,85,0.3) 0%, rgba(15,23,42,0.5) 100%);
+            border: 1px solid rgba(71,85,105,0.3);
+            border-left: 4px solid #475569;
         }
-        @keyframes black-flag-warn {
-            0%, 100% { border-color: rgba(239,68,68,0.2); }
-            50% { border-color: rgba(239,68,68,0.5); }
+        .banner-black-flag .rank-flag {
+            animation: black-flag-pulse 2s ease-in-out infinite;
+        }
+        @keyframes black-flag-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.08); }
         }
     </style>
 </head>
@@ -503,32 +509,32 @@
                 <span id="p4-period-tag" class="text-[11px] font-mono text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">CURRENT PERIOD</span>
             </div>
 
-            <!-- 🚩 Top banner: Red Flag champions (best in each dimension) -->
-            <div id="p4-flag-banner" class="panel-card px-4 py-2 champion-card-golden shrink-0 flex items-center gap-4">
-                <span class="text-2xl rank-flag-winner">🏆</span>
+            <!-- 🚩 Top banner: 红旗（最佳） -->
+            <div id="p4-flag-banner" class="panel-card px-4 py-3 champion-card-golden shrink-0 flex items-center gap-4">
+                <span class="text-3xl rank-flag-winner">🚩</span>
                 <div class="flex flex-col">
-                    <span class="text-[11px] font-black text-amber-400 tracking-widest uppercase drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]">🔥 CHAMPIONS</span>
-                    <span class="text-[9px] text-slate-500 font-mono">Best in each dimension</span>
+                    <span class="text-[13px] font-black text-amber-400 tracking-widest uppercase drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]">🏆 RED FLAG CHAMPIONS</span>
+                    <span class="text-[10px] text-slate-500 font-mono">Best in each dimension</span>
                 </div>
-                <div id="p4-champion-badges" class="flex gap-3 flex-1 flex-wrap"></div>
+                <div id="p4-champion-badges" class="flex gap-2 flex-1 flex-wrap"></div>
             </div>
 
-            <!-- ⚫ Bottom banner: Black Flag losers (worst in each dimension) -->
-            <div id="p4-flag-banner-black" class="panel-card px-4 py-2 black-flag-flash shrink-0 flex items-center gap-4" style="background:linear-gradient(90deg, rgba(127,29,29,0.3) 0%, rgba(15,23,42,0.2) 100%);border-left:4px solid #dc2626;">
-                <span class="text-2xl rank-flag">⚫</span>
+            <!-- ⚫ Bottom banner: 黑旗（最差） -->
+            <div id="p4-flag-banner-black" class="panel-card px-4 py-3 banner-black-flag shrink-0 flex items-center gap-4">
+                <span class="text-3xl rank-flag">⚫</span>
                 <div class="flex flex-col">
-                    <span class="text-[11px] font-black text-red-400 tracking-widest uppercase">⚠️ ALERT — LAST PLACE</span>
-                    <span class="text-[9px] text-slate-600 font-mono">Worst in each dimension</span>
+                    <span class="text-[13px] font-black text-slate-400 tracking-widest uppercase">⚰️ BLACK FLAG — LAST PLACE</span>
+                    <span class="text-[10px] text-slate-600 font-mono">Worst in each dimension</span>
                 </div>
-                <div id="p4-loser-badges" class="flex gap-3 flex-1 flex-wrap"></div>
+                <div id="p4-loser-badges" class="flex gap-2 flex-1 flex-wrap"></div>
             </div>
 
-            <!-- 2x2 grid: full ranking per dimension (padding reduced + scrollbar hidden by compact rows) -->
-            <div class="flex-1 grid grid-cols-2 gap-2.5 min-h-0">
-                <div id="p4-card-saf" class="panel-card flex flex-col p-2.5 border-t-2 border-t-emerald-500/60 min-h-0"></div>
-                <div id="p4-card-pro" class="panel-card flex flex-col p-2.5 border-t-2 border-t-blue-500/60 min-h-0"></div>
-                <div id="p4-card-qua" class="panel-card flex flex-col p-2.5 border-t-2 border-t-purple-500/60 min-h-0"></div>
-                <div id="p4-card-los" class="panel-card flex flex-col p-2.5 border-t-2 border-t-amber-500/60 min-h-0"></div>
+            <!-- 2x2 grid: 4 dimension ranking cards -->
+            <div class="flex-1 grid grid-cols-2 gap-3 min-h-0">
+                <div id="p4-card-saf" class="panel-card flex flex-col p-2 border-t-2 border-t-emerald-500/60 min-h-0"></div>
+                <div id="p4-card-pro" class="panel-card flex flex-col p-2 border-t-2 border-t-blue-500/60 min-h-0"></div>
+                <div id="p4-card-qua" class="panel-card flex flex-col p-2 border-t-2 border-t-purple-500/60 min-h-0"></div>
+                <div id="p4-card-los" class="panel-card flex flex-col p-2 border-t-2 border-t-amber-500/60 min-h-0"></div>
             </div>
         </div>
     </main>
@@ -1325,13 +1331,11 @@
                 const meta = dimMeta[d.id];
                 const entries = dimRankings[d.id];
                 const best = entries[0];
-                const worst = entries.length > 1 ? entries[entries.length - 1] : null;
                 if (best) {
-                    champHtml += `<div class="flex items-center gap-2 px-2.5 py-1 rounded border rank-flag-winner" style="background:rgba(234,179,8,0.12);border-color:rgba(234,179,8,0.25);box-shadow:0 0 8px rgba(234,179,8,0.08)">
-                        <span class="text-[10px]">🥇</span>
-                        <span class="text-white text-[12px] font-extrabold">${best.ws.label}</span>
-                        <span class="num-hl text-amber-300 text-[11px] font-bold drop-shadow-[0_0_4px_rgba(251,191,36,0.3)]">${best.score.toFixed(1)}%</span>
-                        <span class="text-[10px] text-slate-500 font-mono">${meta.icon}</span>
+                    champHtml += `<div class="flex items-center gap-2 px-2 py-1 rounded" style="background:linear-gradient(90deg,rgba(239,68,68,0.15),rgba(234,179,8,0.08));border:1px solid rgba(239,68,68,0.2);box-shadow:0 0 6px rgba(239,68,68,0.06)">
+                        <span class="text-[11px]">🚩</span>
+                        <span class="text-white text-[11px] font-extrabold">${best.ws.label}</span>
+                        <span class="num-hl text-amber-300 text-[10px] font-bold">${best.score.toFixed(1)}%</span>
                     </div>`;
                 }
             });
@@ -1360,24 +1364,24 @@
                     const isWorst = i === totalWS - 1 && totalWS > 1;
                     const rankEmoji = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
                     const rowClass = isBest ? 'rank-best' : (isWorst ? 'rank-worst' : (i % 2 === 0 ? 'bg-white/[0.02]' : ''));
-                    const rowColor = isBest ? 'text-emerald-300' : (isWorst ? 'text-red-400' : 'text-slate-300');
+                    const rowColor = isBest ? 'text-red-300' : (isWorst ? 'text-slate-400' : 'text-slate-300');
                     const scoreColor = e.score >= 100 ? 'text-emerald-400' : (e.score >= 90 ? 'text-yellow-400' : 'text-red-400');
 
-                    rows += `<div class="flex items-center gap-1.5 py-0.5 px-2 rounded text-[11px] ${rowClass} ${rowColor}">
+                    rows += `<div class="flex items-center gap-2 py-1 px-2 rounded text-[11px] ${rowClass} ${rowColor}">
                         <span class="w-5 text-center text-[11px] shrink-0">${rankEmoji}</span>
                         <span class="flex-1 font-bold truncate">${e.ws.label}</span>
                         <span class="num-hl ${scoreColor} text-[11px] font-bold">${e.score.toFixed(1)}%</span>
-                        <span class="text-[9px] text-slate-600 font-mono hidden">${e.t}→${e.a}</span>
-                        <span class="text-[12px] shrink-0 rank-flag${isBest ? ' rank-flag-winner' : ''}">${isBest ? '🚩' : (isWorst ? '⚫' : '')}</span>
+                        <span class="text-[9px] text-slate-600 font-mono">${e.t}→${e.a}</span>
+                        <span class="text-[13px] shrink-0 rank-flag${isBest ? ' rank-flag-winner' : (isWorst ? ' rank-flag-loser' : '')}">${isBest ? '🚩' : (isWorst ? '⚫' : '')}</span>
                     </div>`;
                 });
 
-                card.innerHTML = `<div class="flex items-center gap-1.5 mb-1 shrink-0">
-                    <span class="w-2 h-2 rounded-full bg-${meta.color}-500"></span>
-                    <span class="text-[10px] text-slate-500 tracking-widest font-bold">${meta.icon} ${meta.name}</span>
-                    <span class="ml-auto text-[9px] text-slate-600 font-mono bg-slate-800/50 px-1.5 py-0.5 rounded">🥇 ${entries[0].score.toFixed(1)}%</span>
+                card.innerHTML = `<div class="flex items-center gap-2 mb-1.5 shrink-0 border-b border-slate-800/60 pb-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-${meta.color}-500 shrink-0"></span>
+                    <span class="text-[12px] font-black text-slate-300 tracking-wider">${meta.icon} ${meta.name}</span>
+                    <span class="ml-auto text-[10px] font-bold text-slate-500 font-mono bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">🥇 ${entries[0].score.toFixed(1)}%</span>
                 </div>
-                <div class="flex-1 flex flex-col gap-0 min-h-0">${rows}</div>`;
+                <div class="flex-1 flex flex-col gap-px min-h-0">${rows}</div>`;
             });
 
             /* ── Black Flag banner ── */
@@ -1387,10 +1391,9 @@
                 const entries = dimRankings[d.id];
                 const worst = entries.length > 1 ? entries[entries.length - 1] : (entries.length === 1 ? entries[0] : null);
                 if (worst && entries.length > 1) {
-                    loserHtml += `<div class="flex items-center gap-2 px-2.5 py-1 rounded" style="background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.2);">
-                        <span class="text-red-400 text-[11px] font-extrabold">${worst.ws.label}</span>
-                        <span class="num-hl text-red-400 text-[11px] font-bold drop-shadow-[0_0_4px_rgba(239,68,68,0.3)]">${worst.score.toFixed(1)}%</span>
-                        <span class="text-[10px] text-slate-500 font-mono">${meta.icon}</span>
+                    loserHtml += `<div class="flex items-center gap-2 px-2 py-1 rounded" style="background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.25);">
+                        <span class="text-slate-300 text-[11px] font-extrabold">${worst.ws.label}</span>
+                        <span class="num-hl text-red-400 text-[10px] font-bold">${worst.score.toFixed(1)}%</span>
                     </div>`;
                 }
             });
