@@ -564,6 +564,12 @@
                 <h3 class="title-h3 text-blue-400 mb-4 border-b border-slate-800 pb-2">MOD 1: KPI INPUT</h3>
                 <div id="admin-t1-inputs" class="space-y-4"></div>
             </section>
+            <div class="mt-4 pt-2 border-t border-slate-700/50">
+                <button onclick="copyT1ToAllDates()" class="w-full py-2 px-3 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold rounded transition flex items-center justify-center gap-2" title="将当前页面的T1目标值（不含实际数据）复制到所有已有数据的日期中">
+                    <i class="fa-solid fa-copy"></i> 📋 应用当前T1目标到所有日期
+                </button>
+                <p class="text-[9px] text-slate-600 text-center mt-1">仅复制目标值，不影响实际产出数据</p>
+            </div>
             <section>
                 <h3 class="title-h3 text-indigo-400 mb-4 border-b border-slate-800 pb-2 mt-6">MOD 2: OUTPUT (QTY)</h3>
                 <div id="admin-t2-inputs" class="space-y-4"></div>
@@ -815,9 +821,30 @@
         };
 
         const initDefaultState = () => {
-            workshops.forEach(ws => {
-                state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
-            });
+            var defT1 = localStorage.getItem('_defaultT1Targets');
+            if (defT1) {
+                try {
+                    var parsed = JSON.parse(defT1);
+                    workshops.forEach(ws => {
+                        state.t1[ws.id] = {};
+                        dims.forEach(d => {
+                            state.t1[ws.id][d.id] = {
+                                t: (parsed[ws.id] && parsed[ws.id][d.id]) || 0,
+                                a: 0
+                            };
+                        });
+                    });
+                } catch(e) {
+                    // Fall through to hardcoded defaults
+                    workshops.forEach(ws => {
+                        state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
+                    });
+                }
+            } else {
+                workshops.forEach(ws => {
+                    state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
+                });
+            };
             // Each line split 50/50 into Day & Night shifts
             state.t2.PRO1 = {
                 S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } },
@@ -1815,6 +1842,82 @@
             ov.style.display = open ? 'block' : 'none';
             if(open) { renderAdmin(); lockBadge(); }
         };
+        window.copyT1ToAllDates = function() {
+            // ★ Step 1: Read current T1 target values from DOM inputs
+            var targets = {};
+            workshops.forEach(function(ws) {
+                targets[ws.id] = {};
+                dims.forEach(function(d) {
+                    var input = document.getElementById('inp-t1-' + ws.id + '-' + d.id + '-t');
+                    targets[ws.id][d.id] = input ? Number(input.value) || 0 : 0;
+                });
+            });
+
+            // ★ Step 2: Check if any targets are non-zero
+            var hasTargets = false;
+            workshops.forEach(function(ws) {
+                dims.forEach(function(d) {
+                    if (targets[ws.id][d.id] > 0) hasTargets = true;
+                });
+            });
+            if (!hasTargets) {
+                alert('当前T1所有目标值均为0，请先设置目标值再操作。');
+                return;
+            }
+
+            if (!confirm('确定将当前T1目标值应用到所有已有数据的日期？\n\n仅复制目标值（t），不影响实际数据（a）。')) return;
+
+            // ★ Step 3: Save as default for future dates
+            localStorage.setItem('_defaultT1Targets', JSON.stringify(targets));
+
+            // ★ Step 4: Iterate all existing date keys in localStorage
+            var affected = 0;
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (!key || !key.startsWith('mbs_state_')) continue;
+                var dateStr = key.replace('mbs_state_', '');
+                if (dateStr === currentDate) continue; // current date already has these values
+
+                try {
+                    var raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    var data = JSON.parse(raw);
+
+                    // ★ Step 5: Ensure data structure, update only T1 target values
+                    if (!data.t1) data.t1 = {};
+                    workshops.forEach(function(ws) {
+                        if (!data.t1[ws.id]) data.t1[ws.id] = {};
+                        dims.forEach(function(d) {
+                            if (!data.t1[ws.id][d.id]) data.t1[ws.id][d.id] = { t: 0, a: 0 };
+                            data.t1[ws.id][d.id].t = targets[ws.id][d.id];
+                        });
+                    });
+
+                    // ★ Step 6: Save back to localStorage
+                    localStorage.setItem(key, JSON.stringify(data));
+
+                    // ★ Step 7: Sync to Firebase if available
+                    if (firebaseReady && fbDb) {
+                        var dateRef = firebaseModules.ref(fbDb, 'state/' + dateStr);
+                        firebaseModules.set(dateRef, data).catch(function(e) {
+                            console.warn('Firebase save failed for', dateStr, ':', e.message);
+                        });
+                    }
+
+                    affected++;
+                } catch(e) {
+                    console.warn('Failed to process', dateStr, ':', e.message);
+                }
+            }
+
+            // Step 3 already saved defaults to localStorage (_defaultT1Targets)
+            // initDefaultState() reads from there automatically
+
+            var msg = '已完成！已将当前T1目标值应用到 ' + affected + ' 个日期的数据。\n同时已保存为默认目标值，新建日期的T1目标将自动使用此值。';
+            if (affected === 0) msg = '没有找到其他日期的数据（localStorage中无 mbs_state_* 键）。目标已保存为默认值，后续新建日期时将自动应用。';
+            alert(msg);
+        };
+
         window.toggleLock = () => {
             const locked = document.getElementById('lock-target-toggle').checked;
             document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
