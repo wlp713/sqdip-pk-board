@@ -3911,7 +3911,72 @@ ${lineRanking.map(function(l, i){ return (i+1)+'. '+l[0]+' -> '+l[1].qty+'套('+
                 if(bestIdx >= 0) all[bestIdx].focus();
             }
         });
-        function ensureProdData(date) { if(!db.prod[date]){db.prod[date]=getEmptyDay(); triggerAutoSave();} return db.prod[date]; }
+        function ensureProdData(date) {
+            if(!db.prod[date]){
+                db.prod[date]=getEmptyDay();
+                // 🚀 继承上一个有数据日期的目标值（t, h, att, head）
+                // 保留 o:产出 为0（新日期的实际产出不应继承）
+                var prevDates = Object.keys(db.prod).filter(function(d){ return d < date; }).sort();
+                if(prevDates.length > 0) {
+                    var prevDate = prevDates[prevDates.length - 1];
+                    var prevDay = db.prod[prevDate];
+                    var currDay = db.prod[date];
+                    (typeof PRO_ORDER !== 'undefined' ? PRO_ORDER : ['PRO1','PRO2','PRO3','PRO4','H_MOTOR','F_MOTOR','S_MOTOR','CRANK']).forEach(function(ws) {
+                        if(prevDay[ws] && currDay[ws]) {
+                            if(prevDay[ws].t !== undefined && prevDay[ws].t !== null) { currDay[ws].t = prevDay[ws].t; }
+                            if(prevDay[ws].h !== undefined && prevDay[ws].h !== null) { currDay[ws].h = prevDay[ws].h; }
+                            if(prevDay[ws].att !== undefined && prevDay[ws].att !== null) { currDay[ws].att = prevDay[ws].att; }
+                            if(prevDay[ws].head !== undefined && prevDay[ws].head !== null) { currDay[ws].head = prevDay[ws].head; }
+                            // 班次目标
+                            if(prevDay[ws].shifts && currDay[ws].shifts) {
+                                ['D','N'].forEach(function(s) {
+                                    if(prevDay[ws].shifts[s] && currDay[ws].shifts[s]) {
+                                        if(prevDay[ws].shifts[s].t !== undefined && prevDay[ws].shifts[s].t !== null) { currDay[ws].shifts[s].t = prevDay[ws].shifts[s].t; }
+                                        if(prevDay[ws].shifts[s].o !== undefined && prevDay[ws].shifts[s].o !== null) { currDay[ws].shifts[s].o = prevDay[ws].shifts[s].o; }
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    // PRO2各线体
+                    if(prevDay.PRO2 && prevDay.PRO2.lines && currDay.PRO2 && currDay.PRO2.lines) {
+                        Object.keys(currDay.PRO2.lines).forEach(function(lineName) {
+                            if(prevDay.PRO2.lines[lineName]) {
+                                if(prevDay.PRO2.lines[lineName].t !== undefined && prevDay.PRO2.lines[lineName].t !== null) { currDay.PRO2.lines[lineName].t = prevDay.PRO2.lines[lineName].t; }
+                                if(prevDay.PRO2.lines[lineName].h !== undefined && prevDay.PRO2.lines[lineName].h !== null) { currDay.PRO2.lines[lineName].h = prevDay.PRO2.lines[lineName].h; }
+                                if(prevDay.PRO2.lines[lineName].shifts && currDay.PRO2.lines[lineName].shifts) {
+                                    ['D','N'].forEach(function(s) {
+                                        if(currDay.PRO2.lines[lineName].shifts[s] && prevDay.PRO2.lines[lineName].shifts[s]) {
+                                            if(prevDay.PRO2.lines[lineName].shifts[s].t !== undefined && prevDay.PRO2.lines[lineName].shifts[s].t !== null) { currDay.PRO2.lines[lineName].shifts[s].t = prevDay.PRO2.lines[lineName].shifts[s].t; }
+                                            if(prevDay.PRO2.lines[lineName].shifts[s].o !== undefined && prevDay.PRO2.lines[lineName].shifts[s].o !== null) { currDay.PRO2.lines[lineName].shifts[s].o = prevDay.PRO2.lines[lineName].shifts[s].o; }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    // PRO1/3/4各产线（按id匹配）
+                    ['PRO1','PRO3','PRO4'].forEach(function(ws) {
+                        if(prevDay[ws] && prevDay[ws].dLines && currDay[ws] && currDay[ws].dLines) {
+                            currDay[ws].dLines.forEach(function(cdl) {
+                                var match = null;
+                                for(var pi=0; pi<prevDay[ws].dLines.length; pi++) {
+                                    if(String(prevDay[ws].dLines[pi].id) === String(cdl.id)) { match = prevDay[ws].dLines[pi]; break; }
+                                }
+                                if(match) {
+                                    if(match.t !== undefined && match.t !== null) { cdl.t = match.t; }
+                                    if(match.h !== undefined && match.h !== null) { cdl.h = match.h; }
+                                    if(match.att !== undefined && match.att !== null) { cdl.att = match.att; }
+                                    if(match.head !== undefined && match.head !== null) { cdl.head = match.head; }
+                                }
+                            });
+                        }
+                    });
+                }
+                triggerAutoSave();
+            }
+            return db.prod[date];
+        }
         function ensureDMData(date) { if(!db.dm[date]){db.dm[date]=getEmptyDM(); triggerAutoSave();} return db.dm[date]; }
         let uiState = { expanded: { 'PRO2': true, 'PRO1': false, 'PRO3': false, 'PRO4': false } };
         window.toggleSidebar = function() { document.getElementById('sidebar').classList.toggle('collapsed'); };
