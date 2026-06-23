@@ -743,6 +743,16 @@
 
         var _authRole = null;  /* Current logged-in role */
         var _firebaseChecked = false;  /* Whether checkAuthInit() has completed */
+        /* ★ 立即从 localStorage 读取已保存的认证 (刷新不登出) */
+        try {
+            var _savedAuth = localStorage.getItem('_auth');
+            if (_savedAuth) {
+                var _savedP = JSON.parse(_savedAuth);
+                if (_savedP && _savedP.role) _authRole = _savedP.role;
+            }
+        } catch(e) {}
+
+        /* ── Auth check helpers ──
 
         const workshops = [
             { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA 钱大为' },
@@ -2072,6 +2082,8 @@
                 showLogin();
                 return;
             }
+            /* ★ 隐藏登录遮罩 (auth 从 localStorage 恢复时 login() 不会执行, 须手动隐藏) */
+            hideLogin();
             updateUserBadge();
 
             try {
