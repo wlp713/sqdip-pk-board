@@ -1686,9 +1686,9 @@
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted text-[11px]">${Math.round(t)}</td>
-                        <td class="num-font num-light text-[11px]">${Math.round(a)}</td>
-                        <td class="num-font num-hl text-[11px] ${rc}">${rate.toFixed(1)}%</td>
+                        <td class="num-font num-muted text-[11px]">${Number(t).toFixed(2)}</td>
+                        <td class="num-font num-light text-[11px]">${Number(a).toFixed(2)}</td>
+                        <td class="num-font num-hl text-[11px] ${rc}">${rate.toFixed(2)}%</td>
                     </tr>`;
                 }).join('');
 
@@ -1703,7 +1703,7 @@
                                 <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-sm'} text-white">${ws.label}</span>
                                 <span class="${isSingle ? 'ws-pic' : 'text-[10px]'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
                             </div>
-                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-sm'}">${avg.toFixed(1)}</span>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-sm'}">${avg.toFixed(2)}</span>
                         </div>
                         ${isSingle ? '<hr class="dash-hr">' : ''}
                         <table class="data-table"><thead><tr><th class="text-[9px]">Dim</th><th class="text-[9px]">Target</th><th class="text-[9px]">Actual</th><th class="text-[9px]">ACH%</th></tr></thead><tbody>${rows}</tbody></table>
@@ -1728,7 +1728,7 @@
                 return `<div class="flex items-center py-0.5 px-1 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
                     <span class="text-[10px] mr-0.5">${medals[i]}</span>
                     <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
-                    <span class="text-[10px] num-hl ${scoreColors[i]}">${s.score.toFixed(1)}%</span>
+                    <span class="text-[10px] num-hl ${scoreColors[i]}">${s.score.toFixed(2)}%</span>
                 </div>`;
             }).join('');
             /* ★ Update date in header */
@@ -1794,7 +1794,7 @@
                             label: {
                                 show: true, position: 'top',
                                 color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'; }
+                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(2) + '%' : p.value.toFixed(2) + '%'; }
                             }
                         }]
                     });
@@ -1831,7 +1831,7 @@
                             label: {
                                 show: true, position: 'top',
                                 color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'; }
+                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(2) + '%' : p.value.toFixed(2) + '%'; }
                             }
                         }]
                     });
