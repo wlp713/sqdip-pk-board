@@ -1686,9 +1686,9 @@
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted text-[11px]">${Number(t).toFixed(2)}</td>
-                        <td class="num-font num-light text-[11px]">${Number(a).toFixed(2)}</td>
-                        <td class="num-font num-hl text-[11px] ${rc}">${rate.toFixed(2)}%</td>
+                        <td class="num-font num-muted text-[11px]">${d.id==="saf"||d.id==="los"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
+                        <td class="num-font num-light text-[11px]">${d.id==="saf"||d.id==="los"?Math.round(Number(a)):Number(a).toFixed(2)}</td>
+                        <td class="num-font num-hl text-[11px] ${rc}">${d.id==="saf"||d.id==="los"?Math.round(rate):rate.toFixed(2)}%</td>
                     </tr>`;
                 }).join('');
 
