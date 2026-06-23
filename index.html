@@ -1632,11 +1632,11 @@
             if (t <= 0) return 0;
             /* ★ PRO2 Loss: 实际达成/目标 (standard formula, not reverse) */
             if (wsId === 'PRO2' && d.id === 'los') {
-                return (a / t) * 100;
+                return Math.min((a / t) * 100, 100);
             }
-            if (d.type === 'std') return (a / t) * 100;        // Safety & 5S / UPPH: actual/target, no cap
-            if (d.type === 'qua') return (t / a) * 100;         // Quality: target/actual, no cap (lower loss = better)
-            return Math.min((t / a) * 100, 100);               // Loss: target/actual, capped at 100%
+            if (d.type === 'std') return Math.min((a / t) * 100, 100);  // Safety & 5S / UPPH
+            if (d.type === 'qua') return Math.min((t / a) * 100, 100);   // Quality
+            return Math.min((t / a) * 100, 100);                         // Loss
         };
 
         const updateUI = () => {
@@ -1689,8 +1689,8 @@
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr>
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted text-[11px]">${t}</td>
-                        <td class="num-font num-light text-[11px]">${a}</td>
+                        <td class="num-font num-muted text-[11px]">${Math.round(t)}</td>
+                        <td class="num-font num-light text-[11px]">${Math.round(a)}</td>
                         <td class="num-font num-hl text-[11px] ${rc}">${rate.toFixed(1)}%</td>
                     </tr>`;
                 }).join('');
@@ -1779,7 +1779,7 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 150,
+                        yAxis: { type: 'value', min: 0, max: 100,
                             axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
@@ -1816,7 +1816,7 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 150,
+                        yAxis: { type: 'value', min: 0, max: 100,
                             axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
@@ -1956,7 +1956,7 @@
                         axisLine: { lineStyle: { color: '#334155' } },
                         axisTick: { show: false }
                     },
-                    yAxis: { type: 'value', min: 0, max: 150,
+                    yAxis: { type: 'value', min: 0, max: 100,
                         axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                         splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                         axisLine: { show: false }
