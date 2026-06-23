@@ -277,63 +277,59 @@
         </div>
     </div>
 
-    <header class="h-[56px] bg-[#0b1120] border-b border-slate-800 flex justify-between items-center px-4 shrink-0 z-10">
-        <div class="flex items-center gap-5">
-            <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <h1 class="title-h1 text-[13px] text-slate-100">MBS DM Board</h1>
+    <header class="h-[48px] bg-[#0b1120] border-b border-slate-800 flex items-center px-3 shrink-0 z-10 gap-2">
+        <!-- Row 1: Title + Date + Tabs -->
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <h1 class="title-h1 text-[12px] text-slate-100">MBS</h1>
             </div>
 
-            <div class="flex items-center bg-[#1e293b] border border-slate-700 rounded shadow-inner h-[32px]">
-                <button onclick="shiftDate(-1)" class="px-3 h-full text-slate-400 hover:text-white hover:bg-slate-700 rounded-l transition border-r border-slate-700 flex items-center">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+            <div class="flex items-center bg-[#1e293b] border border-slate-700/50 rounded h-[28px]">
+                <button onclick="shiftDate(-1)" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-l transition border-r border-slate-700/50 flex items-center">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
-                <input type="date" id="global-date" onchange="jumpDate()" class="bg-transparent border-none text-sm font-bold text-slate-200 num-hl px-3 h-full outline-none focus:ring-0">
-                <button onclick="shiftDate(1)" class="px-3 h-full text-slate-400 hover:text-white hover:bg-slate-700 rounded-r transition border-l border-slate-700 flex items-center">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+                <input type="date" id="global-date" onchange="jumpDate()" class="bg-transparent border-none text-xs font-bold text-slate-200 num-hl px-2 h-full outline-none w-[120px]">
+                <button onclick="shiftDate(1)" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-r transition border-l border-slate-700/50 flex items-center">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
-            <div class="flex bg-[#0f172a] p-1 rounded border border-slate-800">
-                <button id="btn-tab1" onclick="switchTab(1)" class="px-4 py-1.5 text-xs font-bold rounded bg-blue-600 text-white transition-colors flex items-center gap-2 shadow-md">
-                    KPI MATRIX
-                </button>
-                <button id="btn-tab2" onclick="switchTab(2)" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-1 flex items-center gap-2">
-                    LIMIT PK
-                </button>
-                <button id="btn-tab3" onclick="switchTab(3)" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-1 flex items-center gap-2">
-                    🏆 STANDINGS
-                </button>
-                <button id="btn-tab4" onclick="switchTab(4)" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-1 flex items-center gap-2">
-                    🏁 DIM RANK
-                </button>
+            <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
+                <button id="btn-tab1" onclick="switchTab(1)" class="px-3 py-1 text-[10px] font-bold rounded bg-blue-600 text-white transition-colors shadow-sm">KPI</button>
+                <button id="btn-tab2" onclick="switchTab(2)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">PK</button>
+                <button id="btn-tab3" onclick="switchTab(3)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏆 STAND</button>
+                <button id="btn-tab4" onclick="switchTab(4)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏁 DIM</button>
+            </div>
+
+            <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
+                <button id="btn-period-day" onclick="setPeriod('day')" class="period-btn px-2 py-1 text-[9px] font-bold rounded bg-blue-600 text-white shadow-sm transition-colors">📅 Day</button>
+                <button id="btn-period-week" onclick="setPeriod('week')" class="period-btn px-2 py-1 text-[9px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📆 Wk</button>
+                <button id="btn-period-month" onclick="setPeriod('month')" class="period-btn px-2 py-1 text-[9px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📊 Mo</button>
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
-            <div class="flex bg-[#0f172a] p-0.5 rounded border border-slate-800 mr-2">
-                <button id="btn-period-day" onclick="setPeriod('day')" class="period-btn px-2.5 py-1 text-[10px] font-bold rounded bg-blue-600 text-white shadow-md transition-colors flex items-center gap-1">📅 Day</button>
-                <button id="btn-period-week" onclick="setPeriod('week')" class="period-btn px-2.5 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1 ml-px">📆 Week</button>
-                <button id="btn-period-month" onclick="setPeriod('month')" class="period-btn px-2.5 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1 ml-px">📊 Month</button>
+        <!-- Row 2: Status + User + Actions -->
+        <div class="flex items-center gap-1.5 shrink-0">
+            <div id="sync-status" class="text-[10px] text-emerald-400 font-mono hidden items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="hidden sm:inline">SYNC...</span>
             </div>
-            <div id="sync-status" class="text-xs text-emerald-400 font-mono hidden flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> SYNCING...
-            </div>
-            <span id="lock-badge" class="text-[10px] font-semibold hidden px-2 py-1 rounded border mr-2"></span>
-            <span id="user-badge" class="text-[10px] text-slate-500 font-mono bg-[#1e293b] px-2.5 py-1 rounded border border-slate-700"></span>
-            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-4 py-2 bg-[#1e293b] hover:bg-slate-700 text-slate-300 text-xs font-bold rounded border border-slate-600 transition-colors flex items-center gap-2">
-                ⚙️ ADMIN
+            <span id="lock-badge" class="text-[9px] font-semibold hidden px-1.5 py-0.5 rounded border"></span>
+            <span id="user-badge" class="text-[9px] text-slate-500 font-mono bg-[#1e293b] px-1.5 py-0.5 rounded border border-slate-700/50"></span>
+            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-2 h-[26px] bg-[#1e293b] hover:bg-slate-700 text-slate-400 text-[10px] font-bold rounded border border-slate-700/50 transition-colors flex items-center gap-1" title="Admin Panel">
+                ⚙️
             </button>
-            <button onclick="logout()" id="btn-logout" class="px-3 py-2 text-slate-500 hover:text-red-400 text-xs rounded border border-slate-700 hover:border-red-700 transition-colors hidden">
-                退出
+            <button onclick="exportBoard()" class="px-2 h-[26px] bg-indigo-700 hover:bg-indigo-600 text-white text-[10px] font-bold rounded border border-indigo-600/50 transition-colors flex items-center gap-1 shadow-[0_0_6px_rgba(79,70,229,0.25)]" title="Export">
+                📸
             </button>
-            <button onclick="exportBoard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded border border-indigo-500 transition-colors flex items-center gap-2 shadow-[0_0_10px_rgba(79,70,229,0.3)]">
-                📸 EXPORT
+            <button onclick="logout()" id="btn-logout" class="px-2 h-[26px] text-slate-500 hover:text-red-400 text-[10px] rounded border border-slate-700/50 hover:border-red-700/50 transition-colors hidden" title="Logout">
+                🚪
             </button>
         </div>
     </header>
 
-    <main id="board-container" class="flex-1 p-4 w-full h-[calc(100vh-86px)] box-border">
+    <main id="board-container" class="flex-1 p-4 w-full h-[calc(100vh-76px)] box-border">
 
         <!-- PAGE 1 -->
         <div id="page1" class="w-full h-full flex flex-col gap-4 fade-enter">
@@ -1542,10 +1538,11 @@
                 </div>
             `;
             };
-            var t2Section = document.getElementById('admin-t2-section');
-            if (t2Section) t2Section.style.display = _authRole === 'admin' ? '' : 'none';
+            var t2Sec = document.getElementById('admin-t2-section');
+            if (t2Sec) t2Sec.style.display = (_authRole === 'admin') ? '' : 'none';
             if (_authRole === 'admin') {
-                document.getElementById('admin-t2-inputs').innerHTML = buildAdminT2('PRO1', state.t2.PRO1) + buildAdminT2('PRO2', state.t2.PRO2);
+                var at2 = document.getElementById('admin-t2-inputs');
+                if (at2) at2.innerHTML = buildAdminT2('PRO1', state.t2.PRO1) + buildAdminT2('PRO2', state.t2.PRO2);
             }
 
             /* ★ Re-apply lock state after re-render */
@@ -1951,19 +1948,23 @@
             }
             updateUserBadge();
 
-            setDateInit();
-            initDefaultState();
-            /* ★ Always render immediately from localStorage (force=true to bypass write counter check on initial load) */
-            const localData = localStorage.getItem(`mbs_state_${currentDate}`);
-            if (localData) {
-                try { mergeData(JSON.parse(localData), true); } catch(e) {}
+            try {
+                setDateInit();
+                initDefaultState();
+                /* ★ Always render immediately from localStorage */
+                const localData = localStorage.getItem(`mbs_state_${currentDate}`);
+                if (localData) {
+                    try { mergeData(JSON.parse(localData), true); } catch(e) {}
+                }
+                renderAdmin();
+                updateUI();
+                window.standingsRender();
+                lockBadge();
+                restoreLockState();
+            } catch(e) {
+                console.error('[init] render error:', e);
+                document.getElementById('board-container').innerHTML = '<div class="flex items-center justify-center h-full text-slate-500"><div class="text-center"><p class="text-xl mb-2">⚠️</p><p class="text-sm">加载失败，请刷新页面</p><p class="text-xs text-slate-600 mt-2">' + (e.message || '') + '</p></div></div>';
             }
-            renderAdmin();
-            updateUI();
-            window.standingsRender();
-            lockBadge();
-            /* ★ Restore target lock state from localStorage */
-            restoreLockState();
             /* ★ Firebase sync (may or may not load) */
             if(firebaseReady) listenToFirebase();
             window.addEventListener('resize', () => { if(chartInstance) chartInstance.resize(); });
