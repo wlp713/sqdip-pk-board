@@ -1847,25 +1847,51 @@
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
 
                 if (_p1Dim === 'all') {
-                    dims.forEach(function(d) {
-                        var _dimData = [];
-                        _trendDates.forEach(function(ds) {
-                            var _sum = 0, _cnt = 0;
-                            _chartWSs.forEach(function(ws) {
+                    if (_chartWSs.length > 1) {
+                        // 多车间 → 各车间整体趋势线
+                        _chartWSs.forEach(function(ws) {
+                            var _wsData = [];
+                            _trendDates.forEach(function(ds) {
                                 var _day = loadDayData(ds);
-                                if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][d.id]) {
-                                    var _e = _day.t1[ws.id][d.id];
-                                    var _t = Number(_e.t) || 0;
-                                    var _a = Number(_e.a) || 0;
-                                    if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
-                                }
+                                if (_day && _day.t1 && _day.t1[ws.id]) {
+                                    var _sum = 0, _cnt = 0;
+                                    dims.forEach(function(d) {
+                                        var _e = _day.t1[ws.id][d.id];
+                                        if (_e) {
+                                            var _t = Number(_e.t) || 0;
+                                            var _a = Number(_e.a) || 0;
+                                            if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
+                                        }
+                                    });
+                                    _wsData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
+                                } else { _wsData.push(null); }
                             });
-                            _dimData.push(_cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null);
+                            if (_wsData.some(function(v) { return v !== null; })) {
+                                _seriesList.push({ name: ws.label, data: _wsData });
+                            }
                         });
-                        if (_dimData.some(function(v) { return v !== null; })) {
-                            _seriesList.push({ name: d.name, data: _dimData });
-                        }
-                    });
+                    } else {
+                        // 单车间 → 各维度趋势线
+                        dims.forEach(function(d) {
+                            var _dimData = [];
+                            _trendDates.forEach(function(ds) {
+                                var _sum = 0, _cnt = 0;
+                                _chartWSs.forEach(function(ws) {
+                                    var _day = loadDayData(ds);
+                                    if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][d.id]) {
+                                        var _e = _day.t1[ws.id][d.id];
+                                        var _t = Number(_e.t) || 0;
+                                        var _a = Number(_e.a) || 0;
+                                        if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
+                                    }
+                                });
+                                _dimData.push(_cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null);
+                            });
+                            if (_dimData.some(function(v) { return v !== null; })) {
+                                _seriesList.push({ name: d.name, data: _dimData });
+                            }
+                        });
+                    }
                     if (_seriesList.length === 0) {
                         var _overallData = [];
                         _trendDates.forEach(function(ds) {
