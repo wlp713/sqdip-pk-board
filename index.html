@@ -1303,24 +1303,7 @@
                     }
                 });
             }
-            /* ★ Apply saved default T1 targets (set by user via 'apply to all dates' button) */
-            try {
-                var _d = localStorage.getItem('_defaultT1Targets');
-                if (_d) {
-                    var _dp = JSON.parse(_d);
-                    workshops.forEach(function(ws) {
-                        if (_dp[ws.id]) {
-                            if (!state.t1[ws.id]) state.t1[ws.id] = {};
-                            dims.forEach(function(d) {
-                                if (_dp[ws.id][d.id] !== undefined) {
-                                    if (!state.t1[ws.id][d.id]) state.t1[ws.id][d.id] = { t: 0, a: 0 };
-                                    state.t1[ws.id][d.id].t = Number(_dp[ws.id][d.id]) || 0;
-                                }
-                            });
-                        }
-                    });
-                }
-            } catch(e) {}
+
 
             if (source.t2) {
                 ['PRO1', 'PRO2'].forEach(wsName => {
@@ -1469,17 +1452,20 @@
                         state.t1[ws.id][d.id].a = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-a`).value) || 0;
                     });
                 });
-                for(let l in state.t2.PRO1) {
-                    state.t2.PRO1[l].day.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-t`).value) || 0;
-                    state.t2.PRO1[l].day.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-a`).value) || 0;
-                    state.t2.PRO1[l].night.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-t`).value) || 0;
-                    state.t2.PRO1[l].night.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-a`).value) || 0;
-                }
-                for(let l in state.t2.PRO2) {
-                    state.t2.PRO2[l].day.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-t`).value) || 0;
-                    state.t2.PRO2[l].day.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-a`).value) || 0;
-                    state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
-                    state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
+                /* ★ Only read T2 inputs when admin (workshop accounts don't have T2 inputs rendered) */
+                if (_authRole === 'admin') {
+                    for(let l in state.t2.PRO1) {
+                        state.t2.PRO1[l].day.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-t`).value) || 0;
+                        state.t2.PRO1[l].day.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-a`).value) || 0;
+                        state.t2.PRO1[l].night.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-t`).value) || 0;
+                        state.t2.PRO1[l].night.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-a`).value) || 0;
+                    }
+                    for(let l in state.t2.PRO2) {
+                        state.t2.PRO2[l].day.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-t`).value) || 0;
+                        state.t2.PRO2[l].day.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-a`).value) || 0;
+                        state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
+                        state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
+                    }
                 }
                 /* ★ Increment write counter before saving: prevents Firebase cache rollback */
                 _localWriteCounter++;
