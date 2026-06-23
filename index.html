@@ -360,7 +360,25 @@
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-1 pl-2">
                         <h2 class="title-h3 text-[11px]">Overall ACH% Analysis</h2>
-                        <span id="p1-period-label" class="text-[8px] font-mono text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700">DAY</span>
+                        <div class="flex items-center gap-1.5" id="p1-chart-filters">
+                            <!-- WS filter (admin only) -->
+                            <select id="p1-ws-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
+                                <option value="all">All WS</option>
+                                <option value="PRO1">PRO1</option>
+                                <option value="PRO2">PRO2</option>
+                                <option value="PRO3">PRO3</option>
+                                <option value="PRO4_5">PRO4&5</option>
+                            </select>
+                            <!-- Dim filter (all modes) -->
+                            <select id="p1-dim-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
+                                <option value="all">All Dim</option>
+                                <option value="saf">Safety</option>
+                                <option value="pro">UPPH</option>
+                                <option value="qua">Quality</option>
+                                <option value="los">Loss</option>
+                            </select>
+                            <span id="p1-period-label" class="text-[8px] font-mono text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700">DAY</span>
+                        </div>
                     </div>
                     <div id="p1-chart" class="flex-1 w-full h-full"></div>
                 </div>
@@ -1724,108 +1742,228 @@
                 document.getElementById('p1-header-date').innerText = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
             }
 
-            /* ★ 判断是否展示趋势折线图: 车间账户 + 周/月模式 */
-            var _isTrendMode = (pkPeriod !== 'day' && _authRole !== 'admin' && _authRole !== null);
-
-            if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
-
-            if (_isTrendMode) {
-                /* ── 趋势折线图: 逐日ACH% ── */
-                var _trendDates = getDateRange(pkPeriod, currentDate);
-                var _trendData = [];
-                var _trendLabels = [];
-                _trendDates.forEach(function(ds) {
-                    var _day = loadDayData(ds);
-                    if (!_day || !_day.t1 || !_day.t1[_authRole]) { _trendLabels.push(ds.slice(5)); _trendData.push(null); return; }
-                    var _wsDims = _day.t1[_authRole];
-                    var _sum = 0, _cnt = 0;
-                    dims.forEach(function(d) {
-                        var _e = _wsDims[d.id];
-                        if (_e) {
-                            var _t = Number(_e.t) || 0;
-                            var _a = Number(_e.a) || 0;
-                            if (_t > 0) { _sum += (_a/_t)*100; _cnt++; }
-                        }
-                    });
-                    _trendLabels.push(ds.slice(5));
-                    _trendData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
-                });
-
-                chartInstance.setOption({
-                    grid: { top: 25, bottom: 20, left: 35, right: 15 },
-                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
-                    xAxis: { type: 'category', data: _trendLabels,
-                        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 'bold', rotate: 45 },
-                        axisLine: { lineStyle: { color: '#334155' } },
-                        axisTick: { show: false }
-                    },
-                    yAxis: { type: 'value', min: 50, max: 100,
-                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
-                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                        axisLine: { show: false }
-                    },
-                    series: [
-                        {
-                            name: 'ACH%',
-                            data: _trendData,
-                            type: 'line', smooth: true,
-                            connectNulls: false,
-                            symbol: 'circle', symbolSize: 6,
-                            lineStyle: { color: '#3b82f6', width: 2 },
-                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                {offset: 0, color: 'rgba(59,130,246,0.3)'},
-                                {offset: 1, color: 'rgba(59,130,246,0.02)'}
-                            ])},
-                            itemStyle: { color: '#3b82f6' },
-                            label: {
-                                show: true, position: 'top',
-                                color: '#e2e8f0', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace',
-                                formatter: function(p) { return p.value !== null ? p.value + '%' : ''; }
-                            },
-                            markLine: {
-                                silent: true,
-                                data: [{ yAxis: 100 }],
-                                lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5 },
-                                label: { formatter: 'Target: 100%', color: '#ef4444', fontSize: 10, fontWeight: 'bold' }
-                            },
-                            z: 2
-                        }
-                    ]
-                });
-            } else {
-                /* ── 柱状图: 车间对比 ── */
-                chartInstance.setOption({
-                    grid: { top: 25, bottom: 20, left: 35, right: 15 },
-                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
-                    xAxis: { type: 'category', data: scores.map(s=>s.name),
-                        axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' },
-                        axisLine: { lineStyle: { color: '#334155' } },
-                        axisTick: { show: false }
-                    },
-                    yAxis: { type: 'value', min: 50, max: 100,
-                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
-                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                        axisLine: { show: false }
-                    },
-                    series: [{
-                        data: scores.map(s=>parseFloat(s.score.toFixed(1))),
-                        type: 'bar', barWidth: '40%',
-                        itemStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                {offset: 0, color: '#3b82f6'},
-                                {offset: 1, color: '#1e3a8a'}
-                            ]),
-                            borderRadius: [4, 4, 0, 0]
-                        },
-                        label: {
-                            show: true, position: 'top',
-                            color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                            formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
-                        },
-                    }]
-                });
+            /* ★ 显示/隐藏 WS 选择器 (仅管理员可见) */
+            var _wsFilterEl = document.getElementById('p1-ws-filter');
+            if (_wsFilterEl) {
+                _wsFilterEl.style.display = (_authRole === 'admin') ? '' : 'none';
             }
 
+            /* ★ 读取过滤器 */
+            var _p1Dim = (document.getElementById('p1-dim-filter') || {}).value || 'all';
+            var _p1WS = (document.getElementById('p1-ws-filter') || {}).value || 'all';
+
+            /* ★ 确定可见车间列表 */
+            var _chartWSs = _authRole === 'admin'
+                ? (_p1WS === 'all' ? workshops : workshops.filter(function(w) { return w.id === _p1WS; }))
+                : workshops.filter(function(w) { return w.id === _authRole; });
+
+            if (!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
+
+            if (pkPeriod === 'day') {
+                /* ★ Day模式: 维度柱状图 (不斜字体) */
+                if (_p1Dim === 'all') {
+                    var _dimBarData = dims.map(function(d) {
+                        var _total = 0, _cnt = 0;
+                        _chartWSs.forEach(function(ws) {
+                            var _t = displayT1[ws.id] && displayT1[ws.id][d.id] ? Number(displayT1[ws.id][d.id].t) || 0 : 0;
+                            var _a = displayT1[ws.id] && displayT1[ws.id][d.id] ? Number(displayT1[ws.id][d.id].a) || 0 : 0;
+                            _total += calcDimRate(d, _t, _a, ws.id); _cnt++;
+                        });
+                        return { name: d.name, value: _cnt > 0 ? parseFloat((_total/_cnt).toFixed(1)) : 0 };
+                    });
+                    chartInstance.setOption({
+                        grid: { top: 25, bottom: 20, left: 35, right: 15 },
+                        tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
+                        xAxis: { type: 'category', data: _dimBarData.map(function(d){return d.name;}),
+                            axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', fontStyle: 'normal' },
+                            axisLine: { lineStyle: { color: '#334155' } },
+                            axisTick: { show: false }
+                        },
+                        yAxis: { type: 'value', min: 50, max: 100,
+                            axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                            splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                            axisLine: { show: false }
+                        },
+                        series: [{
+                            data: _dimBarData.map(function(d){return d.value;}),
+                            type: 'bar', barWidth: '50%',
+                            itemStyle: {
+                                color: function(p) {
+                                    var clrs = ['#34d399','#60a5fa','#c084fc','#fbbf24'];
+                                    return clrs[p.dataIndex % clrs.length];
+                                },
+                                borderRadius: [4, 4, 0, 0]
+                            },
+                            label: {
+                                show: true, position: 'top',
+                                color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
+                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'; }
+                            }
+                        }]
+                    });
+                } else {
+                    var _selDim = dims.find(function(d) { return d.id === _p1Dim; });
+                    var _singleDimData = _chartWSs.map(function(ws) {
+                        var _t = displayT1[ws.id] && displayT1[ws.id][_selDim.id] ? Number(displayT1[ws.id][_selDim.id].t) || 0 : 0;
+                        var _a = displayT1[ws.id] && displayT1[ws.id][_selDim.id] ? Number(displayT1[ws.id][_selDim.id].a) || 0 : 0;
+                        return { name: ws.label, value: parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) };
+                    });
+                    chartInstance.setOption({
+                        grid: { top: 25, bottom: 20, left: 35, right: 15 },
+                        tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
+                        xAxis: { type: 'category', data: _singleDimData.map(function(d){return d.name;}),
+                            axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', fontStyle: 'normal' },
+                            axisLine: { lineStyle: { color: '#334155' } },
+                            axisTick: { show: false }
+                        },
+                        yAxis: { type: 'value', min: 50, max: 100,
+                            axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                            splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                            axisLine: { show: false }
+                        },
+                        series: [{
+                            data: _singleDimData.map(function(d){return d.value;}),
+                            type: 'bar', barWidth: '50%',
+                            itemStyle: {
+                                color: function(p) {
+                                    var clrs = ['#60a5fa','#818cf8','#34d399','#fbbf24','#f87171'];
+                                    return clrs[p.dataIndex % clrs.length];
+                                },
+                                borderRadius: [4, 4, 0, 0]
+                            },
+                            label: {
+                                show: true, position: 'top',
+                                color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
+                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'; }
+                            }
+                        }]
+                    });
+                }
+            } else {
+                /* ★ Week/Month: 趋势折线图 (不斜字体, 带维度/车间筛选) */
+                var _trendDates = getDateRange(pkPeriod, currentDate);
+                var _trendLabels = _trendDates.map(function(ds) { return ds.slice(5); });
+                var _seriesList = [];
+                var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
+
+                if (_p1Dim === 'all') {
+                    dims.forEach(function(d) {
+                        var _dimData = [];
+                        _trendDates.forEach(function(ds) {
+                            var _sum = 0, _cnt = 0;
+                            _chartWSs.forEach(function(ws) {
+                                var _day = loadDayData(ds);
+                                if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][d.id]) {
+                                    var _e = _day.t1[ws.id][d.id];
+                                    var _t = Number(_e.t) || 0;
+                                    var _a = Number(_e.a) || 0;
+                                    if (_t > 0) { _sum += (_a / _t) * 100; _cnt++; }
+                                }
+                            });
+                            _dimData.push(_cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null);
+                        });
+                        if (_dimData.some(function(v) { return v !== null; })) {
+                            _seriesList.push({ name: d.name, data: _dimData });
+                        }
+                    });
+                    if (_seriesList.length === 0) {
+                        var _overallData = [];
+                        _trendDates.forEach(function(ds) {
+                            var _sum = 0, _cnt = 0;
+                            _chartWSs.forEach(function(ws) {
+                                var _day = loadDayData(ds);
+                                if (_day && _day.t1 && _day.t1[ws.id]) {
+                                    dims.forEach(function(d) {
+                                        var _e = _day.t1[ws.id][d.id];
+                                        if (_e) {
+                                            var _t = Number(_e.t) || 0;
+                                            var _a = Number(_e.a) || 0;
+                                            if (_t > 0) { _sum += (_a/_t)*100; _cnt++; }
+                                        }
+                                    });
+                                }
+                            });
+                            _overallData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
+                        });
+                        _seriesList.push({ name: 'Overall', data: _overallData });
+                    }
+                } else {
+                    var _selDim = dims.find(function(d) { return d.id === _p1Dim; });
+                    _chartWSs.forEach(function(ws) {
+                        var _wsData = [];
+                        _trendDates.forEach(function(ds) {
+                            var _day = loadDayData(ds);
+                            if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][_selDim.id]) {
+                                var _e = _day.t1[ws.id][_selDim.id];
+                                var _t = Number(_e.t) || 0;
+                                var _a = Number(_e.a) || 0;
+                                _wsData.push(_t > 0 ? parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) : null);
+                            } else {
+                                _wsData.push(null);
+                            }
+                        });
+                        if (_wsData.some(function(v) { return v !== null; })) {
+                            _seriesList.push({ name: ws.label, data: _wsData });
+                        }
+                    });
+                }
+
+                var _echartSeries = _seriesList.map(function(s, idx) {
+                    var _clr = _lineColors[idx % _lineColors.length];
+                    var _ser = {
+                        name: s.name,
+                        data: s.data,
+                        type: 'line', smooth: true,
+                        connectNulls: false,
+                        symbol: 'circle', symbolSize: 5,
+                        lineStyle: { color: _clr, width: 2 },
+                        itemStyle: { color: _clr },
+                        label: {
+                            show: true, position: 'top',
+                            color: '#e2e8f0', fontSize: 9, fontWeight: 'bold', fontFamily: 'monospace',
+                            fontStyle: 'normal',
+                            formatter: function(p) { return p.value !== null ? p.value + '%' : ''; }
+                        },
+                        z: 2
+                    };
+                    if (_seriesList.length === 1) {
+                        _ser.markLine = {
+                            silent: true,
+                            data: [{ yAxis: 100 }],
+                            lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5 },
+                            label: { formatter: 'Target: 100%', color: '#ef4444', fontSize: 10, fontWeight: 'bold' }
+                        };
+                        _ser.areaStyle = {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: 'rgba(59,130,246,0.3)'},
+                                {offset: 1, color: 'rgba(59,130,246,0.02)'}
+                            ])
+                        };
+                    }
+                    return _ser;
+                });
+
+                chartInstance.setOption({
+                    grid: { top: 30, bottom: 20, left: 35, right: 15 },
+                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
+                    legend: {
+                        data: _seriesList.map(function(s) { return s.name; }),
+                        textStyle: { color: '#94a3b8', fontSize: 9, fontWeight: 'bold', fontStyle: 'normal' },
+                        top: 0, left: 'center', itemWidth: 12, itemHeight: 8
+                    },
+                    xAxis: { type: 'category', data: _trendLabels,
+                        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal' },
+                        axisLine: { lineStyle: { color: '#334155' } },
+                        axisTick: { show: false }
+                    },
+                    yAxis: { type: 'value', min: 50, max: 100,
+                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                        axisLine: { show: false }
+                    },
+                    series: _echartSeries
+                });
+            }
             const calcP2 = (wsName, domPrefix, bgClass) => {
                 let sumT = 0, sumA = 0, html = '';
                 const wsData = displayT2[wsName] || {};
