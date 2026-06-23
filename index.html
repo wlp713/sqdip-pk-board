@@ -81,6 +81,24 @@
         .data-table tbody tr:last-child td { border-bottom: none; }
         .data-table td.status-cell { white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 0.65rem; line-height: 1.15; }
         .h2h-table th, .h2h-table td { padding: 0.25rem 0.2rem; font-size: 0.65rem; white-space: nowrap; }
+        /* 🌟 Single workshop view: oversized data for readability */
+        .single-ws .ws-card .ws-name { font-size: 1.5rem; line-height: 1.1; }
+        .single-ws .ws-card .ws-pic { font-size: 0.875rem; }
+        .single-ws .ws-card .ws-score { font-size: 2rem; letter-spacing: -1px; }
+        .single-ws .ws-card .data-table th {
+            font-size: 0.75rem !important;
+            padding: 0.45rem 0.5rem !important;
+        }
+        .single-ws .ws-card .data-table td {
+            font-size: 0.95rem !important;
+            padding: 0.35rem 0.45rem !important;
+        }
+        .single-ws .ws-card .data-table td:nth-child(1) span {
+            font-size: 0.75rem !important;
+            padding: 0.3rem 0.6rem !important;
+        }
+        .single-ws .ws-card .dash-hr { border-color: rgba(148,163,184,0.3); margin: 0.6rem 0; }
+
         .data-table td.status-cell .status-emoji { font-size: 0.85rem; line-height: 1; display: inline-block; vertical-align: middle; }
 
         .text-good { color: #10b981; }
@@ -277,7 +295,7 @@
         </div>
     </div>
 
-    <header class="h-[48px] bg-[#0b1120] border-b border-slate-800 flex items-center px-3 shrink-0 z-10 gap-2">
+    <header class="h-[52px] bg-[#0b1120] border-b border-slate-800 flex items-center px-3 shrink-0 z-10 gap-2">
         <!-- Row 1: Title + Date + Tabs -->
         <div class="flex items-center gap-3 flex-1 min-w-0">
             <div class="flex items-center gap-1.5 shrink-0">
@@ -285,51 +303,51 @@
                 <h1 class="title-h1 text-[12px] text-slate-100">MBS</h1>
             </div>
 
-            <div class="flex items-center bg-[#1e293b] border border-slate-700/50 rounded h-[28px]">
+            <div class="flex items-center bg-[#1e293b] border border-slate-700/50 rounded h-[30px]">
                 <button onclick="shiftDate(-1)" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-l transition border-r border-slate-700/50 flex items-center">
                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
-                <input type="date" id="global-date" onchange="jumpDate()" class="bg-transparent border-none text-xs font-bold text-slate-200 num-hl px-2 h-full outline-none w-[120px]">
+                <input type="date" id="global-date" onchange="jumpDate()" class="bg-transparent border-none text-sm font-bold text-slate-200 num-hl px-2 h-full outline-none w-[125px]">
                 <button onclick="shiftDate(1)" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-r transition border-l border-slate-700/50 flex items-center">
                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
             <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
-                <button id="btn-tab1" onclick="switchTab(1)" class="px-3 py-1 text-[10px] font-bold rounded bg-blue-600 text-white transition-colors shadow-sm">KPI</button>
+                <button id="btn-tab1" onclick="switchTab(1)" class="px-3 py-1 text-[12px] font-bold rounded bg-blue-600 text-white transition-colors shadow-sm">KPI</button>
                 <button id="btn-tab2" onclick="switchTab(2)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">PK</button>
                 <button id="btn-tab3" onclick="switchTab(3)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏆 STAND</button>
                 <button id="btn-tab4" onclick="switchTab(4)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏁 DIM</button>
             </div>
 
             <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
-                <button id="btn-period-day" onclick="setPeriod('day')" class="period-btn px-2 py-1 text-[9px] font-bold rounded bg-blue-600 text-white shadow-sm transition-colors">📅 Day</button>
-                <button id="btn-period-week" onclick="setPeriod('week')" class="period-btn px-2 py-1 text-[9px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📆 Wk</button>
-                <button id="btn-period-month" onclick="setPeriod('month')" class="period-btn px-2 py-1 text-[9px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📊 Mo</button>
+                <button id="btn-period-day" onclick="setPeriod('day')" class="period-btn px-2 py-1 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm transition-colors">📅 Day</button>
+                <button id="btn-period-week" onclick="setPeriod('week')" class="period-btn px-2 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📆 Wk</button>
+                <button id="btn-period-month" onclick="setPeriod('month')" class="period-btn px-2 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📊 Mo</button>
             </div>
         </div>
 
         <!-- Row 2: Status + User + Actions -->
         <div class="flex items-center gap-1.5 shrink-0">
-            <div id="sync-status" class="text-[10px] text-emerald-400 font-mono hidden items-center gap-1">
+            <div id="sync-status" class="text-[12px] text-emerald-400 font-mono hidden items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span class="hidden sm:inline">SYNC...</span>
             </div>
-            <span id="lock-badge" class="text-[9px] font-semibold hidden px-1.5 py-0.5 rounded border"></span>
-            <span id="user-badge" class="text-[9px] text-slate-500 font-mono bg-[#1e293b] px-1.5 py-0.5 rounded border border-slate-700/50"></span>
-            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-2 h-[26px] bg-[#1e293b] hover:bg-slate-700 text-slate-400 text-[10px] font-bold rounded border border-slate-700/50 transition-colors flex items-center gap-1" title="Admin Panel">
+            <span id="lock-badge" class="text-[10px] font-semibold hidden px-1.5 py-0.5 rounded border"></span>
+            <span id="user-badge" class="text-[10px] text-slate-500 font-mono bg-[#1e293b] px-1.5 py-0.5 rounded border border-slate-700/50"></span>
+            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-2 h-[28px] bg-[#1e293b] hover:bg-slate-700 text-slate-400 text-[11px] font-bold rounded border border-slate-700/50 transition-colors flex items-center gap-1" title="Admin Panel">
                 ⚙️
             </button>
-            <button onclick="exportBoard()" class="px-2 h-[26px] bg-indigo-700 hover:bg-indigo-600 text-white text-[10px] font-bold rounded border border-indigo-600/50 transition-colors flex items-center gap-1 shadow-[0_0_6px_rgba(79,70,229,0.25)]" title="Export">
+            <button onclick="exportBoard()" class="px-2 h-[28px] bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-bold rounded border border-indigo-600/50 transition-colors flex items-center gap-1 shadow-[0_0_6px_rgba(79,70,229,0.25)]" title="Export">
                 📸
             </button>
-            <button onclick="logout()" id="btn-logout" class="px-2 h-[26px] text-slate-500 hover:text-red-400 text-[10px] rounded border border-slate-700/50 hover:border-red-700/50 transition-colors hidden" title="Logout">
+            <button onclick="logout()" id="btn-logout" class="px-2 h-[28px] text-slate-500 hover:text-red-400 text-[11px] rounded border border-slate-700/50 hover:border-red-700/50 transition-colors hidden" title="Logout">
                 🚪
             </button>
         </div>
     </header>
 
-    <main id="board-container" class="flex-1 p-4 w-full h-[calc(100vh-76px)] box-border">
+    <main id="board-container" class="flex-1 p-4 w-full h-[calc(100vh-80px)] box-border">
 
         <!-- PAGE 1 -->
         <div id="page1" class="w-full h-full flex flex-col gap-4 fade-enter">
@@ -1627,8 +1645,9 @@
             var visWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
             var cardsContainer = document.getElementById('p1-cards-container');
             /* ★ Adjust grid for single-workshop view vs multi-workshop admin view */
-            if (visWs.length === 1) {
-                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[60%]';
+            var isSingle = visWs.length === 1;
+            if (isSingle) {
+                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[50%] single-ws';
             } else {
                 cardsContainer.className = 'grid grid-cols-4 gap-4 h-[60%]';
             }
@@ -1651,15 +1670,17 @@
                 let avg = count ? sum/count : 0;
                 scores.push({name: ws.label, score: avg});
 
+                var isSingle = visWs.length === 1;
                 return `
-                    <div class="panel-card flex flex-col p-4">
-                        <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
+                    <div class="panel-card flex flex-col p-4 ${isSingle ? 'ws-card' : ''}">
+                        <div class="flex justify-between items-center ${isSingle ? '' : 'border-b border-slate-700 pb-3 mb-3'}">
                             <div class="flex flex-col items-start">
-                                <span class="title-h2 text-lg text-white">${ws.label}</span>
-                                <span class="text-xs text-slate-400 font-medium">PIC: ${ws.pic}</span>
+                                <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-lg'} text-white">${ws.label}</span>
+                                <span class="${isSingle ? 'ws-pic' : 'text-xs'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
                             </div>
-                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded border border-blue-500/30 text-[1.1rem]">${avg.toFixed(1)}</span>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-3 py-1.5 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-[1.1rem]'}">${avg.toFixed(1)}</span>
                         </div>
+                        ${isSingle ? '<hr class="dash-hr">' : ''}
                         <table class="data-table"><thead><tr><th>Dim</th><th>Target</th><th>Actual</th><th>ACH%</th></tr></thead><tbody>${rows}</tbody></table>
                     </div>
                 `;
