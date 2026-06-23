@@ -1639,7 +1639,7 @@
             return Math.min((t / a) * 100, 100);                         // Loss
         };
 
-        const updateUI = () => {
+        window.updateUI = () => {
             /* ── Determine data source: daily vs cumulative ── */
             let displayT1, displayT2;
             if (pkPeriod === 'day') {
