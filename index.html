@@ -611,9 +611,20 @@
     <div id="admin-overlay" onclick="toggleAdmin()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:40;display:none;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)"></div>
 
     <div id="admin-drawer" class="admin-drawer">
-        <div class="flex justify-between items-center p-5 border-b border-slate-700 bg-[#1e293b] shrink-0 shadow-md z-10">
-            <h2 class="title-h2 text-sm text-slate-100 flex items-center gap-2">⚙️ DATA CONTROL</h2>
-            <div class="flex items-center gap-5">
+        <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-[#1e293b] shrink-0 shadow-md z-10">
+            <div class="flex items-center gap-3">
+                <h2 class="title-h2 text-sm text-slate-100 flex items-center gap-2">⚙️ DATA CONTROL</h2>
+                <div class="flex items-center bg-[#0f172a] border border-slate-700/50 rounded h-[28px]">
+                    <button onclick="adminPrevDate()" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-l transition border-r border-slate-700/50 flex items-center" title="前一天">
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <input type="date" id="admin-date" onchange="adminJumpDate()" class="bg-transparent border-none text-[10px] font-bold text-slate-200 num-hl px-2 h-full outline-none w-[105px]">
+                    <button onclick="adminNextDate()" class="px-2 h-full text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-r transition border-l border-slate-700/50 flex items-center" title="后一天">
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
                 <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-700 transition">
                     <span class="title-h3 text-slate-300">LOCK TGT</span>
                     <input type="checkbox" id="lock-target-toggle" class="accent-blue-500 w-3.5 h-3.5" onchange="toggleLock()">
@@ -985,42 +996,22 @@
         function renderUserMgmt(roles) {
             var list = document.getElementById('user-list');
             if (!list) return;
-            var roleIds = ['admin','PRO1','PRO2','PRO3','PRO4_5'];
+            var allRoleIds = ['admin','PRO1','PRO2','PRO3','PRO4_5'];
             var labels = { admin:'⚙️ ADMIN', PRO1:'PRO1', PRO2:'PRO2', PRO3:'PRO3', PRO4_5:'PRO4&5' };
+            /* ★ Filter: workshop users only see themselves, admin sees all */
+            var roleIds = _authRole === 'admin' ? allRoleIds : allRoleIds.filter(function(r) { return r === _authRole; });
             list.innerHTML = roleIds.map(function(r) {
                 var hasPass = roles && roles[r] && roles[r].pass ? true : false;
                 var status = hasPass ? '<span class="text-emerald-400">✅ 已设置</span>' : '<span class="text-red-400">❌ 未设置</span>';
-                var canReset = _authRole === 'admin' ? '' : 'hidden';
-                return '<div class="grid grid-cols-3 gap-2 items-center py-2 px-2 bg-slate-800/50 rounded border border-slate-700">' +
-                    '<span class="text-xs text-slate-200 font-semibold">' + (labels[r] || r) + '</span>' +
-                    '<span class="text-[10px]">' + status + '</span>' +
-                    '<div class="flex gap-1 ' + canReset + '">' +
-                    '<input type="password" id="pw-' + r + '" placeholder="新密码" class="w-full bg-[#1e293b] border border-slate-700 rounded px-2 py-1 text-[10px] text-white outline-none focus:border-amber-500 placeholder:text-slate-600">' +
-                    '<button onclick="resetPw(\'' + r + '\')" class="px-2 py-1 bg-amber-600/80 hover:bg-amber-600 text-white text-[9px] font-bold rounded transition">保存</button>' +
-                    '</div></div>';
+                /* ★ Workshop users CAN change their own password */
+                return '<div class="flex items-center gap-2 py-2 px-2 bg-slate-800/50 rounded border border-slate-700">' +
+                    '<span class="text-xs text-slate-200 font-semibold w-16">' + (labels[r] || r) + '</span>' +
+                    '<span class="text-[10px] w-16">' + status + '</span>' +
+                    '<input type="password" id="pw-' + r + '" placeholder="新密码" class="flex-1 bg-[#1e293b] border border-slate-700 rounded px-2 py-1 text-[10px] text-white outline-none focus:border-amber-500 placeholder:text-slate-600">' +
+                    '<button onclick="resetPw(\'' + r + '\')" class="px-2 py-1 bg-amber-600/80 hover:bg-amber-600 text-white text-[9px] font-bold rounded transition whitespace-nowrap">保存</button>' +
+                    '</div>';
             }).join('');
-        }
-
-        /* ── Reset workshop/admin password ── */
-        window.resetPw = async function(role) {
-            var input = document.getElementById('pw-' + role);
-            if (!input) return;
-            var pw = input.value.trim();
-            if (!pw || pw.length < 4) { showUserMsg('密码至少4位'); return; }
-            try {
-                var hash = await hashPass(pw);
-                var roleRef = firebaseModules.ref(fbDb, '_config/roles/' + role + '/pass');
-                /* ★ Use Promise-based set (modular SDK does NOT support callback style) */
-                await firebaseModules.set(roleRef, hash);
-                input.value = '';
-                showUserMsg(role + ' 密码更新成功');
-                refreshUserList();
-            } catch(e) {
-                showUserMsg('失败: ' + e.message);
-            }
-        };
-
-        function showUserMsg(msg) {
+        } function showUserMsg(msg) {
             var el = document.getElementById('user-msg');
             if (el) el.textContent = msg;
         }
@@ -1458,14 +1449,52 @@
 
                 localStorage.setItem(`mbs_state_${currentDate}`, JSON.stringify(savePayload));
                 if(firebaseReady && dbRef) {
-                    firebaseModules.set(dbRef, savePayload).then(() => {
-                        setTimeout(() => syncUI.classList.add('hidden'), 800);
-                    }).catch(function(e) {
-                        /* ★ Save failed: decrement counter so retry gets a fresh number */
-                        _localWriteCounter--;
-                        localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
-                        console.warn('Firebase save failed:', e.message);
-                    });
+                    if (_authRole !== 'admin') {
+                        /* ★ Workshop: read Firebase current state first, merge own data on top */
+                        var readRef = firebaseModules.ref(fbDb, `mbs_dm_board_data/${currentDate}`);
+                        firebaseModules.onValue(readRef, function(snapshot) {
+                            var fbData = snapshot.val() || {};
+                            if (!fbData.t1) fbData.t1 = {};
+                            if (!fbData.t2) fbData.t2 = {};
+                            /* Merge OWN workshop data, preserve others' data from Firebase */
+                            saveWs.forEach(function(ws) {
+                                fbData.t1[ws.id] = state.t1[ws.id];
+                            });
+                            /* Also merge T2 if applicable */
+                            for (var tw in state.t2) {
+                                fbData.t2[tw] = state.t2[tw];
+                            }
+                            fbData._writeCounter = savePayload._writeCounter;
+                            fbData._clientId = savePayload._clientId;
+                            fbData._updatedAt = savePayload._updatedAt;
+                            firebaseModules.set(dbRef, fbData).then(function() {
+                                setTimeout(function() { syncUI.classList.add('hidden'); }, 800);
+                            }).catch(function(e) {
+                                _localWriteCounter--;
+                                localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                                console.warn('Firebase save failed:', e.message);
+                            });
+                        }, function(e) {
+                            /* Firebase read failed - fallback to direct save */
+                            console.warn('Firebase read failed, saving directly:', e.message);
+                            firebaseModules.set(dbRef, savePayload).then(function() {
+                                setTimeout(function() { syncUI.classList.add('hidden'); }, 800);
+                            }).catch(function(e) {
+                                _localWriteCounter--;
+                                localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                                console.warn('Firebase save failed:', e.message);
+                            });
+                        }, { onlyOnce: true });
+                    } else {
+                        /* ★ Admin: save everything (full authority) */
+                        firebaseModules.set(dbRef, savePayload).then(function() {
+                            setTimeout(function() { syncUI.classList.add('hidden'); }, 800);
+                        }).catch(function(e) {
+                            _localWriteCounter--;
+                            localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                            console.warn('Firebase save failed:', e.message);
+                        });
+                    }
                 } else {
                     setTimeout(() => syncUI.classList.add('hidden'), 800);
                 }
@@ -1596,7 +1625,14 @@
             let scores = [];
             /* ★ Filter workshops by auth role: non-admin only sees their own */
             var visWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
-            document.getElementById('p1-cards-container').innerHTML = visWs.map(ws => {
+            var cardsContainer = document.getElementById('p1-cards-container');
+            /* ★ Adjust grid for single-workshop view vs multi-workshop admin view */
+            if (visWs.length === 1) {
+                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[60%]';
+            } else {
+                cardsContainer.className = 'grid grid-cols-4 gap-4 h-[60%]';
+            }
+            cardsContainer.innerHTML = visWs.map(ws => {
                 let sum = 0, count = 0;
                 let rows = dims.map(d => {
                     let t = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0;
@@ -2338,6 +2374,29 @@
         loadFirebase();
         init();
 
+        /* ── Admin drawer date navigation ── */
+        window.adminJumpDate = () => {
+            currentDate = document.getElementById('admin-date').value;
+            document.getElementById('global-date').value = currentDate;
+            initDefaultState();
+            const local = localStorage.getItem(`mbs_state_${currentDate}`);
+            if (local) { try { mergeData(JSON.parse(local), true); } catch(e) {} }
+            renderAdmin(); restoreLockState(); updateUI();
+            if(firebaseReady) listenToFirebase();
+        };
+        window.adminPrevDate = () => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() - 1);
+            document.getElementById('admin-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            adminJumpDate();
+        };
+        window.adminNextDate = () => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() + 1);
+            document.getElementById('admin-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            adminJumpDate();
+        };
+
         window.switchTab = (idx) => {
             const p1 = document.getElementById('page1'), p2 = document.getElementById('page2'), p3 = document.getElementById('page3'), p4 = document.getElementById('page4');
             [p1,p2,p3,p4].forEach(p => { p.classList.remove('fade-enter'); void p.offsetWidth; });
@@ -2361,7 +2420,13 @@
             const open = !dr.classList.contains('open');
             dr.classList.toggle('open');
             ov.style.display = open ? 'block' : 'none';
-            if(open) { renderAdmin(); lockBadge(); refreshUserList(); }
+            if(open) {
+                var ad = document.getElementById('admin-date');
+                if (ad) ad.value = currentDate;
+                renderAdmin();
+                lockBadge();
+                refreshUserList();
+            }
         };
         window.copyT1ToAllDates = function() {
             // ★ Step 1: Read current T1 target values from DOM inputs
