@@ -81,23 +81,23 @@
         .data-table tbody tr:last-child td { border-bottom: none; }
         .data-table td.status-cell { white-space: nowrap; overflow: visible; text-overflow: clip; font-size: 0.65rem; line-height: 1.15; }
         .h2h-table th, .h2h-table td { padding: 0.25rem 0.2rem; font-size: 0.65rem; white-space: nowrap; }
-        /* 🌟 Single workshop view: oversized data for readability */
-        .single-ws .ws-card .ws-name { font-size: 1.5rem; line-height: 1.1; }
-        .single-ws .ws-card .ws-pic { font-size: 0.875rem; }
-        .single-ws .ws-card .ws-score { font-size: 2rem; letter-spacing: -1px; }
+        /* 🌟 Single workshop view: compact data */
+        .single-ws .ws-card .ws-name { font-size: 1.2rem; line-height: 1.1; }
+        .single-ws .ws-card .ws-pic { font-size: 0.75rem; }
+        .single-ws .ws-card .ws-score { font-size: 1.5rem; letter-spacing: -1px; }
         .single-ws .ws-card .data-table th {
-            font-size: 0.75rem !important;
-            padding: 0.45rem 0.5rem !important;
+            font-size: 0.65rem !important;
+            padding: 0.25rem 0.3rem !important;
         }
         .single-ws .ws-card .data-table td {
-            font-size: 0.95rem !important;
-            padding: 0.35rem 0.45rem !important;
+            font-size: 0.78rem !important;
+            padding: 0.2rem 0.25rem !important;
         }
         .single-ws .ws-card .data-table td:nth-child(1) span {
-            font-size: 0.75rem !important;
-            padding: 0.3rem 0.6rem !important;
+            font-size: 0.65rem !important;
+            padding: 0.15rem 0.4rem !important;
         }
-        .single-ws .ws-card .dash-hr { border-color: rgba(148,163,184,0.3); margin: 0.6rem 0; }
+        .single-ws .ws-card .dash-hr { border-color: rgba(148,163,184,0.3); margin: 0.3rem 0; }
 
         .data-table td.status-cell .status-emoji { font-size: 0.85rem; line-height: 1; display: inline-block; vertical-align: middle; }
 
@@ -255,7 +255,7 @@
                     <input type="password" id="login-pass" placeholder="输入密码" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
                 </div>
                 <div class="flex items-center gap-2 mb-4">
-                    <input type="checkbox" id="login-remember" class="accent-blue-500 w-3.5 h-3.5">
+                    <input type="checkbox" id="login-remember" class="accent-blue-500 w-3.5 h-3.5" checked>
                     <label for="login-remember" class="text-[10px] text-slate-500 cursor-pointer">记住登录 / Remember me</label>
                 </div>
                 <div id="login-error" class="text-[11px] text-red-400 mb-3 hidden"></div>
@@ -355,36 +355,36 @@
                 <!-- JS Inject -->
             </div>
 
-            <div class="flex-1 flex gap-4 h-[40%] overflow-hidden">
-                <div class="panel-card p-4 flex-1 flex flex-col relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <div class="flex justify-between items-center mb-2 pl-2">
-                        <h2 class="title-h3 text-[13px]">Overall ACH% Analysis</h2>
-                        <span id="p1-period-label" class="text-[9px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700">DAY</span>
+            <div class="flex-1 flex gap-3 h-[45%] overflow-hidden">
+                <div class="panel-card p-2 flex-1 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
+                    <div class="flex justify-between items-center mb-1 pl-2">
+                        <h2 class="title-h3 text-[11px]">Overall ACH% Analysis</h2>
+                        <span id="p1-period-label" class="text-[8px] font-mono text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700">DAY</span>
                     </div>
                     <div id="p1-chart" class="flex-1 w-full h-full"></div>
                 </div>
 
-                <div class="panel-card champion-card p-3 w-[25%] flex flex-col items-center text-center relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
+                <div class="panel-card champion-card p-2 w-[25%] flex flex-col items-center text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
 
                     <!-- ★ Champion visual: trophy + name + score -->
-                    <div class="flex items-center gap-2 mt-3">
-                        <div class="trophy-float text-[2.2rem]">🏆</div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <div class="trophy-float text-[1.6rem]">🏆</div>
                         <div class="flex flex-col items-start">
-                            <span class="title-h3 text-amber-400/80 text-[9px] tracking-[0.2em]">CHAMPION</span>
-                            <div id="p1-winner-text" class="text-2xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
+                            <span class="title-h3 text-amber-400/80 text-[8px] tracking-[0.15em]">CHAMPION</span>
+                            <div id="p1-winner-text" class="text-xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
                         </div>
                     </div>
 
                     <!-- ★ Ranking list: all workshops with champion highlighted -->
-                    <div class="w-full flex-1 flex flex-col justify-center space-y-1 px-0.5 mt-1" id="p1-rank-list"></div>
+                    <div class="w-full flex-1 flex flex-col justify-center space-y-0.5 px-0.5 mt-0.5" id="p1-rank-list"></div>
 
                     <!-- ★ Badge at bottom -->
-                    <div class="mt-auto mb-1 flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1">
-                        <span class="text-[10px]">🏆</span>
-                        <span class="text-[8px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
-                        <span id="p1-header-date" class="text-[8px] text-amber-500/60 font-mono ml-1"></span>
+                    <div class="mt-auto mb-0.5 flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">
+                        <span class="text-[8px]">🏆</span>
+                        <span class="text-[7px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
+                        <span id="p1-header-date" class="text-[7px] text-amber-500/60 font-mono ml-1"></span>
                     </div>
                 </div>
             </div>
@@ -1647,9 +1647,9 @@
             /* ★ Adjust grid for single-workshop view vs multi-workshop admin view */
             var isSingle = visWs.length === 1;
             if (isSingle) {
-                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[50%] overflow-y-auto single-ws';
+                cardsContainer.className = 'grid grid-cols-1 gap-2 h-[45%] single-ws';
             } else {
-                cardsContainer.className = 'grid grid-cols-4 gap-4 h-[60%] overflow-y-auto';
+                cardsContainer.className = 'grid grid-cols-4 gap-2 h-[50%]';
             }
             cardsContainer.innerHTML = visWs.map(ws => {
                 let sum = 0, count = 0;
@@ -1660,10 +1660,10 @@
                     sum += rate; count++;
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr>
-                        <td><span class="px-2 py-1 rounded text-[9px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted">${t}</td>
-                        <td class="num-font num-light">${a}</td>
-                        <td class="num-font num-hl ${rc}">${rate.toFixed(1)}%</td>
+                        <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
+                        <td class="num-font num-muted text-[11px]">${t}</td>
+                        <td class="num-font num-light text-[11px]">${a}</td>
+                        <td class="num-font num-hl text-[11px] ${rc}">${rate.toFixed(1)}%</td>
                     </tr>`;
                 }).join('');
 
@@ -1672,16 +1672,16 @@
 
                 var isSingle = visWs.length === 1;
                 return `
-                    <div class="panel-card flex flex-col p-4 min-h-0 ${isSingle ? 'ws-card overflow-y-auto' : ''}">
-                        <div class="flex justify-between items-center ${isSingle ? '' : 'border-b border-slate-700 pb-3 mb-3'}">
+                    <div class="panel-card flex flex-col p-2 min-h-0 ${isSingle ? 'ws-card' : ''}">
+                        <div class="flex justify-between items-center ${isSingle ? '' : 'border-b border-slate-700 pb-1.5 mb-1.5'}">
                             <div class="flex flex-col items-start">
-                                <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-lg'} text-white">${ws.label}</span>
-                                <span class="${isSingle ? 'ws-pic' : 'text-xs'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
+                                <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-sm'} text-white">${ws.label}</span>
+                                <span class="${isSingle ? 'ws-pic' : 'text-[10px]'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
                             </div>
-                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-3 py-1.5 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-[1.1rem]'}">${avg.toFixed(1)}</span>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-sm'}">${avg.toFixed(1)}</span>
                         </div>
                         ${isSingle ? '<hr class="dash-hr">' : ''}
-                        <table class="data-table"><thead><tr><th>Dim</th><th>Target</th><th>Actual</th><th>ACH%</th></tr></thead><tbody>${rows}</tbody></table>
+                        <table class="data-table"><thead><tr><th class="text-[9px]">Dim</th><th class="text-[9px]">Target</th><th class="text-[9px]">Actual</th><th class="text-[9px]">ACH%</th></tr></thead><tbody>${rows}</tbody></table>
                     </div>
                 `;
             }).join('');
@@ -1700,10 +1700,10 @@
             const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
             const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
             document.getElementById('p1-rank-list').innerHTML = scores.map((s, i) => {
-                return `<div class="flex items-center py-0.5 px-1.5 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
-                    <span class="text-xs mr-1">${medals[i]}</span>
-                    <span class="text-[11px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
-                    <span class="text-[11px] num-hl ${scoreColors[i]}">${s.score.toFixed(1)}%</span>
+                return `<div class="flex items-center py-0.5 px-1 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
+                    <span class="text-[10px] mr-0.5">${medals[i]}</span>
+                    <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
+                    <span class="text-[10px] num-hl ${scoreColors[i]}">${s.score.toFixed(1)}%</span>
                 </div>`;
             }).join('');
             /* ★ Update date in header */
@@ -1714,38 +1714,107 @@
                 document.getElementById('p1-header-date').innerText = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
             }
 
-            if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
-            chartInstance.setOption({
-                grid: { top: 25, bottom: 20, left: 35, right: 15 },
-                tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
-                xAxis: { type: 'category', data: scores.map(s=>s.name),
-                    axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' },
-                    axisLine: { lineStyle: { color: '#334155' } },
-                    axisTick: { show: false }
-                },
-                yAxis: { type: 'value', min: 50, max: 100,
-                    axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
-                    splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                    axisLine: { show: false }
-                },
-                series: [{
-                    data: scores.map(s=>parseFloat(s.score.toFixed(1))),
-                    type: 'bar', barWidth: '40%',
-                    itemStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            {offset: 0, color: '#3b82f6'},
-                            {offset: 1, color: '#1e3a8a'}
-                        ]),
-                        borderRadius: [4, 4, 0, 0]
-                    },
-                    label: {
-                        show: true, position: 'top',
-                        color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                        formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
-                    },
+            /* ★ 判断是否展示趋势折线图: 车间账户 + 周/月模式 */
+            var _isTrendMode = (pkPeriod !== 'day' && _authRole !== 'admin' && _authRole !== null);
 
-                }]
-            });
+            if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
+
+            if (_isTrendMode) {
+                /* ── 趋势折线图: 逐日ACH% ── */
+                var _trendDates = getDateRange(pkPeriod, currentDate);
+                var _trendData = [];
+                var _trendLabels = [];
+                _trendDates.forEach(function(ds) {
+                    var _day = loadDayData(ds);
+                    if (!_day || !_day.t1 || !_day.t1[_authRole]) { _trendLabels.push(ds.slice(5)); _trendData.push(null); return; }
+                    var _wsDims = _day.t1[_authRole];
+                    var _sum = 0, _cnt = 0;
+                    dims.forEach(function(d) {
+                        var _e = _wsDims[d.id];
+                        if (_e) {
+                            var _t = Number(_e.t) || 0;
+                            var _a = Number(_e.a) || 0;
+                            if (_t > 0) { _sum += (_a/_t)*100; _cnt++; }
+                        }
+                    });
+                    _trendLabels.push(ds.slice(5));
+                    _trendData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
+                });
+
+                chartInstance.setOption({
+                    grid: { top: 25, bottom: 20, left: 35, right: 15 },
+                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
+                    xAxis: { type: 'category', data: _trendLabels,
+                        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 'bold', rotate: 45 },
+                        axisLine: { lineStyle: { color: '#334155' } },
+                        axisTick: { show: false }
+                    },
+                    yAxis: { type: 'value', min: 50, max: 100,
+                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
+                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                        axisLine: { show: false }
+                    },
+                    series: [
+                        {
+                            name: 'ACH%',
+                            data: _trendData,
+                            type: 'line', smooth: true,
+                            connectNulls: false,
+                            symbol: 'circle', symbolSize: 6,
+                            lineStyle: { color: '#3b82f6', width: 2 },
+                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: 'rgba(59,130,246,0.3)'},
+                                {offset: 1, color: 'rgba(59,130,246,0.02)'}
+                            ])},
+                            itemStyle: { color: '#3b82f6' },
+                            label: {
+                                show: true, position: 'top',
+                                color: '#e2e8f0', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace',
+                                formatter: function(p) { return p.value !== null ? p.value + '%' : ''; }
+                            },
+                            markLine: {
+                                silent: true,
+                                data: [{ yAxis: 100 }],
+                                lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5 },
+                                label: { formatter: 'Target: 100%', color: '#ef4444', fontSize: 10, fontWeight: 'bold' }
+                            },
+                            z: 2
+                        }
+                    ]
+                });
+            } else {
+                /* ── 柱状图: 车间对比 ── */
+                chartInstance.setOption({
+                    grid: { top: 25, bottom: 20, left: 35, right: 15 },
+                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
+                    xAxis: { type: 'category', data: scores.map(s=>s.name),
+                        axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' },
+                        axisLine: { lineStyle: { color: '#334155' } },
+                        axisTick: { show: false }
+                    },
+                    yAxis: { type: 'value', min: 50, max: 100,
+                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
+                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                        axisLine: { show: false }
+                    },
+                    series: [{
+                        data: scores.map(s=>parseFloat(s.score.toFixed(1))),
+                        type: 'bar', barWidth: '40%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: '#3b82f6'},
+                                {offset: 1, color: '#1e3a8a'}
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        label: {
+                            show: true, position: 'top',
+                            color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
+                            formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
+                        },
+                    }]
+                });
+            }
 
             const calcP2 = (wsName, domPrefix, bgClass) => {
                 let sumT = 0, sumA = 0, html = '';
@@ -2394,6 +2463,15 @@
         /* ★ Start Firebase loading in background, then render immediately */
         loadFirebase();
         init();
+
+        /* ★ 超时降级: 5秒后 Firebase Auth 还没就绪, 跳过认证直接进 */
+        setTimeout(function() {
+            if (!_firebaseChecked) {
+                console.warn('[Auth] Firebase 超时, 跳过登录验证');
+                _firebaseChecked = true;
+                init();
+            }
+        }, 5000);
 
         /* ── Admin drawer date navigation ── */
         window.adminJumpDate = () => {
