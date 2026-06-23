@@ -1769,34 +1769,70 @@
                         return { name: d.name, value: _cnt > 0 ? parseFloat((_total/_cnt).toFixed(1)) : 0 };
                     });
                     chartInstance.clear(); chartInstance.setOption({
-                        grid: { top: 25, bottom: 20, left: 35, right: 15 },
-                        tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
-                        xAxis: { type: 'category', data: _dimBarData.map(function(d){return d.name;}),
-                            axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', fontStyle: 'normal' },
+                        grid: { top: 30, bottom: 24, left: 38, right: 18 },
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(15,23,42,0.92)',
+                            borderColor: 'rgba(71,85,105,0.6)',
+                            borderWidth: 1,
+                            textStyle: { color: '#f1f5f9', fontSize: 12 },
+                            padding: [10,14],
+                            formatter: function(ps) {
+                                var p = ps[0];
+                                var clrs = ["#34d399","#60a5fa","#c084fc","#fbbf24"];
+                                var i = p.dataIndex;
+                                return "<span style='display:inline-block;width:10px;height:10px;border-radius:3px;background:"+clrs[i]+";margin-right:6px'></span>" +
+                                    "<b>"+p.name+"</b><br/>" +
+                                    "<span style='font-family:monospace;font-size:13px;color:#e2e8f0'>ACH%: <b>"+p.value.toFixed(2)+"%</b></span>";
+                            }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: _dimBarData.map(function(d){return d.name;}),
+                            axisLabel: { color: '#cbd5e1', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal' },
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 100,
-                            axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                        yAxis: {
+                            type: 'value', min: 0, max: 100,
+                            axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
                         },
-                        series: [{
-                            data: _dimBarData.map(function(d){return d.value;}),
-                            type: 'bar', barWidth: '50%',
-                            itemStyle: {
-                                color: function(p) {
-                                    var clrs = ['#34d399','#60a5fa','#c084fc','#fbbf24'];
-                                    return clrs[p.dataIndex % clrs.length];
+                        series: [
+                            {
+                                type: 'bar', barWidth: '55%', z: 10,
+                                data: _dimBarData.map(function(d){return d.value;}),
+                                itemStyle: {
+                                    color: function(p) {
+                                        var clrs = ["#34d399","#60a5fa","#c084fc","#fbbf24"];
+                                        return new echarts.graphic.LinearGradient(0,0,0,1, [
+                                            {offset:0,color:clrs[p.dataIndex % clrs.length]},
+                                            {offset:1,color:clrs[p.dataIndex % clrs.length]+"66"}
+                                        ]);
+                                    },
+                                    borderRadius: [6, 6, 0, 0],
+                                    shadowColor: 'rgba(0,0,0,0.3)',
+                                    shadowBlur: 8,
+                                    shadowOffsetY: 4
                                 },
-                                borderRadius: [4, 4, 0, 0]
+                                label: {
+                                    show: true, position: 'top',
+                                    color: '#e2e8f0', fontSize: 12, fontWeight: 'bold', fontFamily: 'monospace',
+                                    formatter: function(p) {
+                                        return p.value >= 100 ? "\u2705 " + p.value.toFixed(2) + "%" : p.value.toFixed(2) + "%";
+                                    }
+                                }
                             },
-                            label: {
-                                show: true, position: 'top',
-                                color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(2) + '%' : p.value.toFixed(2) + '%'; }
+                            {
+                                type: 'bar', barWidth: '55%', z: 1,
+                                barGap: '-100%',
+                                data: _dimBarData.map(function(d){return 100;}),
+                                itemStyle: { color: 'rgba(30,41,59,0.4)', borderRadius: [6, 6, 0, 0] },
+                                silent: true,
+                                animation: false
                             }
-                        }]
+                        ]
                     });
                 } else {
                     var _selDim = dims.find(function(d) { return d.id === _p1Dim; });
@@ -1806,34 +1842,70 @@
                         return { name: ws.label, value: parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) };
                     });
                     chartInstance.clear(); chartInstance.setOption({
-                        grid: { top: 25, bottom: 20, left: 35, right: 15 },
-                        tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
-                        xAxis: { type: 'category', data: _singleDimData.map(function(d){return d.name;}),
-                            axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', fontStyle: 'normal' },
+                        grid: { top: 30, bottom: 24, left: 38, right: 18 },
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(15,23,42,0.92)',
+                            borderColor: 'rgba(71,85,105,0.6)',
+                            borderWidth: 1,
+                            textStyle: { color: '#f1f5f9', fontSize: 12 },
+                            padding: [10,14],
+                            formatter: function(ps) {
+                                var p = ps[0];
+                                var clrs = ["#60a5fa","#818cf8","#34d399","#fbbf24","#f87171"];
+                                var i = p.dataIndex;
+                                return "<span style='display:inline-block;width:10px;height:10px;border-radius:3px;background:"+clrs[i]+";margin-right:6px'></span>" +
+                                    "<b>"+p.name+"</b><br/>" +
+                                    "<span style='font-family:monospace;font-size:13px;color:#e2e8f0'>ACH%: <b>"+p.value.toFixed(2)+"%</b></span>";
+                            }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: _singleDimData.map(function(d){return d.name;}),
+                            axisLabel: { color: '#cbd5e1', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal' },
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 100,
-                            axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                        yAxis: {
+                            type: 'value', min: 0, max: 100,
+                            axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
                         },
-                        series: [{
-                            data: _singleDimData.map(function(d){return d.value;}),
-                            type: 'bar', barWidth: '50%',
-                            itemStyle: {
-                                color: function(p) {
-                                    var clrs = ['#60a5fa','#818cf8','#34d399','#fbbf24','#f87171'];
-                                    return clrs[p.dataIndex % clrs.length];
+                        series: [
+                            {
+                                type: 'bar', barWidth: '55%', z: 10,
+                                data: _singleDimData.map(function(d){return d.value;}),
+                                itemStyle: {
+                                    color: function(p) {
+                                        var clrs = ["#60a5fa","#818cf8","#34d399","#fbbf24","#f87171"];
+                                        return new echarts.graphic.LinearGradient(0,0,0,1, [
+                                            {offset:0,color:clrs[p.dataIndex % clrs.length]},
+                                            {offset:1,color:clrs[p.dataIndex % clrs.length]+"66"}
+                                        ]);
+                                    },
+                                    borderRadius: [6, 6, 0, 0],
+                                    shadowColor: 'rgba(0,0,0,0.3)',
+                                    shadowBlur: 8,
+                                    shadowOffsetY: 4
                                 },
-                                borderRadius: [4, 4, 0, 0]
+                                label: {
+                                    show: true, position: 'top',
+                                    color: '#e2e8f0', fontSize: 12, fontWeight: 'bold', fontFamily: 'monospace',
+                                    formatter: function(p) {
+                                        return p.value >= 100 ? "\u2705 " + p.value.toFixed(2) + "%" : p.value.toFixed(2) + "%";
+                                    }
+                                }
                             },
-                            label: {
-                                show: true, position: 'top',
-                                color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
-                                formatter: function(p) { return p.value >= 100 ? '\u2705 ' + p.value.toFixed(2) + '%' : p.value.toFixed(2) + '%'; }
+                            {
+                                type: 'bar', barWidth: '55%', z: 1,
+                                barGap: '-100%',
+                                data: _singleDimData.map(function(d){return 100;}),
+                                itemStyle: { color: 'rgba(30,41,59,0.4)', borderRadius: [6, 6, 0, 0] },
+                                silent: true,
+                                animation: false
                             }
-                        }]
+                        ]
                     });
                 }
             } else {
