@@ -214,6 +214,69 @@
 </head>
 <body>
 
+    <!-- ── LOGIN OVERLAY ── -->
+    <div id="login-overlay" class="fixed inset-0 z-50 bg-[#060b17] flex items-center justify-center">
+        <div id="login-box" class="bg-[#0f172a] border border-slate-700 rounded-xl p-8 w-[380px] shadow-2xl shadow-black/50">
+            <div class="text-center mb-6">
+                <h2 class="text-lg font-black text-white tracking-wide">MBS DM Board</h2>
+                <p class="text-[11px] text-slate-500 mt-1">SQDIP · LIMIT PK · STANDINGS</p>
+            </div>
+            <div id="login-form">
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">角色 / Role</label>
+                    <select id="login-role" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500">
+                        <option value="PRO1">PRO1 — MS. PIYA 钱大为</option>
+                        <option value="PRO2">PRO2 — MR. SUDTHIPAN 潘文星</option>
+                        <option value="PRO3">PRO3 — MR. PRATEEP</option>
+                        <option value="PRO4_5">PRO4&amp;5 — MR. VIRAT</option>
+                        <option value="admin">⚙️ ADMIN</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">密码 / Password</label>
+                    <input type="password" id="login-pass" placeholder="输入密码" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
+                </div>
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" id="login-remember" class="accent-blue-500 w-3.5 h-3.5">
+                    <label for="login-remember" class="text-[10px] text-slate-500 cursor-pointer">记住登录 / Remember me</label>
+                </div>
+                <div id="login-error" class="text-[11px] text-red-400 mb-3 hidden"></div>
+                <button id="btn-login" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2" onclick="window.login()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                    登 录
+                </button>
+                <div class="mt-3 text-center">
+                    <span id="btn-reset-all" class="text-[10px] text-slate-600 hover:text-slate-400 cursor-pointer transition-colors">🔑 忘记密码？重置</span>
+                </div>
+            </div>
+            <!-- Loading spinner -->
+            <div id="login-loader" class="hidden text-center py-8">
+                <div class="inline-block w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p class="text-xs text-slate-500">验证中...</p>
+            </div>
+            <!-- First-time setup -->
+            <div id="login-setup" class="hidden">
+                <div class="text-center mb-4">
+                    <div class="text-2xl mb-1">🔐</div>
+                    <p class="text-sm text-slate-300 font-bold">首次设置管理员密码</p>
+                    <p class="text-[10px] text-slate-500 mt-1">设置完成后可添加车间账号</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">管理员密码</label>
+                    <input type="password" id="setup-pass" placeholder="至少6位" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
+                </div>
+                <div class="mb-5">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">确认密码</label>
+                    <input type="password" id="setup-pass2" placeholder="再次输入" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
+                </div>
+                <div id="setup-error" class="text-[11px] text-red-400 mb-3 hidden"></div>
+                <button id="btn-setup" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-emerald-900/30">
+                    ✅ 完成设置
+                </button>
+            </div>
+        </div>
+    </div>
+
     <header class="h-[56px] bg-[#0b1120] border-b border-slate-800 flex justify-between items-center px-4 shrink-0 z-10">
         <div class="flex items-center gap-5">
             <div class="flex items-center gap-2">
@@ -257,8 +320,12 @@
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> SYNCING...
             </div>
             <span id="lock-badge" class="text-[10px] font-semibold hidden px-2 py-1 rounded border mr-2"></span>
-            <button onclick="toggleAdmin()" class="px-4 py-2 bg-[#1e293b] hover:bg-slate-700 text-slate-300 text-xs font-bold rounded border border-slate-600 transition-colors flex items-center gap-2">
+            <span id="user-badge" class="text-[10px] text-slate-500 font-mono bg-[#1e293b] px-2.5 py-1 rounded border border-slate-700"></span>
+            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-4 py-2 bg-[#1e293b] hover:bg-slate-700 text-slate-300 text-xs font-bold rounded border border-slate-600 transition-colors flex items-center gap-2">
                 ⚙️ ADMIN
+            </button>
+            <button onclick="logout()" id="btn-logout" class="px-3 py-2 text-slate-500 hover:text-red-400 text-xs rounded border border-slate-700 hover:border-red-700 transition-colors hidden">
+                退出
             </button>
             <button onclick="exportBoard()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded border border-indigo-500 transition-colors flex items-center gap-2 shadow-[0_0_10px_rgba(79,70,229,0.3)]">
                 📸 EXPORT
@@ -574,6 +641,17 @@
                 <h3 class="title-h3 text-indigo-400 mb-4 border-b border-slate-800 pb-2 mt-6">MOD 2: OUTPUT (QTY)</h3>
                 <div id="admin-t2-inputs" class="space-y-4"></div>
             </section>
+            <!-- ★ User Management -->
+            <section>
+                <h3 class="title-h3 text-amber-400 mb-4 border-b border-slate-800 pb-2 mt-6">👥 用户管理 / USERS</h3>
+                <div id="admin-user-mgmt" class="space-y-3">
+                    <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-500 font-mono mb-2 px-1">
+                        <span>角色</span><span>密码状态</span><span></span>
+                    </div>
+                    <div id="user-list"></div>
+                    <div id="user-msg" class="text-[10px] text-slate-600 mt-2"></div>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -596,6 +674,8 @@
             if (firebaseReady) initFirebase();
             /* ★ Sync saved defaults from Firebase (cross-machine) */
             if (firebaseReady) initFirebaseConfigSync();
+            /* ★ Check if auth system is initialized (first-time setup) */
+            if (firebaseReady) checkAuthInit();
         }
 
         /* ★ Load default T1 targets from Firebase config node (for cross-machine consistency) */
@@ -627,6 +707,333 @@
                 }, function(err) {
                     console.warn('Firebase config sync error:', err.message);
                 });
+            } catch(e) {}
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* ★ AUTHENTICATION SYSTEM                                   */
+        /* ═══════════════════════════════════════════════════════════ */
+
+        var _authRole = null;  /* Current logged-in role */
+        var _firebaseChecked = false;  /* Whether checkAuthInit() has completed */
+
+        const workshops = [
+            { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA 钱大为' },
+            { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN 潘文星' },
+            { id: 'PRO3', label: 'PRO3', pic: 'MR. PRATEEP' },
+            { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' }
+        ];
+
+        /* ── SHA256 hash helper ── */
+        async function hashPass(pw) {
+            var enc = new TextEncoder().encode(pw);
+            var buf = await crypto.subtle.digest('SHA-256', enc);
+            return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2,'0'); }).join('');
+        }
+
+        /* ── Show login overlay ── */
+        function showLogin() {
+            var ov = document.getElementById('login-overlay');
+            ov.classList.remove('hidden');
+            document.getElementById('login-pass').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+            /* Reset loading state */
+            var btn = document.getElementById('btn-login');
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>登 录';
+            /* Hide loader if visible */
+            var loader = document.getElementById('login-loader');
+            if (loader) loader.classList.add('hidden');
+            /* Show login form, hide setup */
+            document.getElementById('login-setup').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+        }
+        function showLoginLoading() {
+            var ov = document.getElementById('login-overlay');
+            ov.classList.remove('hidden');
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('login-setup').classList.add('hidden');
+            var loader = document.getElementById('login-loader');
+            if (loader) loader.classList.remove('hidden');
+        }
+        function hideLogin() {
+            document.getElementById('login-overlay').classList.add('hidden');
+        }
+
+        /* ── Check saved auth on page load ── */
+        function checkSavedAuth() {
+            /* ★ In-memory _authRole takes priority (e.g. after login()) */
+            if (_authRole) return true;
+            try {
+                var saved = localStorage.getItem('_auth');
+                if (saved) {
+                    var p = JSON.parse(saved);
+                    if (p.role) {
+                        _authRole = p.role;
+                        return true;
+                    }
+                }
+            } catch(e) {}
+            return false;
+        }
+
+        /* ── Save auth (workshop users only) ── */
+        function saveAuth(role) {
+            localStorage.setItem('_auth', JSON.stringify({ role: role, ts: Date.now() }));
+        }
+        function clearAuth() {
+            localStorage.removeItem('_auth');
+            _authRole = null;
+        }
+
+        /* ── Login ── */
+        window.login = async function() {
+            var role = document.getElementById('login-role').value;
+            var pw = document.getElementById('login-pass').value.trim();
+            if (!pw) { showLoginError('请输入密码'); return; }
+
+            /* Check Firebase readiness */
+            if (!firebaseReady || !fbDb) {
+                showLoginError('Firebase 未就绪, 请稍后重试');
+                return;
+            }
+
+            /* Set loading state */
+            var btn = document.getElementById('btn-login');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>验证中...';
+            document.getElementById('login-error').classList.add('hidden');
+
+            try {
+                var rolesRef = firebaseModules.ref(fbDb, '_config/roles');
+                var snap = await new Promise(function(resolve, reject) {
+                    var unsub = firebaseModules.onValue(rolesRef, function(s) {
+                        unsub();
+                        resolve(s);
+                    });
+                    setTimeout(function() {
+                        try { unsub(); } catch(e){}
+                        reject(new Error('Firebase 超时'));
+                    }, 8000);
+                });
+                var roles = snap.val();
+                if (!roles) {
+                    showLoginError('系统尚未设置, 请管理员先完成首次设置');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>登 录';
+                    return;
+                }
+
+                var hash = await hashPass(pw);
+                var remember = document.getElementById('login-remember') ? document.getElementById('login-remember').checked : false;
+
+                if (roles[role] && roles[role].pass === hash) {
+                    _authRole = role;
+                    if (remember || role !== 'admin') {
+                        saveAuth(role);
+                    } else {
+                        /* Admin without remember me: clear any saved auth */
+                        localStorage.removeItem('_auth');
+                    }
+                    hideLogin();
+                    updateUserBadge();
+                    if (typeof init === 'function') init();
+                } else {
+                    showLoginError('密码错误');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>登 录';
+                }
+            } catch(e) {
+                showLoginError('登录失败: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>登 录';
+            }
+        };
+
+        /* ── First-time admin setup ── */
+        window.setupAdmin = async function() {
+            var p1 = document.getElementById('setup-pass').value.trim();
+            var p2 = document.getElementById('setup-pass2').value.trim();
+            var errEl = document.getElementById('setup-error');
+            if (!p1 || p1.length < 4) { errEl.textContent = '密码至少4位'; errEl.classList.remove('hidden'); return; }
+            if (p1 !== p2) { errEl.textContent = '两次密码不一致'; errEl.classList.remove('hidden'); return; }
+            errEl.classList.add('hidden');
+            /* Loading state */
+            var sbtn = document.getElementById('btn-setup');
+            sbtn.disabled = true;
+            sbtn.textContent = '⏳ 设置中...';
+
+            try {
+                var hash = await hashPass(p1);
+                var rolesRef = firebaseModules.ref(fbDb, '_config/roles');
+                var data;
+
+                if (window._resetMode) {
+                    /* Reset mode: preserve existing workshop passwords, only update admin */
+                    var snap = await new Promise(function(resolve) {
+                        firebaseModules.onValue(rolesRef, function(s) { resolve(s); }, { onlyOnce: true });
+                    });
+                    var existing = snap.val() || {};
+                    data = {
+                        admin: { pass: hash },
+                        PRO1: { pass: (existing.PRO1 && existing.PRO1.pass) || '' },
+                        PRO2: { pass: (existing.PRO2 && existing.PRO2.pass) || '' },
+                        PRO3: { pass: (existing.PRO3 && existing.PRO3.pass) || '' },
+                        PRO4_5: { pass: (existing.PRO4_5 && existing.PRO4_5.pass) || '' }
+                    };
+                    window._resetMode = false;
+                } else {
+                    /* First-time setup: create all workshop accounts with empty passwords */
+                    data = {
+                        admin: { pass: hash },
+                        PRO1: { pass: '' },
+                        PRO2: { pass: '' },
+                        PRO3: { pass: '' },
+                        PRO4_5: { pass: '' }
+                    };
+                }
+                await firebaseModules.set(rolesRef, data);
+                alert(window._resetMode ? '管理员密码重置成功!' : '管理员密码设置成功!\n\n请为各车间设置密码 (管理 → 用户管理)');
+                showLoginForm();
+            } catch(e) {
+                document.getElementById('setup-error').textContent = '设置失败: ' + e.message;
+                document.getElementById('setup-error').classList.remove('hidden');
+            } finally {
+                sbtn.disabled = false;
+                sbtn.textContent = '✅ 完成设置';
+            }
+        };
+
+        function showLoginError(msg) {
+            var el = document.getElementById('login-error');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function showLoginForm() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('login-setup').classList.add('hidden');
+        }
+
+        /* ── Logout ── */
+        window.logout = function() {
+            clearAuth();
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('login-setup').classList.add('hidden');
+            document.getElementById('user-badge').textContent = '';
+            document.getElementById('btn-logout').classList.add('hidden');
+            document.getElementById('btn-admin-toggle').classList.remove('hidden');
+        };
+
+        /* ── Update header badge ── */
+        function updateUserBadge() {
+            var badge = document.getElementById('user-badge');
+            var logoutBtn = document.getElementById('btn-logout');
+            var adminBtn = document.getElementById('btn-admin-toggle');
+            /* ★ Always reset tab visibility first (in case of logout+re-login) */
+            ['page2','page3','page4','btn-tab2','btn-tab3','btn-tab4'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = '';
+            });
+            document.getElementById('btn-admin-toggle').classList.remove('hidden');
+            if (_authRole === 'admin') {
+                badge.textContent = '⚙️ ADMIN';
+            } else if (_authRole) {
+                var ws = workshops.find(function(w) { return w.id === _authRole; });
+                badge.textContent = ws ? ws.label : _authRole;
+                adminBtn.classList.add('hidden');
+                /* ★ Workshop users: hide PK / Standings / DIM RANK tabs */
+                ['page2','page3','page4','btn-tab2','btn-tab3','btn-tab4'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                /* Show only page1 */
+                var p1 = document.getElementById('page1');
+                if (p1) p1.classList.remove('hidden');
+            }
+            logoutBtn.classList.remove('hidden');
+        }
+
+        /* ── Check if auth system is initialized ── */
+        async function checkAuthInit() {
+            try {
+                var rolesRef = firebaseModules.ref(fbDb, '_config/roles');
+                var snap = await new Promise(function(resolve) {
+                    firebaseModules.onValue(rolesRef, function(s) { resolve(s); }, { onlyOnce: true });
+                });
+                var val = snap.val();
+                if (!val || !val.admin || !val.admin.pass) {
+                    /* First time: show setup screen */
+                    document.getElementById('login-form').classList.add('hidden');
+                    document.getElementById('login-setup').classList.remove('hidden');
+                    _firebaseChecked = true;
+                    /* Hide loading spinner */
+                    var loader = document.getElementById('login-loader');
+                    if (loader) loader.classList.add('hidden');
+                    return false;
+                }
+                _firebaseChecked = true;
+                /* Replay init to switch from loading spinner to login form / dashboard */
+                init();
+                return true;
+            } catch(e) {
+                _firebaseChecked = true;
+                /* Replay init to show login form */
+                init();
+                return true;
+            }
+        }
+
+        /* ── Render user management in admin drawer ── */
+        function renderUserMgmt(roles) {
+            var list = document.getElementById('user-list');
+            if (!list) return;
+            var roleIds = ['admin','PRO1','PRO2','PRO3','PRO4_5'];
+            var labels = { admin:'⚙️ ADMIN', PRO1:'PRO1', PRO2:'PRO2', PRO3:'PRO3', PRO4_5:'PRO4&5' };
+            list.innerHTML = roleIds.map(function(r) {
+                var hasPass = roles && roles[r] && roles[r].pass ? true : false;
+                var status = hasPass ? '<span class="text-emerald-400">✅ 已设置</span>' : '<span class="text-red-400">❌ 未设置</span>';
+                var canReset = _authRole === 'admin' ? '' : 'hidden';
+                return '<div class="grid grid-cols-3 gap-2 items-center py-2 px-2 bg-slate-800/50 rounded border border-slate-700">' +
+                    '<span class="text-xs text-slate-200 font-semibold">' + (labels[r] || r) + '</span>' +
+                    '<span class="text-[10px]">' + status + '</span>' +
+                    '<div class="flex gap-1 ' + canReset + '">' +
+                    '<input type="password" id="pw-' + r + '" placeholder="新密码" class="w-full bg-[#1e293b] border border-slate-700 rounded px-2 py-1 text-[10px] text-white outline-none focus:border-amber-500 placeholder:text-slate-600">' +
+                    '<button onclick="resetPw(\'' + r + '\')" class="px-2 py-1 bg-amber-600/80 hover:bg-amber-600 text-white text-[9px] font-bold rounded transition">保存</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        /* ── Reset workshop/admin password ── */
+        window.resetPw = async function(role) {
+            var input = document.getElementById('pw-' + role);
+            if (!input) return;
+            var pw = input.value.trim();
+            if (!pw || pw.length < 4) { showUserMsg('密码至少4位'); return; }
+            try {
+                var hash = await hashPass(pw);
+                var roleRef = firebaseModules.ref(fbDb, '_config/roles/' + role + '/pass');
+                /* ★ Use Promise-based set (modular SDK does NOT support callback style) */
+                await firebaseModules.set(roleRef, hash);
+                input.value = '';
+                showUserMsg(role + ' 密码更新成功');
+                refreshUserList();
+            } catch(e) {
+                showUserMsg('失败: ' + e.message);
+            }
+        };
+
+        function showUserMsg(msg) {
+            var el = document.getElementById('user-msg');
+            if (el) el.textContent = msg;
+        }
+
+        /* ── Refresh user list from Firebase ── */
+        function refreshUserList() {
+            if (!firebaseReady || !fbDb) return;
+            try {
+                var rolesRef = firebaseModules.ref(fbDb, '_config/roles');
+                firebaseModules.onValue(rolesRef, function(snap) { renderUserMgmt(snap.val()); }, { onlyOnce: true });
             } catch(e) {}
         }
 
@@ -824,13 +1231,6 @@
             updateUI();
             renderAdmin();
         };
-
-        const workshops = [
-            { id: 'PRO1', label: 'PRO1', pic: 'MS. PIYA 钱大为' },
-            { id: 'PRO2', label: 'PRO2', pic: 'MR. SUDTHIPAN 潘文星' },
-            { id: 'PRO3', label: 'PRO3', pic: 'MR. PRATEEP' },
-            { id: 'PRO4_5', label: 'PRO4&5', pic: 'MR. VIRAT' }
-        ];
 
         const dims = [
             { id: 'saf', name: 'Safety & 5S', type: 'std', colorClass: 'badge-saf' },
@@ -1188,7 +1588,9 @@
             }
 
             let scores = [];
-            document.getElementById('p1-cards-container').innerHTML = workshops.map(ws => {
+            /* ★ Filter workshops by auth role: non-admin only sees their own */
+            var visWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
+            document.getElementById('p1-cards-container').innerHTML = visWs.map(ws => {
                 let sum = 0, count = 0;
                 let rows = dims.map(d => {
                     let t = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0;
@@ -1528,6 +1930,18 @@
         };
 
         const init = () => {
+            /* ★ Auth check: if not logged in, show login overlay and stop */
+            if (!checkSavedAuth()) {
+                /* ★ Wait for Firebase auth check to avoid race condition (first-run vs login flash) */
+                if (!_firebaseChecked) {
+                    showLoginLoading();
+                    return;
+                }
+                showLogin();
+                return;
+            }
+            updateUserBadge();
+
             setDateInit();
             initDefaultState();
             /* ★ Always render immediately from localStorage (force=true to bypass write counter check on initial load) */
@@ -1937,7 +2351,7 @@
             const open = !dr.classList.contains('open');
             dr.classList.toggle('open');
             ov.style.display = open ? 'block' : 'none';
-            if(open) { renderAdmin(); lockBadge(); }
+            if(open) { renderAdmin(); lockBadge(); refreshUserList(); }
         };
         window.copyT1ToAllDates = function() {
             // ★ Step 1: Read current T1 target values from DOM inputs
@@ -2142,6 +2556,56 @@
                 });
             } catch(e) {
                 console.error('Export error:', e);
+            }
+        };
+
+        /* ★ Bind login/setup/reset events */
+        /* Note: btn-login now uses onclick="window.login()" in HTML, no JS bind needed */
+        document.getElementById('login-pass').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') window.login();
+        });
+        document.getElementById('setup-pass').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') window.setupAdmin();
+        });
+        document.getElementById('setup-pass2').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') window.setupAdmin();
+        });
+        /* Reset password handler */
+        document.getElementById('btn-reset-all').addEventListener('click', function() {
+            window.resetAllPasswords();
+        });
+        window.resetAllPasswords = async function() {
+            if (!firebaseReady || !fbDb) {
+                showLoginError('Firebase 未就绪');
+                return;
+            }
+            var oldPw = prompt('请输入当前管理员密码以验证身份:\n(Enter current admin password to verify)');
+            if (!oldPw) return;
+            try {
+                var rolesRef = firebaseModules.ref(fbDb, '_config/roles');
+                var snap = await new Promise(function(resolve) {
+                    firebaseModules.onValue(rolesRef, function(s) { resolve(s); }, { onlyOnce: true });
+                });
+                var roles = snap.val();
+                if (!roles || !roles.admin) {
+                    /* No existing roles, go straight to setup */
+                    document.getElementById('login-form').classList.add('hidden');
+                    document.getElementById('login-setup').classList.remove('hidden');
+                    return;
+                }
+                var oldHash = await hashPass(oldPw);
+                if (roles.admin.pass !== oldHash) {
+                    showLoginError('❌ 管理员密码验证失败');
+                    return;
+                }
+                /* Verified: show setup form to set new admin password */
+                alert('✅ 身份验证通过, 请设置新的管理员密码');
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('login-setup').classList.remove('hidden');
+                /* Mark as reset mode so setupAdmin knows to preserve workshop passwords */
+                window._resetMode = true;
+            } catch(e) {
+                showLoginError('重置失败: ' + e.message);
             }
         };
     </script>
