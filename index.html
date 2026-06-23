@@ -1771,7 +1771,7 @@
                         });
                         return { name: d.name, value: _cnt > 0 ? parseFloat((_total/_cnt).toFixed(1)) : 0 };
                     });
-                    chartInstance.setOption({
+                    chartInstance.clear(); chartInstance.setOption({
                         grid: { top: 25, bottom: 20, left: 35, right: 15 },
                         tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
                         xAxis: { type: 'category', data: _dimBarData.map(function(d){return d.name;}),
@@ -1808,7 +1808,7 @@
                         var _a = displayT1[ws.id] && displayT1[ws.id][_selDim.id] ? Number(displayT1[ws.id][_selDim.id].a) || 0 : 0;
                         return { name: ws.label, value: parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) };
                     });
-                    chartInstance.setOption({
+                    chartInstance.clear(); chartInstance.setOption({
                         grid: { top: 25, bottom: 20, left: 35, right: 15 },
                         tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
                         xAxis: { type: 'category', data: _singleDimData.map(function(d){return d.name;}),
@@ -1943,8 +1943,8 @@
                     return _ser;
                 });
 
-                chartInstance.setOption({
-                    grid: { top: 30, bottom: 20, left: 35, right: 15 },
+                chartInstance.clear(); chartInstance.setOption({
+                    grid: { top: 30, bottom: 30, left: 35, right: 15 },
                     tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
                     legend: {
                         data: _seriesList.map(function(s) { return s.name; }),
@@ -1952,7 +1952,7 @@
                         top: 0, left: 'center', itemWidth: 12, itemHeight: 8
                     },
                     xAxis: { type: 'category', data: _trendLabels,
-                        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal' },
+                        axisLabel: { show: true, color: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal', hideOverlap: false, interval: 0 },
                         axisLine: { lineStyle: { color: '#334155' } },
                         axisTick: { show: false }
                     },
