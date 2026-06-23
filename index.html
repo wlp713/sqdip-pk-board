@@ -355,7 +355,7 @@
                 <!-- JS Inject -->
             </div>
 
-            <div class="flex-1 flex gap-3 overflow-hidden">
+            <div class="flex gap-3 h-[55%] overflow-hidden">
                 <div class="panel-card p-2 flex-1 flex flex-col relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-1 pl-2">
@@ -1684,7 +1684,7 @@
                     let rate = calcDimRate(d, t, a, ws.id);
                     sum += rate; count++;
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
-                    return `<tr>
+                    return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
                         <td class="num-font num-muted text-[11px]">${Math.round(t)}</td>
                         <td class="num-font num-light text-[11px]">${Math.round(a)}</td>
@@ -2015,7 +2015,7 @@
                 }
 
                 chartInstance.clear(); chartInstance.setOption({
-                    grid: { top: 30, bottom: 30, left: 35, right: 15 },
+                    grid: { top: 25, bottom: 35, left: 35, right: 15 },
                     tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
                     legend: {
                         data: _seriesList.map(function(s) { return s.name; }),
