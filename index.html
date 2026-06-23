@@ -941,8 +941,7 @@
             } else if (_authRole) {
                 var ws = workshops.find(function(w) { return w.id === _authRole; });
                 badge.textContent = ws ? ws.label : _authRole;
-                adminBtn.classList.add('hidden');
-                /* ★ Workshop users: hide PK / Standings / DIM RANK tabs */
+                /* ★ Workshop users: allow admin drawer (only see own workshop), hide PK/Standings/DIM RANK tabs */
                 ['page2','page3','page4','btn-tab2','btn-tab3','btn-tab4'].forEach(function(id) {
                     var el = document.getElementById(id);
                     if (el) el.style.display = 'none';
@@ -1430,7 +1429,9 @@
             syncUI.classList.remove('hidden');
             clearTimeout(saveTimer);
             saveTimer = setTimeout(() => {
-                workshops.forEach(ws => {
+                /* ★ Only save own workshop data if not admin */
+                var saveWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
+                saveWs.forEach(ws => {
                     dims.forEach(d => {
                         state.t1[ws.id][d.id].t = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-t`).value) || 0;
                         state.t1[ws.id][d.id].a = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-a`).value) || 0;
@@ -1480,8 +1481,10 @@
             const accT2 = pkPeriod !== 'day' ? accumulateT2(pkPeriod) : null;
             const cumLabel = pkPeriod === 'week' ? '\u{1F4C6} WTD' : (pkPeriod === 'month' ? '\u{1F4CA} MTD' : '');
 
+            /* ★ Filter workshops by auth role */
+            var visWsAdmin = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
             const t1Cont = document.getElementById('admin-t1-inputs');
-            t1Cont.innerHTML = workshops.map(ws => {
+            t1Cont.innerHTML = visWsAdmin.map(ws => {
                 /* Build cumulative summary line for this workshop */
                 let cumHtml = '';
                 if (accT1 && accT1[ws.id]) {
@@ -2356,7 +2359,8 @@
         window.copyT1ToAllDates = function() {
             // ★ Step 1: Read current T1 target values from DOM inputs
             var targets = {};
-            workshops.forEach(function(ws) {
+            var copyWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
+            copyWs.forEach(function(ws) {
                 targets[ws.id] = {};
                 dims.forEach(function(d) {
                     var input = document.getElementById('inp-t1-' + ws.id + '-' + d.id + '-t');
