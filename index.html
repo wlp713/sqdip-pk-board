@@ -355,7 +355,7 @@
                 <!-- JS Inject -->
             </div>
 
-            <div class="flex-1 flex gap-4 h-[40%]">
+            <div class="flex-1 flex gap-4 h-[40%] overflow-hidden">
                 <div class="panel-card p-4 flex-1 flex flex-col relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-2 pl-2">
@@ -1647,9 +1647,9 @@
             /* ★ Adjust grid for single-workshop view vs multi-workshop admin view */
             var isSingle = visWs.length === 1;
             if (isSingle) {
-                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[50%] single-ws';
+                cardsContainer.className = 'grid grid-cols-1 gap-4 h-[50%] overflow-y-auto single-ws';
             } else {
-                cardsContainer.className = 'grid grid-cols-4 gap-4 h-[60%]';
+                cardsContainer.className = 'grid grid-cols-4 gap-4 h-[60%] overflow-y-auto';
             }
             cardsContainer.innerHTML = visWs.map(ws => {
                 let sum = 0, count = 0;
@@ -1672,7 +1672,7 @@
 
                 var isSingle = visWs.length === 1;
                 return `
-                    <div class="panel-card flex flex-col p-4 ${isSingle ? 'ws-card' : ''}">
+                    <div class="panel-card flex flex-col p-4 min-h-0 ${isSingle ? 'ws-card overflow-y-auto' : ''}">
                         <div class="flex justify-between items-center ${isSingle ? '' : 'border-b border-slate-700 pb-3 mb-3'}">
                             <div class="flex flex-col items-start">
                                 <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-lg'} text-white">${ws.label}</span>
