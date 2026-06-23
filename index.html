@@ -1779,7 +1779,7 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 100,
+                        yAxis: { type: 'value', min: 0, max: 150,
                             axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
@@ -1816,7 +1816,7 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: { type: 'value', min: 0, max: 100,
+                        yAxis: { type: 'value', min: 0, max: 150,
                             axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                             splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                             axisLine: { show: false }
@@ -1857,7 +1857,7 @@
                                     var _e = _day.t1[ws.id][d.id];
                                     var _t = Number(_e.t) || 0;
                                     var _a = Number(_e.a) || 0;
-                                    if (_t > 0) { _sum += (_a / _t) * 100; _cnt++; }
+                                    if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
                                 }
                             });
                             _dimData.push(_cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null);
@@ -1878,7 +1878,7 @@
                                         if (_e) {
                                             var _t = Number(_e.t) || 0;
                                             var _a = Number(_e.a) || 0;
-                                            if (_t > 0) { _sum += (_a/_t)*100; _cnt++; }
+                                            if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
                                         }
                                     });
                                 }
@@ -1956,7 +1956,7 @@
                         axisLine: { lineStyle: { color: '#334155' } },
                         axisTick: { show: false }
                     },
-                    yAxis: { type: 'value', min: 0, max: 100,
+                    yAxis: { type: 'value', min: 0, max: 150,
                         axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
                         splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
                         axisLine: { show: false }
