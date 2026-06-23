@@ -379,7 +379,102 @@
         <!-- PAGE 2 -->
         <div id="page2" class="w-full h-full hidden flex gap-3 fade-enter">
 
-            <div id="page3" class="w-full h-full hidden flex-col gap-3 fade-enter">
+            <!-- 加入 ID:t2-p1-card,用于胜利红框绑定 -->
+            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-blue-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
+                    <div>
+                        <h2 id="t2-p1-title" class="text-3xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2">PRO1 <span id="t2-p1-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MS. PIYA 钱大为</span>
+                    </div>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p1-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p1-actual-sum" class="num-hl text-xl text-blue-400">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-blue-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p1-rate-text" class="num-hl text-lg text-white">0.0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
+                        <div id="t2-p1-progress" class="bg-blue-500 h-full transition-all duration-500 progress-glow-blue" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="flex-1 min-w-0 overflow-y-auto">
+                    <table class="data-table">
+                        <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                        <tbody id="t2-p1-lines"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 中央裁判区 -- 加大WIN视觉效果 -->
+            <div class="w-[200px] flex flex-col justify-center items-center p-1">
+                <div class="relative flex flex-col items-center justify-center w-full">
+                    <p class="text-[10px] font-black text-slate-600 tracking-[0.2em] mb-2 uppercase">Battle</p>
+                    <div class="text-5xl font-black italic text-slate-700 mb-4 font-serif">VS</div>
+
+                    <div class="w-full panel-card border-slate-600 bg-slate-800/80 rounded-xl p-4 text-center backdrop-blur-sm shadow-xl">
+                        <span id="t2-center-date" class="text-base font-bold text-white border-b border-slate-700 pb-2 mb-2 block tracking-wider">YYYY-MM-DD</span>
+                        <span class="text-xs text-slate-400 font-mono block mb-3 bg-slate-900 py-1.5 rounded">Limit: ≥ 90.0%</span>
+
+                        <div id="t2-referee-result" class="text-lg font-black text-white mb-1 uppercase tracking-wide min-h-[60px] flex items-center justify-center text-center leading-tight">
+                            AWAITING
+                        </div>
+                        <div id="t2-referee-prize" class="text-[9px] text-slate-400 font-medium mt-1 leading-tight">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加入 ID:t2-p2-card,用于胜利红框绑定 -->
+            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
+                    <div>
+                        <h2 id="t2-p2-title" class="text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2">PRO2 <span id="t2-p2-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MR. SUDTHIPAN 潘文星</span>
+                    </div>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p2-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p2-actual-sum" class="num-hl text-xl text-indigo-400">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-indigo-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p2-rate-text" class="num-hl text-lg text-white">0.0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
+                        <div id="t2-p2-progress" class="bg-indigo-500 h-full transition-all duration-500 progress-glow-indigo" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="flex-1 min-w-0 overflow-y-auto">
+                    <table class="data-table">
+                        <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                        <tbody id="t2-p2-lines"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PAGE 3: CHAMPIONSHIP STANDINGS (THE PODIUM + PK ARENA) -->
+        <div id="page3" class="w-full h-full hidden flex-col gap-3 fade-enter">
             <!-- Title bar -->
             <div class="flex justify-between items-center shrink-0">
                 <h1 class="title-h2 text-2xl font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)] tracking-wide">🏆 CHAMPIONSHIP STANDINGS</h1>
@@ -543,7 +638,11 @@
                 <p class="text-[9px] text-slate-600 text-center mt-1">仅复制目标值,不影响实际产出数据</p>
             </div>
             <section>
-                
+                <h3 class="title-h3 text-indigo-400 mb-4 border-b border-slate-800 pb-2 mt-6">MOD 2: OUTPUT (QTY)</h3>
+                <div id="admin-t2-inputs" class="space-y-4"></div>
+            </section>
+            <!-- ★ User Management -->
+            <section>
                 <h3 class="title-h3 text-amber-400 mb-4 border-b border-slate-800 pb-2 mt-6">👥 用户管理 / USERS</h3>
                 <div id="admin-user-mgmt" class="space-y-3">
                     <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-500 font-mono mb-2 px-1">
@@ -1010,7 +1109,72 @@
             return getDateRange(mode, currentDate).length;
         }
 
-
+        /* ── Accumulate T2 (PRO1/PRO2 output) across dates ── */
+        function accumulateT2(mode) {
+            const dates = getDateRange(mode, currentDate);
+            const acc = { PRO1: {}, PRO2: {} };
+            const cnt = { PRO1: {}, PRO2: {} };  /* per (ws, line, shift) date counter */
+            let hasData = false;
+            dates.forEach(ds => {
+                const data = loadDayData(ds);
+                if (!data || !data.t2) return;
+                ['PRO1','PRO2'].forEach(ws => {
+                    if (!data.t2[ws]) return;
+                    if (!cnt[ws]) cnt[ws] = {};
+                    Object.keys(data.t2[ws]).forEach(line => {
+                        const entry = data.t2[ws][line];
+                        if (!entry) return;
+                        if (!cnt[ws][line]) cnt[ws][line] = {};
+                        // ★ Preserve Day/Night structure for accumulated periods
+                        if (entry.day !== undefined) {
+                            if (!acc[ws][line]) acc[ws][line] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
+                            const dT = Number(entry.day.t) || 0;
+                            const dA = Number(entry.day.a) || 0;
+                            const nT = Number(entry.night.t) || 0;
+                            const nA = Number(entry.night.a) || 0;
+                            acc[ws][line].day.t += dT;
+                            acc[ws][line].day.a += dA;
+                            acc[ws][line].night.t += nT;
+                            acc[ws][line].night.a += nA;
+                            cnt[ws][line]._day = (cnt[ws][line]._day || 0) + 1;
+                            cnt[ws][line]._night = (cnt[ws][line]._night || 0) + 1;
+                        } else if (typeof entry.t === 'number' || entry.t) {
+                            if (!acc[ws][line]) acc[ws][line] = { t: 0, a: 0 };
+                            const vT = Number(entry.t) || 0;
+                            const vA = Number(entry.a) || 0;
+                            acc[ws][line].t += vT;
+                            acc[ws][line].a += vA;
+                            cnt[ws][line]._flat = (cnt[ws][line]._flat || 0) + 1;
+                        } else {
+                            return;
+                        }
+                        hasData = true;
+                    });
+                });
+            });
+            /* ★ Convert sum → average per date */
+            if (hasData) {
+                ['PRO1','PRO2'].forEach(ws => {
+                    if (!cnt[ws]) return;
+                    Object.keys(acc[ws]).forEach(line => {
+                        const e = acc[ws][line];
+                        if (e.day !== undefined) {
+                            const dc = (cnt[ws][line]._day || 1);
+                            const nc = (cnt[ws][line]._night || 1);
+                            e.day.t = e.day.t / dc;
+                            e.day.a = e.day.a / dc;
+                            e.night.t = e.night.t / nc;
+                            e.night.a = e.night.a / nc;
+                        } else if (typeof e.t === 'number') {
+                            const c = (cnt[ws][line]._flat || 1);
+                            e.t = e.t / c;
+                            e.a = e.a / c;
+                        }
+                    });
+                });
+            }
+            return hasData ? acc : null;
+        }
 
         /* ── Accumulate T1 (KPI dimensions) across dates → AVERAGE ── */
         function accumulateT1(mode) {
@@ -1081,7 +1245,7 @@
             localStorage.setItem('_mbs_client_id', _clientId);
         }
 
-        
+        let state = { t1: {}, t2: { PRO1: {}, PRO2: {} }, standings: {} };
 
         /* ★ Safe merge: creates missing entries instead of relying on prior initDefaultState().
            If source contains write tracking info, skip merge when it's our own stale cache data.
@@ -1126,7 +1290,34 @@
                 }
             } catch(e) {}
 
-
+            if (source.t2) {
+                ['PRO1', 'PRO2'].forEach(wsName => {
+                    if (source.t2[wsName]) {
+                        if (!state.t2[wsName]) state.t2[wsName] = {};
+                        // ★ Iterate source keys, not state keys (state might be empty)
+                        Object.keys(source.t2[wsName]).forEach(l => {
+                            const src = source.t2[wsName][l];
+                            if (src) {
+                                if (!state.t2[wsName][l]) state.t2[wsName][l] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
+                                const dst = state.t2[wsName][l];
+                                if (src.day !== undefined) {
+                                    dst.day.t = Number(src.day.t) || 0;
+                                    dst.day.a = Number(src.day.a) || 0;
+                                    dst.night.t = Number(src.night.t) || 0;
+                                    dst.night.a = Number(src.night.a) || 0;
+                                } else if (src.t !== undefined) {
+                                    const halfT = Math.round((Number(src.t) || 0) / 2);
+                                    const halfA = Math.round((Number(src.a) || 0) / 2);
+                                    dst.day.t = halfT;
+                                    dst.day.a = halfA;
+                                    dst.night.t = (Number(src.t) || 0) - halfT;
+                                    dst.night.a = (Number(src.a) || 0) - halfA;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
         };
 
         const initDefaultState = () => {
@@ -1153,6 +1344,17 @@
                 workshops.forEach(ws => {
                     state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
                 });
+            };
+            // Each line split 50/50 into Day & Night shifts
+            state.t2.PRO1 = {
+                S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } },
+                H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } }
+            };
+            state.t2.PRO2 = {
+                A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } },
+                B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } },
+                C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } },
+                D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } }
             };
         };
 
@@ -1235,6 +1437,18 @@
                         state.t1[ws.id][d.id].a = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-a`).value) || 0;
                     });
                 });
+                for(let l in state.t2.PRO1) {
+                    state.t2.PRO1[l].day.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-t`).value) || 0;
+                    state.t2.PRO1[l].day.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-a`).value) || 0;
+                    state.t2.PRO1[l].night.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-t`).value) || 0;
+                    state.t2.PRO1[l].night.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-a`).value) || 0;
+                }
+                for(let l in state.t2.PRO2) {
+                    state.t2.PRO2[l].day.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-t`).value) || 0;
+                    state.t2.PRO2[l].day.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-a`).value) || 0;
+                    state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
+                    state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
+                }
                 /* ★ Increment write counter before saving: prevents Firebase cache rollback */
                 _localWriteCounter++;
                 localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
@@ -1264,7 +1478,7 @@
         const renderAdmin = () => {
             /* ── Compute cumulative summary for admin display ── */
             const accT1 = pkPeriod !== 'day' ? accumulateT1(pkPeriod) : null;
-            
+            const accT2 = pkPeriod !== 'day' ? accumulateT2(pkPeriod) : null;
             const cumLabel = pkPeriod === 'week' ? '\u{1F4C6} WTD' : (pkPeriod === 'month' ? '\u{1F4CA} MTD' : '');
 
             /* ★ Filter workshops by auth role */
@@ -1294,6 +1508,40 @@
                 </div>
             `}).join('');
 
+            /* ── Build admin T2 with cumulative summary ── */
+            const buildAdminT2 = (wsName, obj) => {
+                let cumHtml = '';
+                if (accT2 && accT2[wsName]) {
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} · (AVG / date)</div>`;
+                }
+                return `
+                <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm mb-3">
+                    <div class="title-h3 text-slate-200 mb-3">${wsName}</div>
+                    ${cumHtml}
+                    <div class="space-y-2">
+                        ${Object.keys(obj).map(l => {
+                            const d = obj[l];
+                            return `
+                            <div class="bg-[#0f172a] p-2.5 rounded border border-slate-800">
+                                <div class="text-xs font-bold text-slate-300 mb-1.5 pl-1">${l} LINE</div>
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="text-[10px] text-slate-500 w-14 flex items-center gap-1">☀ Day</span>
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Day-t" value="${d.day.t}" class="form-input input-target flex-1" placeholder="TGT" oninput="triggerSave()">
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Day-a" value="${d.day.a}" class="form-input flex-1" placeholder="ACT" oninput="triggerSave()">
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-slate-500 w-14 flex items-center gap-1">🌙 Night</span>
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Night-t" value="${d.night.t}" class="form-input input-target flex-1" placeholder="TGT" oninput="triggerSave()">
+                                    <input type="number" id="inp-t2-${wsName}-${l}-Night-a" value="${d.night.a}" class="form-input flex-1" placeholder="ACT" oninput="triggerSave()">
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            };
+            document.getElementById('admin-t2-inputs').innerHTML = buildAdminT2('PRO1', state.t2.PRO1) + buildAdminT2('PRO2', state.t2.PRO2);
+
             /* ★ Re-apply lock state after re-render */
             const lockCb = document.getElementById('lock-target-toggle');
             if(lockCb && lockCb.checked) {
@@ -1315,13 +1563,15 @@
 
         const updateUI = () => {
             /* ── Determine data source: daily vs cumulative ── */
-
+            let displayT1, displayT2;
             if (pkPeriod === 'day') {
                 displayT1 = state.t1;
-
+                displayT2 = state.t2;
             } else {
                 const accT1 = accumulateT1(pkPeriod);
-
+                const accT2 = accumulateT2(pkPeriod);
+                displayT1 = accT1 || state.t1;
+                displayT2 = accT2 || state.t2;
             }
 
             /* ── Update period labels ── */
@@ -1330,7 +1580,239 @@
             // (t2-period-mode removed per user request)
 
             /* ── Update center date display ── */
+            const dateSpan = document.getElementById('t2-center-date');
+            if (dateSpan) {
+                if (pkPeriod === 'day') {
+                    dateSpan.textContent = currentDate;
+                } else {
+                    const range = getDateRange(pkPeriod, currentDate);
+                    dateSpan.textContent = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
+                }
+            }
 
+            let scores = [];
+            /* ★ Filter workshops by auth role: non-admin only sees their own */
+            var visWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
+            document.getElementById('p1-cards-container').innerHTML = visWs.map(ws => {
+                let sum = 0, count = 0;
+                let rows = dims.map(d => {
+                    let t = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0;
+                    let a = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].a : 0;
+                    let rate = calcDimRate(d, t, a, ws.id);
+                    sum += rate; count++;
+                    let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
+                    return `<tr>
+                        <td><span class="px-2 py-1 rounded text-[9px] font-bold ${d.colorClass}">${d.name}</span></td>
+                        <td class="num-font num-muted">${t}</td>
+                        <td class="num-font num-light">${a}</td>
+                        <td class="num-font num-hl ${rc}">${rate.toFixed(1)}%</td>
+                    </tr>`;
+                }).join('');
+
+                let avg = count ? sum/count : 0;
+                scores.push({name: ws.label, score: avg});
+
+                return `
+                    <div class="panel-card flex flex-col p-4">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
+                            <div class="flex flex-col items-start">
+                                <span class="title-h2 text-lg text-white">${ws.label}</span>
+                                <span class="text-xs text-slate-400 font-medium">PIC: ${ws.pic}</span>
+                            </div>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2.5 py-1 rounded border border-blue-500/30 text-[1.1rem]">${avg.toFixed(1)}</span>
+                        </div>
+                        <table class="data-table"><thead><tr><th>Dim</th><th>Target</th><th>Actual</th><th>ACH%</th></tr></thead><tbody>${rows}</tbody></table>
+                    </div>
+                `;
+            }).join('');
+
+            scores.sort((a,b) => b.score - a.score);
+            document.getElementById('p1-winner-text').innerHTML = scores[0].name;
+            /* ★ Build ranking list: all workshops with champion highlighted */
+            const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+            const rankColors = [
+                'bg-amber-500/15 border-l-2 border-amber-400',
+                'bg-slate-300/8 border-l-2 border-slate-400',
+                'bg-amber-800/10 border-l-2 border-amber-700',
+                'bg-slate-700/10 border-l-2 border-slate-600',
+                'bg-slate-800/10 border-l-2 border-slate-700'
+            ];
+            const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
+            const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
+            document.getElementById('p1-rank-list').innerHTML = scores.map((s, i) => {
+                return `<div class="flex items-center py-0.5 px-1.5 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
+                    <span class="text-xs mr-1">${medals[i]}</span>
+                    <span class="text-[11px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
+                    <span class="text-[11px] num-hl ${scoreColors[i]}">${s.score.toFixed(1)}%</span>
+                </div>`;
+            }).join('');
+            /* ★ Update date in header */
+            if (pkPeriod === 'day') {
+                document.getElementById('p1-header-date').innerText = currentDate;
+            } else {
+                const range = getDateRange(pkPeriod, currentDate);
+                document.getElementById('p1-header-date').innerText = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
+            }
+
+            if(!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
+            chartInstance.setOption({
+                grid: { top: 25, bottom: 20, left: 35, right: 15 },
+                tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' } },
+                xAxis: { type: 'category', data: scores.map(s=>s.name),
+                    axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 'bold' },
+                    axisLine: { lineStyle: { color: '#334155' } },
+                    axisTick: { show: false }
+                },
+                yAxis: { type: 'value', min: 50, max: 100,
+                    axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', formatter: '{value}%' },
+                    splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                    axisLine: { show: false }
+                },
+                series: [{
+                    data: scores.map(s=>parseFloat(s.score.toFixed(1))),
+                    type: 'bar', barWidth: '40%',
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            {offset: 0, color: '#3b82f6'},
+                            {offset: 1, color: '#1e3a8a'}
+                        ]),
+                        borderRadius: [4, 4, 0, 0]
+                    },
+                    label: {
+                        show: true, position: 'top',
+                        color: '#e2e8f0', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace',
+                        formatter: (p) => p.value >= 100 ? '\u2705 ' + p.value.toFixed(1) + '%' : p.value.toFixed(1) + '%'
+                    },
+
+                }]
+            });
+
+            const calcP2 = (wsName, domPrefix, bgClass) => {
+                let sumT = 0, sumA = 0, html = '';
+                const wsData = displayT2[wsName] || {};
+                for(let l in wsData) {
+                    let d = wsData[l];
+                    if (d.day !== undefined) {
+                        // ★ Daily mode: show Day/Night split
+                        const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
+                        const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
+                        const lineT = dayT + nightT, lineA = dayA + nightA;
+                        sumT += lineT; sumA += lineA;
+
+                        const dayRate  = dayT === 0 ? 0 : (dayA/dayT)*100;
+                        const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
+                        const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
+
+                        const daySt  = '<span class="status-emoji">' + (dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const nightSt = '<span class="status-emoji">' + (nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const lineSt = '<span class="status-emoji">' + (lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴')) + '</span>';
+
+                        // Line total row
+                        html += `<tr class="border-b border-slate-700/20">
+                            <td class="font-bold text-slate-200 text-[12px] py-[5px]">${l} LINE</td>
+                            <td class="num-font num-muted text-[12px] py-[5px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[5px]">${lineA}</td>
+                            <td class="py-[5px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                        // Day shift sub-row
+                        html += `<tr class="text-[9px]">
+                            <td class="pl-4 text-slate-500 py-[1px] leading-[18px]">☀ Day</td>
+                            <td class="num-font text-slate-500 py-[1px] leading-[18px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-[1px] leading-[18px]">${dayA}</td>
+                            <td class="py-[1px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                        // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
+                        if (l !== 'D' && (nightT > 0 || nightA > 0)) {
+                        html += `<tr class="text-[9px] border-b border-slate-800/30">
+                            <td class="pl-4 text-slate-500 pb-[3px] leading-[18px]">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-[3px] leading-[18px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[3px] leading-[18px]">${nightA}</td>
+                            <td class="pb-[3px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
+                        </tr>`;
+                        }
+                    } else {
+                        // ★ Cumulative mode: flat total (no shift split)
+                        sumT += d.t; sumA += d.a;
+                        let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
+                        let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
+                        html += `<tr class="border-b border-slate-700/20">
+                            <td class="font-bold text-slate-300 text-[14px] py-[5px]">${l} Line</td>
+                            <td class="num-font num-muted text-[14px] py-[5px]">${d.t}</td>
+                            <td class="num-font num-light text-[14px] py-[5px]">${d.a}</td>
+                            <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
+                        </tr>`;
+                    }
+                }
+                document.getElementById(`${domPrefix}-lines`).innerHTML = html;
+                document.getElementById(`${domPrefix}-target-sum`).innerText = sumT.toLocaleString();
+                document.getElementById(`${domPrefix}-actual-sum`).innerText = sumA.toLocaleString();
+
+                let rate = sumT === 0 ? 0 : (sumA/sumT)*100;
+                document.getElementById(`${domPrefix}-rate-text`).innerText = rate.toFixed(1) + '%';
+                document.getElementById(`${domPrefix}-progress`).style.width = Math.min(rate, 100) + '%';
+
+                const pBar = document.getElementById(`${domPrefix}-progress`);
+                pBar.className = rate < 90 ? "h-full transition-all duration-500 bg-red-500 progress-glow-red" : `h-full transition-all duration-500 ${bgClass}`;
+                return rate;
+            };
+
+            let p1Rate = calcP2('PRO1', 't2-p1', 'bg-blue-500 progress-glow-blue');
+            let p2Rate = calcP2('PRO2', 't2-p2', 'bg-indigo-500 progress-glow-indigo');
+
+            const p1Title = document.getElementById('t2-p1-title');
+            const p2Title = document.getElementById('t2-p2-title');
+            const trophy1 = document.getElementById('t2-p1-trophy');
+            const trophy2 = document.getElementById('t2-p2-trophy');
+            const p1Card = document.getElementById('t2-p1-card');
+            const p2Card = document.getElementById('t2-p2-card');
+
+            // ★ 核心修改:移除透明度变化,增加胜方红色边框
+            p1Title.className = "text-4xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300";
+            p2Title.className = "text-4xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300";
+            trophy1.classList.add('hidden'); trophy2.classList.add('hidden');
+            p1Card.classList.remove('winner-card');
+            p2Card.classList.remove('winner-card');
+
+            const setWinner = (side) => {
+                if(side === 1) {
+                    p1Title.className = "title-h2 is-winner-title transition-all duration-500";
+                    p1Card.classList.add('winner-card');
+                    trophy1.classList.remove('hidden');
+                } else if (side === 2) {
+                    p2Title.className = "title-h2 is-winner-title transition-all duration-500";
+                    p2Card.classList.add('winner-card');
+                    trophy2.classList.remove('hidden');
+                }
+            };
+
+            const resBox = document.getElementById('t2-referee-result');
+            const prizeBox = document.getElementById('t2-referee-prize');
+            if (p1Rate < 90 && p2Rate < 90) {
+                resBox.innerHTML = "<span class='text-red-500 text-xl font-black drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]'>BOTH<br>FAILED</span>";
+                prizeBox.style.display = 'none';
+            } else if (p1Rate >= 90 && p2Rate < 90) {
+                resBox.innerHTML = "<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO1<br>WINS!</span>";
+                prizeBox.style.display = 'block';
+                setWinner(1);
+            } else if (p1Rate < 90 && p2Rate >= 90) {
+                resBox.innerHTML = "<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO2<br>WINS!</span>";
+                prizeBox.style.display = 'block';
+                setWinner(2);
+            } else {
+                if(p1Rate > p2Rate) { resBox.innerHTML = `<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO1 WIN<br><span class="text-base">${p1Rate.toFixed(1)}%</span></span>`; setWinner(1); }
+                else if(p2Rate > p1Rate) { resBox.innerHTML = `<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO2 WIN<br><span class="text-base">${p2Rate.toFixed(1)}%</span></span>`; setWinner(2); }
+                else { resBox.innerHTML = "<span class='text-slate-300 text-xl font-black'>DRAW</span>"; }
+                prizeBox.style.display = 'block';
+            }
+            // If Page 3 is visible, refresh standings with the current period
+            const p3 = document.getElementById('page3');
+            if (p3 && p3.style.display !== 'none' && p3.style.display !== '') {
+                if (typeof window.standingsRender === 'function') window.standingsRender();
+            }
+        };
+
+        /* ★ PAGE 4: Dimension Red Flag / Black Flag ranking */
+        window.renderDimRank = () => {
             /* ── Determine data source ── */
             let t1Src;
             if (pkPeriod === 'day') {
@@ -1510,7 +1992,7 @@
                             const t = cell ? Number(cell.t)||0 : 0;
                             const a = cell ? Number(cell.a)||0 : 0;
                             const rate = calcDimRate(d, t, a, ws.id);
-
+                            sum += rate; count++;
                         });
                         return { name: ws.label, score: count ? sum/count : 0 };
                     });
@@ -1520,7 +2002,29 @@
                     }
                     dailyScoreHistory.push({date: dateStr, scores: dayScores});
 
-                    
+                    // ── PRO PK ──
+                    if (dayData.t2) {
+                        let p1T=0,p1A=0,p2T=0,p2A=0;
+                        ['PRO1','PRO2'].forEach((ws, idx) => {
+                            const wsData = dayData.t2[ws] || {};
+                            for (let l in wsData) {
+                                const d = wsData[l];
+                                if (d && d.day !== undefined) {
+                                    const t = (Number(d.day.t)||0) + (Number(d.night.t)||0);
+                                    const a = (Number(d.day.a)||0) + (Number(d.night.a)||0);
+                                    if (idx === 0) { p1T+=t; p1A+=a; } else { p2T+=t; p2A+=a; }
+                                } else if (d && d.t !== undefined) {
+                                    if (idx === 0) { p1T+=Number(d.t)||0; p1A+=Number(d.a)||0; }
+                                    else { p2T+=Number(d.t)||0; p2A+=Number(d.a)||0; }
+                                }
+                            }
+                        });
+                        if (p1T > 0 && p2T > 0) {
+                            const r1 = p1A/p1T, r2 = p2A/p2T;
+                            if (r1 > r2) pro1Wins++; else if (r2 > r1) pro2Wins++;
+                            proDaily.push({date: dateStr, p1rate:r1*100, p2rate:r2*100, p1T, p1A, p2T, p2A});
+                        }
+                    }
                 }
             } catch(e) { console.warn('standings scan error:', e); }
 
@@ -1543,8 +2047,10 @@
             currentScores.sort((a,b) => b.score - a.score);
 
             /* ── Current period PRO rates ── */
+            let t2Src = pkPeriod === 'day' ? state.t2 : (accumulateT2(pkPeriod) || state.t2);
             let currP1T=0,currP1A=0,currP2T=0,currP2A=0;
             ['PRO1','PRO2'].forEach((ws, idx) => {
+                const wsData = t2Src[ws] || {};
                 for (let l in wsData) {
                     const d = wsData[l];
                     if (d && d.day !== undefined) {
