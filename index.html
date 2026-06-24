@@ -1421,27 +1421,38 @@
             syncUI.classList.remove('hidden');
             clearTimeout(saveTimer);
             saveTimer = setTimeout(() => {
-                /* ★ Only save own workshop data if not admin */
+                /* ★ Only save own workshop data if not admin.
+               ★ DOM存在性检查:面板关闭时输入框不在文档流,取不到则用state已有值保底 */
                 var saveWs = _authRole === 'admin' ? workshops : workshops.filter(function(w) { return w.id === _authRole; });
                 saveWs.forEach(ws => {
                     dims.forEach(d => {
-                        state.t1[ws.id][d.id].t = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-t`).value) || 0;
-                        state.t1[ws.id][d.id].a = Number(document.getElementById(`inp-t1-${ws.id}-${d.id}-a`).value) || 0;
+                        var tEl = document.getElementById(`inp-t1-${ws.id}-${d.id}-t`);
+                        var aEl = document.getElementById(`inp-t1-${ws.id}-${d.id}-a`);
+                        state.t1[ws.id][d.id].t = tEl ? Number(tEl.value) || 0 : state.t1[ws.id][d.id].t;
+                        state.t1[ws.id][d.id].a = aEl ? Number(aEl.value) || 0 : state.t1[ws.id][d.id].a;
                     });
                 });
                 /* ★ Only read T2 inputs when admin (workshop accounts don't have T2 inputs rendered) */
                 if (_authRole === 'admin') {
                     for(let l in state.t2.PRO1) {
-                        state.t2.PRO1[l].day.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-t`).value) || 0;
-                        state.t2.PRO1[l].day.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Day-a`).value) || 0;
-                        state.t2.PRO1[l].night.t = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-t`).value) || 0;
-                        state.t2.PRO1[l].night.a = Number(document.getElementById(`inp-t2-PRO1-${l}-Night-a`).value) || 0;
+                        var p1dT = document.getElementById(`inp-t2-PRO1-${l}-Day-t`);
+                        var p1dA = document.getElementById(`inp-t2-PRO1-${l}-Day-a`);
+                        var p1nT = document.getElementById(`inp-t2-PRO1-${l}-Night-t`);
+                        var p1nA = document.getElementById(`inp-t2-PRO1-${l}-Night-a`);
+                        state.t2.PRO1[l].day.t = p1dT ? Number(p1dT.value) || 0 : state.t2.PRO1[l].day.t;
+                        state.t2.PRO1[l].day.a = p1dA ? Number(p1dA.value) || 0 : state.t2.PRO1[l].day.a;
+                        state.t2.PRO1[l].night.t = p1nT ? Number(p1nT.value) || 0 : state.t2.PRO1[l].night.t;
+                        state.t2.PRO1[l].night.a = p1nA ? Number(p1nA.value) || 0 : state.t2.PRO1[l].night.a;
                     }
                     for(let l in state.t2.PRO2) {
-                        state.t2.PRO2[l].day.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-t`).value) || 0;
-                        state.t2.PRO2[l].day.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Day-a`).value) || 0;
-                        state.t2.PRO2[l].night.t = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-t`).value) || 0;
-                        state.t2.PRO2[l].night.a = Number(document.getElementById(`inp-t2-PRO2-${l}-Night-a`).value) || 0;
+                        var p2dT = document.getElementById(`inp-t2-PRO2-${l}-Day-t`);
+                        var p2dA = document.getElementById(`inp-t2-PRO2-${l}-Day-a`);
+                        var p2nT = document.getElementById(`inp-t2-PRO2-${l}-Night-t`);
+                        var p2nA = document.getElementById(`inp-t2-PRO2-${l}-Night-a`);
+                        state.t2.PRO2[l].day.t = p2dT ? Number(p2dT.value) || 0 : state.t2.PRO2[l].day.t;
+                        state.t2.PRO2[l].day.a = p2dA ? Number(p2dA.value) || 0 : state.t2.PRO2[l].day.a;
+                        state.t2.PRO2[l].night.t = p2nT ? Number(p2nT.value) || 0 : state.t2.PRO2[l].night.t;
+                        state.t2.PRO2[l].night.a = p2nA ? Number(p2nA.value) || 0 : state.t2.PRO2[l].night.a;
                     }
                 }
                 /* ★ Increment write counter before saving: prevents Firebase cache rollback */
@@ -2720,14 +2731,17 @@
         loadFirebase();
         init();
 
-        /* ★ 超时降级: 5秒后 Firebase Auth 还没就绪, 跳过认证直接进 */
+        /* ★ 超时提示: 5秒后 Firebase 还没就绪, 显示网络异常提示 */
         setTimeout(function() {
             if (!_firebaseChecked) {
-                console.warn('[Auth] Firebase 超时, 跳过登录验证');
+                console.warn('[Auth] Firebase 超时');
                 _firebaseChecked = true;
-                init();
+                var loader = document.getElementById('login-loader');
+                if (loader) {
+                    loader.innerHTML = '<div class="text-center px-6"><p class="text-4xl mb-4">📡</p><p class="text-sm text-red-400 font-bold mb-2">网络连接异常</p><p class="text-xs text-slate-500">请检查网络后刷新页面重试</p></div>';
+                }
             }
-        }, 5000);
+        }, 8000);
 
         /* ── Admin drawer date navigation ── */
         window.adminJumpDate = () => {
@@ -2781,6 +2795,26 @@
                 renderAdmin();
                 lockBadge();
                 refreshUserList();
+            } else {
+                /* ★ 关闭面板: 清除防抖, 立即保存(保底不丢数据) */
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(function() {
+                    /* 复用 triggerSave 里的保存逻辑, 但跳过 DOM 读取(面板已关闭) */
+                    _localWriteCounter++;
+                    localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                    var savePayload = JSON.parse(JSON.stringify(state));
+                    savePayload._writeCounter = _localWriteCounter;
+                    savePayload._clientId = _clientId;
+                    savePayload._updatedAt = Date.now();
+                    localStorage.setItem('mbs_state_' + currentDate, JSON.stringify(savePayload));
+                    if (firebaseReady && dbRef) {
+                        firebaseModules.set(dbRef, savePayload).catch(function(e) {
+                            _localWriteCounter--;
+                            localStorage.setItem('_mbs_write_seq', String(_localWriteCounter));
+                            console.warn('Firebase save failed:', e.message);
+                        });
+                    }
+                }, 0);
             }
         };
         window.copyT1ToAllDates = function() {
