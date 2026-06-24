@@ -7,7 +7,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.1.6/dist/dom-to-image-more.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Roboto+Mono:wght@500;700&display=swap');
@@ -2962,31 +2962,24 @@
         window.exportBoard = () => {
             document.getElementById('admin-drawer').classList.remove('open');
             document.getElementById('admin-overlay').style.display = 'none';
-            try {
-                /* ★ Capture ONLY the current visible page - no admin drawer, no blank space */
-                const pageId = document.getElementById('page1').style.display === 'none' ? 'page2' : 'page1';
-                const el = document.getElementById(pageId);
-                html2canvas(el, {
-                    backgroundColor: '#0f172a',
-                    scale: 2,
-                    useCORS: true,
-                    onclone: (doc) => {
-                        const target = doc.getElementById(pageId);
-                        if(target) {
-                            target.style.filter = 'brightness(1.15) saturate(1.05)';
-                            target.style.backgroundColor = '#0f172a';
-                        }
-                    }
-                }).then(canvas => {
-                    const a = document.createElement('a');
-                    const pageName = pageId === 'page1' ? 'KPIMatrix' : 'LimitPK';
-                    a.download = `MBS_${pageName}_${currentDate}.png`; a.href = canvas.toDataURL(); a.click();
-                }).catch(err => {
-                    alert('Export failed: ' + err.message);
-                });
-            } catch(e) {
-                console.error('Export error:', e);
-            }
+            const pageId = document.getElementById('page1').style.display === 'none' ? 'page2' : 'page1';
+            const el = document.getElementById(pageId);
+            domtoimage.toPng(el, {
+                bgColor: '#0f172a',
+                width: el.scrollWidth,
+                height: el.scrollHeight,
+                style: {
+                    'margin': '0',
+                    'padding': '0',
+                    'box-shadow': 'none',
+                }
+            }).then(dataUrl => {
+                const a = document.createElement('a');
+                const pageName = pageId === 'page1' ? 'KPIMatrix' : 'LimitPK';
+                a.download = `MBS_${pageName}_${currentDate}.png`; a.href = dataUrl; a.click();
+            }).catch(err => {
+                alert('Export failed: ' + err.message);
+            });
         };
 
         /* ★ Bind login/setup/reset events */
