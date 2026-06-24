@@ -337,6 +337,9 @@
             </div>
             <span id="lock-badge" class="text-[10px] font-semibold hidden px-1.5 py-0.5 rounded border"></span>
             <span id="user-badge" class="text-[10px] text-slate-500 font-mono bg-[#1e293b] px-1.5 py-0.5 rounded border border-slate-700/50"></span>
+            <button id="btn-admin-toggle" onclick="toggleAdmin()" class="px-2 h-[28px] bg-[#1e293b] hover:bg-slate-700 text-slate-400 text-[11px] font-bold rounded border border-slate-700/50 transition-colors flex items-center gap-1" title="Admin Panel">
+                ADMIN
+            </button>
             <button onclick="exportBoard()" class="px-2 h-[28px] bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-bold rounded border border-indigo-600/50 transition-colors flex items-center gap-1 shadow-[0_0_6px_rgba(79,70,229,0.25)]" title="Export">
                 📸
             </button>
@@ -973,12 +976,14 @@
             document.getElementById('login-setup').classList.add('hidden');
             document.getElementById('user-badge').textContent = '';
             document.getElementById('btn-logout').classList.add('hidden');
+            document.getElementById('btn-admin-toggle').classList.remove('hidden');
         };
 
         /* ── Update header badge ── */
         function updateUserBadge() {
             var badge = document.getElementById('user-badge');
             var logoutBtn = document.getElementById('btn-logout');
+            var adminBtn = document.getElementById('btn-admin-toggle');
             /* ★ Always reset tab visibility first (in case of logout+re-login) */
             ['page2','page3','page4','btn-tab2','btn-tab3','btn-tab4'].forEach(function(id) {
                 var el = document.getElementById(id);
