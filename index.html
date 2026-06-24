@@ -1186,27 +1186,7 @@
                     });
                 });
             });
-            /* ★ Convert sum → average per date */
-            if (hasData) {
-                ['PRO1','PRO2'].forEach(ws => {
-                    if (!cnt[ws]) return;
-                    Object.keys(acc[ws]).forEach(line => {
-                        const e = acc[ws][line];
-                        if (e.day !== undefined) {
-                            const dc = (cnt[ws][line]._day || 1);
-                            const nc = (cnt[ws][line]._night || 1);
-                            e.day.t = e.day.t / dc;
-                            e.day.a = e.day.a / dc;
-                            e.night.t = e.night.t / nc;
-                            e.night.a = e.night.a / nc;
-                        } else if (typeof e.t === 'number') {
-                            const c = (cnt[ws][line]._flat || 1);
-                            e.t = e.t / c;
-                            e.a = e.a / c;
-                        }
-                    });
-                });
-            }
+            /* ★ Keep cumulative sums (no averaging) — PK page shows weekly/monthly totals */
             return hasData ? acc : null;
         }
 
@@ -1570,7 +1550,7 @@
             const buildAdminT2 = (wsName, obj) => {
                 let cumHtml = '';
                 if (accT2 && accT2[wsName]) {
-                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} · (AVG / date)</div>`;
+                    cumHtml = `<div class="text-[9px] font-mono text-blue-300 bg-blue-900/20 px-2 py-1 rounded border border-blue-700/30 mb-2">${cumLabel} · CUMULATIVE</div>`;
                 }
                 return `
                 <div class="bg-[#1e293b] border border-slate-700 p-3 rounded shadow-sm mb-3">
