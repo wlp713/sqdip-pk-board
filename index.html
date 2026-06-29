@@ -1266,27 +1266,18 @@
                         const vT = Number(entry.t) || 0;
                         const vA = Number(entry.a) || 0;
                         if (!acc[ws.id][d.id]) { acc[ws.id][d.id] = { t: 0, a: 0 }; cnt[ws.id][d.id] = 0; }
-                        if (d.id === 'saf') {
-                            // ★ Safety & 5S: 周/月取每日达标率平均——存天数计数+归一化率(0-1),calcDimRate自动算出平均%
-                            if (vT > 0) {
-                                acc[ws.id][d.id].t += 1;      // 天数计数
-                                acc[ws.id][d.id].a += (vA / vT); // 当日达标率(0-1)
-                            }
-                        } else {
-                            acc[ws.id][d.id].t += vT;
-                            acc[ws.id][d.id].a += vA;
-                        }
+                        acc[ws.id][d.id].t += vT;
+                        acc[ws.id][d.id].a += vA;
                         cnt[ws.id][d.id]++;
                         hasData = true;
                     });
                 });
             });
-            /* ★ Convert sum → average per date (saf已用平均逻辑, 跳过) */
+            /* ★ Convert sum → average per date (所有维度统一, saf周目标=日目标均值) */
             if (hasData) {
                 workshops.forEach(ws => {
                     if (!cnt[ws.id]) return;
                     dims.forEach(d => {
-                        if (d.id === 'saf') return; // ★ saf已用每日达标率平均逻辑, 直接通过calcDimRate输出正确结果
                         if (!cnt[ws.id][d.id] || cnt[ws.id][d.id] === 0) return;
                         acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
                         acc[ws.id][d.id].a = acc[ws.id][d.id].a / cnt[ws.id][d.id];
