@@ -1303,8 +1303,13 @@
                         if (d.id === 'los') {
                             /* ★ Loss: t和a都累计(总目标/总实际) */
                         } else if (d.id === 'saf') {
-                            /* ★ Safety & 5S: t平均, a累计 */
-                            acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
+                            if (mode === 'month') {
+                                /* ★ 月Safety & 5S: 目标固定10, 实际累计 */
+                                acc[ws.id][d.id].t = 10;
+                            } else {
+                                /* ★ 周Safety & 5S: t平均, a累计 */
+                                acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
+                            }
                         } else {
                             acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
                             acc[ws.id][d.id].a = acc[ws.id][d.id].a / cnt[ws.id][d.id];
