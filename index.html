@@ -1668,6 +1668,7 @@
         /* ★ Rate calculator: handles std/qua/rev types */
         const calcDimRate = (d, t, a, wsId) => {
             if (t <= 0) return 0;
+            if (a <= 0) return 0;   /* 实际为0时反向公式会产生Infinity */
             /* ★ PRO2 Loss: 实际达成/目标 (standard formula, not reverse) */
             if (wsId === 'PRO2' && d.id === 'los') {
                 return Math.min((a / t) * 100, 100);
@@ -2008,7 +2009,7 @@
                     // 各车间整体趋势线
                     _chartWSs.forEach(function(ws) {
                         var _wsData = _trendDates.map(function(ds) { return _wsAchPct(ws.id, ds); });
-                        if (_wsData.some(function(v) { return v !== null; })) {
+                        if (_wsData.some(function(v) { return v !== null && isFinite(v); })) {
                             _seriesList.push({ name: ws.label, data: _wsData });
                         }
                     });
@@ -2036,7 +2037,7 @@
                     var _sum = 0, _cnt = 0;
                     _chartWSs.forEach(function(ws) {
                         var v = _wsAchPct(ws.id, ds);
-                        if (v !== null) { _sum += v; _cnt++; }
+                        if (v !== null && isFinite(v)) { _sum += v; _cnt++; }
                     });
                     return _cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null;
                 });
