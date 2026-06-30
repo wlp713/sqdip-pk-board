@@ -2091,11 +2091,14 @@
                 });
                 _seriesList.push({ name: 'Overall', data: _overallTrendData });
 
+                var _Y_CAP = 150;  /* ★ 线条最高显示到Y轴上限,数据保持真实 */
                 var _echartSeries = _seriesList.map(function(s, idx) {
                     var _clr = idx < _lineColors.length ? _lineColors[idx] : '#94a3b8';
                     var _ser = {
                         name: s.name,
-                        data: s.data,
+                        data: s.data.map(function(v) {
+                            return v === null ? null : { value: Math.min(v, _Y_CAP), realValue: v };
+                        }),
                         type: 'line', smooth: true,
                         connectNulls: false,
                         symbol: 'circle', symbolSize: 5,
@@ -2105,7 +2108,10 @@
                             show: true, position: 'top',
                             color: '#e2e8f0', fontSize: 9, fontWeight: 'bold', fontFamily: 'monospace',
                             fontStyle: 'normal',
-                            formatter: function(p) { return p.value !== null ? p.value + '%' : ''; }
+                            formatter: function(p) {
+                                var rv = p.data && p.data.realValue !== undefined ? p.data.realValue : p.value;
+                                return rv !== null && rv !== undefined ? rv + '%' : '';
+                            }
                         },
                         z: 2
                     };
@@ -2136,12 +2142,15 @@
                 /* ★ 自适应纵轴范围 (趋势图) */
                 var _allVals = [];
                 _echartSeries.forEach(function(s) {
-                    s.data.forEach(function(v) { if (v !== null) _allVals.push(v); });
+                    s.data.forEach(function(v) {
+                        if (v === null) return;
+                        _allVals.push(typeof v === 'object' ? v.value : v);
+                    });
                 });
                 var _yMin = 0, _yMax = 100;
                 if (_allVals.length > 0) {
                     var _min = Math.min.apply(null, _allVals);
-                    var _max = Math.min(Math.max.apply(null, _allVals), 150);  /* ★ 真实数值不变,但Y轴显示上限150% */
+                    var _max = Math.min(Math.max.apply(null, _allVals), _Y_CAP);  /* ★ Y轴上限=线条显示上限 */
                     var _range = _max - _min;
                     if (_range === 0) {
                         _yMin = Math.max(0, _min - 8);
@@ -2155,7 +2164,23 @@
 
                 chartInstance.clear(); chartInstance.setOption({
                     grid: { top: 25, bottom: 35, left: 35, right: 15 },
-                    tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569', textStyle: { color: '#f8fafc', fontSize: 12 } },
+                    tooltip: {
+                        trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569',
+                        textStyle: { color: '#f8fafc', fontSize: 12 },
+                        formatter: function(params) {
+                            if (!params || !params.length) return '';
+                            var s = '<div class="text-[11px]">' + params[0].axisValueLabel + '</div>';
+                            params.forEach(function(p) {
+                                var rv = p.data && p.data.realValue !== undefined ? p.data.realValue : p.value;
+                                if (rv === null || rv === undefined) return;
+                                s += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px">';
+                                s += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + p.color + '"></span>';
+                                s += '<span style="font-weight:600">' + p.seriesName + ':</span>';
+                                s += '<span style="font-family:monospace;font-weight:700">' + rv + '%</span></div>';
+                            });
+                            return s;
+                        }
+                    },
                     legend: {
                         data: _seriesList.map(function(s) { return s.name; }),
                         textStyle: { color: '#94a3b8', fontSize: 9, fontWeight: 'bold', fontStyle: 'normal' },
