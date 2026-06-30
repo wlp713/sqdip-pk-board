@@ -2105,9 +2105,13 @@
                         lineStyle: { color: _clr, width: 2 },
                         itemStyle: { color: _clr },
                         label: {
-                            show: true, position: 'top',
+                            show: true,
                             color: '#e2e8f0', fontSize: 8, fontWeight: 'bold', fontFamily: 'monospace',
                             fontStyle: 'normal',
+                            /* ★ 各车间标签错开位置避免重叠 */
+                            position: _seriesList.length > 2 ? (idx === 2 ? 'bottom' : idx === 3 ? 'bottom' : 'top') : 'top',
+                            distance: idx === 0 ? 2 : idx === 1 ? 2 : idx === 2 ? 2 : idx === 3 ? 2 : 2,
+                            offset: idx === 0 ? [0, -10] : idx === 1 ? [0, 10] : idx === 2 ? [-28, 8] : idx === 3 ? [28, 8] : [0, -14],
                             formatter: function(p) {
                                 var rv = p.data && p.data.realValue !== undefined ? p.data.realValue : p.value;
                                 return rv !== null && rv !== undefined ? rv + '%' : '';
@@ -2121,6 +2125,7 @@
                         _ser.symbol = 'diamond';
                         _ser.symbolSize = 6;
                         _ser.z = 10;
+                        _ser.label.offset = [0, -16];
                     }
                     if (_seriesList.length === 1) {
                         _ser.markLine = {
