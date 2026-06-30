@@ -1972,8 +1972,18 @@
                     var wsT2 = _day.t2[wsId];
                     var tT = 0, tA = 0;
                     Object.keys(wsT2).forEach(function(line) {
-                        tT += Number(wsT2[line].t) || 0;
-                        tA += Number(wsT2[line].a) || 0;
+                        var entry = wsT2[line];
+                        if (entry.day !== undefined) {
+                            // 日/夜班态（每日原始数据）
+                            tT += Number(entry.day.t) || 0;
+                            tA += Number(entry.day.a) || 0;
+                            tT += Number(entry.night.t) || 0;
+                            tA += Number(entry.night.a) || 0;
+                        } else if (entry.t !== undefined) {
+                            // 扁平态（累计数据）
+                            tT += Number(entry.t) || 0;
+                            tA += Number(entry.a) || 0;
+                        }
                     });
                     return tT > 0 ? parseFloat(((tA / tT) * 100).toFixed(1)) : null;
                 }
