@@ -2141,10 +2141,7 @@
                 var _yMin = 0, _yMax = 100;
                 if (_allVals.length > 0) {
                     var _min = Math.min.apply(null, _allVals);
-                    /* ★ 排除极端异常值: 取90%分位防止单条异常线拉偏Y轴 */
-                    var _sorted = _allVals.slice().sort(function(a, b) { return b - a; });
-                    var _pIdx = Math.ceil(_sorted.length * 0.1);
-                    var _max = _pIdx < _sorted.length ? _sorted[_pIdx] : _sorted[0];
+                    var _max = Math.min(Math.max.apply(null, _allVals), 150);  /* ★ 真实数值不变,但Y轴显示上限150% */
                     var _range = _max - _min;
                     if (_range === 0) {
                         _yMin = Math.max(0, _min - 8);
