@@ -421,6 +421,16 @@
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-1 pl-2">
                         <h2 class="title-h3 text-[11px]">Overall ACH% Analysis</h2>
+                        <!-- ★ 指标说明: 悬浮tooltip,不占布局空间 -->
+                        <div class="relative group shrink-0">
+                            <span class="cursor-help text-[11px] text-slate-500 hover:text-slate-300 transition-colors select-none">📋</span>
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[300px] bg-[#1a2332] border border-slate-700/80 rounded-lg p-3 shadow-2xl shadow-black/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[999] text-[10px] leading-relaxed pointer-events-none">
+                                <p class="flex items-center gap-1.5 text-emerald-400 font-bold mb-1 text-[11px]">🛡️ Safety &amp; 5S</p>
+                                <p class="text-slate-300 mb-2 pl-1">每月总计十个改善项目<br>每周至少两个改善项目</p>
+                                <p class="flex items-center gap-1.5 text-amber-400 font-bold mb-1 text-[11px]">📉 Loss</p>
+                                <p class="text-slate-300 pl-1">PRO1/3/4：影响装配台数<br>PRO2：作业完成率</p>
+                            </div>
+                        </div>
                         <div class="flex items-center gap-1.5" id="p1-chart-filters">
                             <!-- WS filter (admin only) -->
                             <select id="p1-ws-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
