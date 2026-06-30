@@ -412,8 +412,14 @@
 
         <!-- PAGE 1 -->
         <div id="page1" class="w-full h-full flex flex-col gap-3 fade-enter">
-            <div id="p1-cards-container" class="grid grid-cols-4 gap-4 h-[60%]">
+            <div id="p1-cards-container" class="grid grid-cols-4 gap-4 h-[60%] relative">
                 <!-- JS Inject -->
+            <!-- ★ 指标说明: 白字,横排,挂在卡片区底部,不占布局 -->
+            <div class="absolute bottom-0 left-0 right-0 flex items-center gap-3 px-2 py-0.5 text-[11px] text-white/90 font-medium pointer-events-none" style="z-index:10;">
+                <span class="flex items-center gap-1"><span class="text-emerald-400">🛡️</span> S&amp;S: 每月10项, 每周≥2项</span>
+                <span class="text-slate-600">|</span>
+                <span class="flex items-center gap-1"><span class="text-amber-400">📉</span> Loss: PRO1/3/4=影响装配台数, PRO2=作业完成率</span>
+            </div>
             </div>
 
             <div class="flex gap-3 h-[53%]">
@@ -443,12 +449,7 @@
                             <span id="p1-period-label" class="text-[12px] font-mono font-bold text-amber-300 bg-amber-900/30 px-2.5 py-1 rounded-full border border-amber-500/40 shadow-[0_0_10px_rgba(251,191,36,0.15)]">DAY</span>
                         </div>
                     </div>
-                    <!-- ★ 指标说明(永久文字,截屏用) -->
-                    <div class="flex items-center gap-3 px-2 pb-1 text-[9px] text-slate-400 shrink-0 leading-tight">
-                        <span class="flex items-center gap-1"><span class="text-emerald-400">🛡️</span> S&amp;S: 每月10项改善, 每周≥2项</span>
-                        <span class="text-slate-700">|</span>
-                        <span class="flex items-center gap-1"><span class="text-amber-400">📉</span> Loss: PRO1/3/4=影响装配台数, PRO2=作业完成率</span>
-                    </div>
+
                     <div id="p1-chart" class="flex-1 w-full" style="min-height:0"></div>
                 </div>
 
@@ -1686,15 +1687,27 @@
         /* ★ Rate calculator: handles std/qua/rev types */
         const calcDimRate = (d, t, a, wsId) => {
             if (t <= 0) return 0;
-            if (a <= 0) return 0;   /* 实际为0时反向公式会产生Infinity */
-            /* ★ PRO2 Loss: 实际达成/目标 (standard formula, not reverse) */
+            /* ★ PRO2 Loss: 实际达成/目标 (完成率) — a=0时0% */
             if (wsId === 'PRO2' && d.id === 'los') {
+                if (a <= 0) return 0;
                 return Math.min((a / t) * 100, 100);
             }
-            if (d.type === 'std') return (a / t) * 100;  // Safety & 5S / UPPH
-            if (d.type === 'qua') return (t / a) * 100;   // Quality
-            if (d.type === 'rev') return Math.min((t / a) * 100, 100);  // Loss 上限100%
-            return (t / a) * 100;
+            /* ★ Loss(rev): 目标/实际达成 — a=0时零损失=满分100% */
+            if (d.type === 'rev') {
+                if (a <= 0) return 100;
+                return Math.min((t / a) * 100, 100);
+            }
+            /* ★ Safety&5S / UPPH(std) */
+            if (d.type === 'std') {
+                if (a <= 0) return 0;
+                return (a / t) * 100;
+            }
+            /* ★ Quality(qua): 实际质量损失 — a=0时undefined,返回0 */
+            if (d.type === 'qua') {
+                if (a <= 0) return 0;
+                return (t / a) * 100;
+            }
+            return 0;
         };
 
         window.updateUI = () => {
