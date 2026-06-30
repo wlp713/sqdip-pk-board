@@ -1670,11 +1670,11 @@
             if (t <= 0) return 0;
             /* ★ PRO2 Loss: 实际达成/目标 (standard formula, not reverse) */
             if (wsId === 'PRO2' && d.id === 'los') {
-                return Math.min((a / t) * 100, 100);
+                return (a / t) * 100;
             }
-            if (d.type === 'std') return Math.min((a / t) * 100, 100);  // Safety & 5S / UPPH
-            if (d.type === 'qua') return Math.min((t / a) * 100, 100);   // Quality
-            return Math.min((t / a) * 100, 100);                         // Loss
+            if (d.type === 'std') return (a / t) * 100;  // Safety & 5S / UPPH
+            if (d.type === 'qua') return (t / a) * 100;   // Quality
+            return (t / a) * 100;                         // Loss
         };
 
         window.updateUI = () => {
