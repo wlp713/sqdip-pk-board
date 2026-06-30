@@ -1958,93 +1958,45 @@
                     });
                 }
             } else {
-                /* ★ Week/Month: 趋势折线图 (各维度线 + 整体趋势线) */
+                /* ★ Week/Month: 趋势折线图 (直接取各车间输出达成率) */
                 var _trendDates = getDateRange(pkPeriod, currentDate);
                 var _trendLabels = _trendDates.map(function(ds) { return ds.slice(5); });
                 var _seriesList = [];
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
 
+                /* ★ 辅助：取某车间某天的输出达成率 */
+                function _wsAchPct(wsId, ds) {
+                    var _day = loadDayData(ds);
+                    if (!_day || !_day.t2 || !_day.t2[wsId]) return null;
+                    var wsT2 = _day.t2[wsId];
+                    var tT = 0, tA = 0;
+                    Object.keys(wsT2).forEach(function(line) {
+                        tT += Number(wsT2[line].t) || 0;
+                        tA += Number(wsT2[line].a) || 0;
+                    });
+                    return tT > 0 ? parseFloat(((tA / tT) * 100).toFixed(1)) : null;
+                }
+
                 if (_p1Dim === 'all') {
-                    if (_chartWSs.length > 1) {
-                        // 多车间 → 各车间整体趋势线
-                        _chartWSs.forEach(function(ws) {
-                            var _wsData = [];
-                            _trendDates.forEach(function(ds) {
-                                var _day = loadDayData(ds);
-                                if (_day && _day.t1 && _day.t1[ws.id]) {
-                                    var _sum = 0, _cnt = 0;
-                                    dims.forEach(function(d) {
-                                        var _e = _day.t1[ws.id][d.id];
-                                        if (_e) {
-                                            var _t = Number(_e.t) || 0;
-                                            var _a = Number(_e.a) || 0;
-                                            if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
-                                        }
-                                    });
-                                    _wsData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
-                                } else { _wsData.push(null); }
-                            });
-                            if (_wsData.some(function(v) { return v !== null; })) {
-                                _seriesList.push({ name: ws.label, data: _wsData });
-                            }
-                        });
-                    } else {
-                        // 单车间 → 各维度趋势线
-                        dims.forEach(function(d) {
-                            var _dimData = [];
-                            _trendDates.forEach(function(ds) {
-                                var _sum = 0, _cnt = 0;
-                                _chartWSs.forEach(function(ws) {
-                                    var _day = loadDayData(ds);
-                                    if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][d.id]) {
-                                        var _e = _day.t1[ws.id][d.id];
-                                        var _t = Number(_e.t) || 0;
-                                        var _a = Number(_e.a) || 0;
-                                        if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
-                                    }
-                                });
-                                _dimData.push(_cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null);
-                            });
-                            if (_dimData.some(function(v) { return v !== null; })) {
-                                _seriesList.push({ name: d.name, data: _dimData });
-                            }
-                        });
-                    }
-                    if (_seriesList.length === 0) {
-                        var _overallData = [];
-                        _trendDates.forEach(function(ds) {
-                            var _sum = 0, _cnt = 0;
-                            _chartWSs.forEach(function(ws) {
-                                var _day = loadDayData(ds);
-                                if (_day && _day.t1 && _day.t1[ws.id]) {
-                                    dims.forEach(function(d) {
-                                        var _e = _day.t1[ws.id][d.id];
-                                        if (_e) {
-                                            var _t = Number(_e.t) || 0;
-                                            var _a = Number(_e.a) || 0;
-                                            if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
-                                        }
-                                    });
-                                }
-                            });
-                            _overallData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
-                        });
-                        _seriesList.push({ name: 'Overall', data: _overallData });
-                    }
+                    // 各车间整体趋势线
+                    _chartWSs.forEach(function(ws) {
+                        var _wsData = _trendDates.map(function(ds) { return _wsAchPct(ws.id, ds); });
+                        if (_wsData.some(function(v) { return v !== null; })) {
+                            _seriesList.push({ name: ws.label, data: _wsData });
+                        }
+                    });
                 } else {
                     var _selDim = dims.find(function(d) { return d.id === _p1Dim; });
                     _chartWSs.forEach(function(ws) {
-                        var _wsData = [];
-                        _trendDates.forEach(function(ds) {
+                        var _wsData = _trendDates.map(function(ds) {
                             var _day = loadDayData(ds);
                             if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][_selDim.id]) {
                                 var _e = _day.t1[ws.id][_selDim.id];
                                 var _t = Number(_e.t) || 0;
                                 var _a = Number(_e.a) || 0;
-                                _wsData.push(_t > 0 ? parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) : null);
-                            } else {
-                                _wsData.push(null);
+                                return _t > 0 ? parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) : null;
                             }
+                            return null;
                         });
                         if (_wsData.some(function(v) { return v !== null; })) {
                             _seriesList.push({ name: ws.label, data: _wsData });
@@ -2052,24 +2004,14 @@
                     });
                 }
 
-                /* ★ 添加整体趋势线 (所有维度+车间平均) */
-                var _overallTrendData = [];
-                _trendDates.forEach(function(ds) {
+                /* ★ 整体趋势线 = 各车间输出达成率的均值 */
+                var _overallTrendData = _trendDates.map(function(ds) {
                     var _sum = 0, _cnt = 0;
                     _chartWSs.forEach(function(ws) {
-                        var _day = loadDayData(ds);
-                        if (_day && _day.t1 && _day.t1[ws.id]) {
-                            dims.forEach(function(d) {
-                                var _e = _day.t1[ws.id][d.id];
-                                if (_e) {
-                                    var _t = Number(_e.t) || 0;
-                                    var _a = Number(_e.a) || 0;
-                                    if (_t > 0) { _sum += calcDimRate(d, _t, _a, ws.id); _cnt++; }
-                                }
-                            });
-                        }
+                        var v = _wsAchPct(ws.id, ds);
+                        if (v !== null) { _sum += v; _cnt++; }
                     });
-                    _overallTrendData.push(_cnt > 0 ? parseFloat((_sum/_cnt).toFixed(1)) : null);
+                    return _cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null;
                 });
                 _seriesList.push({ name: 'Overall', data: _overallTrendData });
 
