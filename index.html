@@ -1196,10 +1196,7 @@
             const dates = [];
             while (start <= today) {
                 const ds = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
-                /* ★ 月模式跳过休息日 */
-                if (mode !== 'month' || !isRestDay(ds)) {
-                    dates.push(ds);
-                }
+                dates.push(ds);
                 start.setDate(start.getDate() + 1);
             }
             return dates;
@@ -1231,6 +1228,8 @@
             dates.forEach(ds => {
                 const data = loadDayData(ds);
                 if (!data || !data.t2) return;
+                /* ★ t2产出数据: 休息日不纳入月累计 */
+                if (mode === 'month' && isRestDay(ds)) return;
                 ['PRO1','PRO2'].forEach(ws => {
                     if (!data.t2[ws]) return;
                     if (!cnt[ws]) cnt[ws] = {};
@@ -1284,6 +1283,10 @@
                     dims.forEach(d => {
                         const entry = data.t1[ws.id][d.id];
                         if (!entry) return;
+                        /* ★ 月模式: 休息日仅累PRO2.Loss和PRO4&5.Safety */
+                        if (mode === 'month' && isRestDay(ds)) {
+                            if (!(ws.id === 'PRO2' && d.id === 'los') && !(ws.id === 'PRO4_5' && d.id === 'saf')) return;
+                        }
                         const vT = Number(entry.t) || 0;
                         const vA = Number(entry.a) || 0;
                         if (!acc[ws.id][d.id]) { acc[ws.id][d.id] = { t: 0, a: 0 }; cnt[ws.id][d.id] = 0; }
