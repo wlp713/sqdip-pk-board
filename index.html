@@ -1834,12 +1834,16 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: {
-                            type: 'value', min: 0, max: 100,
-                            axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
-                            splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                            axisLine: { show: false }
-                        },
+                        yAxis: (function() {
+                            var _vals = _dimBarData.map(function(d){return d.value;});
+                            var _mx = Math.max.apply(null, _vals);
+                            var _yMx = _mx <= 100 ? 100 : Math.ceil((_mx + 5) / 10) * 10;
+                            return { type: 'value', min: 0, max: _yMx,
+                                axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                                splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                                axisLine: { show: false }
+                            };
+                        })(),
                         series: [
                             {
                                 type: 'bar', barWidth: '55%', z: 10,
@@ -1907,12 +1911,16 @@
                             axisLine: { lineStyle: { color: '#334155' } },
                             axisTick: { show: false }
                         },
-                        yAxis: {
-                            type: 'value', min: 0, max: 100,
-                            axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
-                            splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                            axisLine: { show: false }
-                        },
+                        yAxis: (function() {
+                            var _vals = _singleDimData.map(function(d){return d.value;});
+                            var _mx = Math.max.apply(null, _vals);
+                            var _yMx = _mx <= 100 ? 100 : Math.ceil((_mx + 5) / 10) * 10;
+                            return { type: 'value', min: 0, max: _yMx,
+                                axisLabel: { color: '#94a3b8', fontSize: 10, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
+                                splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
+                                axisLine: { show: false }
+                            };
+                        })(),
                         series: [
                             {
                                 type: 'bar', barWidth: '55%', z: 10,
@@ -2119,12 +2127,12 @@
                     var _range = _max - _min;
                     if (_range === 0) {
                         _yMin = Math.max(0, _min - 8);
-                        _yMax = Math.min(100, _min + 8);
+                        _yMax = _min + 8;
                     } else {
                         _yMin = Math.max(0, Math.floor((_min - _range * 0.15) / 5) * 5);
-                        _yMax = Math.min(100, Math.ceil((_max + _range * 0.15) / 5) * 5);
+                        _yMax = Math.ceil((_max + _range * 0.15) / 5) * 5;
                     }
-                    if (_yMax - _yMin < 10) { _yMin = Math.max(0, _yMin - 5); _yMax = Math.min(100, _yMin + 10); }
+                    if (_yMax - _yMin < 10) { _yMin = Math.max(0, _yMin - 5); _yMax = _yMin + 10; }
                 }
 
                 chartInstance.clear(); chartInstance.setOption({
