@@ -1584,6 +1584,7 @@
                 /* ★ Standings data changed → mark cache dirty */
                 _standingsDirty = true;
                 updateUI();
+                renderDimRank();
             }, 800);
         };
 
@@ -1664,6 +1665,8 @@
             if(lockCb && lockCb.checked) {
                 document.querySelectorAll('.input-target').forEach(el => el.readOnly = true);
             }
+            /* ★ Refresh dim rank any time admin panel re-renders (period change, data save) */
+            renderDimRank();
         };
 
         /* ★ Rate calculator: handles std/qua/rev types */
