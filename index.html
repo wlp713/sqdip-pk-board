@@ -1176,6 +1176,14 @@
             d.setDate(diff);
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
+        const REST_DAYS_BY_MONTH = {
+            '2026-06': [1, 2, 3, 7, 13, 14, 20, 21, 27, 28]
+        };
+        function isRestDay(dateStr) {
+            var parts = dateStr.split('-').map(Number);
+            var key = parts[0] + '-' + String(parts[1]).padStart(2, '0');
+            return REST_DAYS_BY_MONTH[key] && REST_DAYS_BY_MONTH[key].indexOf(parts[2]) !== -1;
+        }
         function getDateRange(mode, refDate) {
             if (mode === 'day') return [refDate];
             const today = new Date(refDate + 'T00:00:00');
@@ -1188,7 +1196,10 @@
             const dates = [];
             while (start <= today) {
                 const ds = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
-                dates.push(ds);
+                /* ★ 月模式跳过休息日 */
+                if (mode !== 'month' || !isRestDay(ds)) {
+                    dates.push(ds);
+                }
                 start.setDate(start.getDate() + 1);
             }
             return dates;
