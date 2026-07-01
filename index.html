@@ -1570,6 +1570,28 @@
             updateUI();
         };
 
+        /* ★ p2月模式临时覆盖(仅截图/报表用,不存后端) */
+        var _p2MonthOverrides = {};
+        window.onCellEditP2 = function(el) {
+            if (!el || !el.dataset) return;
+            var wsName = el.dataset.ws, line = el.dataset.line, field = el.dataset.field;
+            if (!wsName || !line || !field) return;
+            var raw = el.textContent.trim();
+            var val = parseFloat(raw);
+            if (isNaN(val)) {
+                if (_p2MonthOverrides[wsName] && _p2MonthOverrides[wsName][line]) delete _p2MonthOverrides[wsName][line][field];
+                updateUI(); return;
+            }
+            if (!_p2MonthOverrides[wsName]) _p2MonthOverrides[wsName] = {};
+            if (!_p2MonthOverrides[wsName][line]) _p2MonthOverrides[wsName][line] = {};
+            _p2MonthOverrides[wsName][line][field] = val;
+            updateUI();
+        };
+        window.clearP2Overrides = function() {
+            _p2MonthOverrides = {};
+            updateUI();
+        };
+
         window.triggerSave = () => {
             const syncUI = document.getElementById('sync-status');
             syncUI.classList.remove('hidden');
@@ -2276,11 +2298,19 @@
                         const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
                         const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
                         const lineT = dayT + nightT, lineA = dayA + nightA;
-                        sumT += lineT; sumA += lineA;
+
+                        var _ovrLine = _p2MonthOverrides[wsName] && _p2MonthOverrides[wsName][l];
+                        var adjLineT = _ovrLine && _ovrLine.t !== undefined ? _ovrLine.t : lineT;
+                        var adjLineA = _ovrLine && _ovrLine.a !== undefined ? _ovrLine.a : lineA;
+                        sumT += adjLineT; sumA += adjLineA;
+                        /* ★ 月模式可编辑(line total), 覆盖影响line总和小计 */
+                        var isEditable = pkPeriod === 'month';
+                        var editableLineT = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-field="t" onblur="onCellEditP2(this)"' : '';
+                        var editableLineA = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-field="a" onblur="onCellEditP2(this)"' : '';
+                        const lineRate = adjLineT === 0 ? 0 : (adjLineA/adjLineT)*100;
 
                         const dayRate  = dayT === 0 ? 0 : (dayA/dayT)*100;
                         const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
-                        const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
 
                         const daySt  = '<span class="status-emoji">' + (dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')) + '</span>';
                         const nightSt = '<span class="status-emoji">' + (nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')) + '</span>';
@@ -2289,8 +2319,8 @@
                         // Line total row
                         html += `<tr class="border-b border-slate-700/20">
                             <td class="font-bold text-slate-200 text-[12px] py-[5px]">${l} LINE</td>
-                            <td class="num-font num-muted text-[12px] py-[5px]">${lineT}</td>
-                            <td class="num-font num-light text-[12px] py-[5px]">${lineA}</td>
+                            <td class="num-font num-muted text-[12px] py-[5px]" ${editableLineT}>${adjLineT.toLocaleString()}</td>
+                            <td class="num-font num-light text-[12px] py-[5px]" ${editableLineA}>${adjLineA.toLocaleString()}</td>
                             <td class="py-[5px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         // Day shift sub-row
