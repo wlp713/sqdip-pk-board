@@ -2405,6 +2405,11 @@
                 los: { name: 'Loss',          icon: '📉',   color: 'amber',   bg: 'bg-amber-900/10', border: 'border-amber-500/30', text: 'text-amber-300' }
             };
 
+            /* ★ Format score per dimension (same as SQDIP card's decimal mechanism) */
+            function _fmt4(v, dimId) {
+                return dimId === 'pro' ? v.toFixed(2) : Math.round(v);
+            }
+
             /* Build ranking for each dimension */
             const dimRankings = {};
             dims.forEach(d => {
@@ -2438,7 +2443,7 @@
                     champHtml += `<div class="flex items-center gap-1.5 px-2 py-1 rounded" style="background:linear-gradient(90deg,rgba(239,68,68,0.15),rgba(234,179,8,0.08));border:1px solid rgba(239,68,68,0.2);box-shadow:0 0 6px rgba(239,68,68,0.06)">
                         <span class="text-[12px] font-bold text-red-400">${meta.name.split(' &')[0]}</span>
                         <span class="text-white text-[12px] font-extrabold">${best.ws.label}</span>
-                        <span class="num-hl text-amber-300 text-[12px] font-bold">${best.score.toFixed(1)}%</span>
+                        <span class="num-hl text-amber-300 text-[12px] font-bold">${_fmt4(best.score, d.id)}%</span>
                     </div>`;
                 }
             });
@@ -2473,7 +2478,7 @@
                     rows += `<div class="flex items-center gap-1.5 py-1 px-2 rounded text-[11px] ${rowClass} ${rowColor}">
                         <span class="w-4 text-center text-[10px] shrink-0">${rankEmoji}</span>
                         <span class="flex-1 font-bold truncate text-[10px]">${e.ws.label}</span>
-                        <span class="num-hl ${scoreColor} text-[10px] font-bold shrink-0">${e.score.toFixed(1)}%</span>
+                        <span class="num-hl ${scoreColor} text-[10px] font-bold shrink-0">${_fmt4(e.score, d.id)}%</span>
                         <span class="text-[8px] text-slate-600 font-mono shrink-0">${e.t}→${e.a}</span>
                         <span class="text-[12px] shrink-0 rank-flag${isBest ? ' rank-flag-winner' : (isWorst ? ' rank-flag-loser' : '')}">${isBest ? '🚩' : (isWorst ? '⚫' : '')}</span>
                     </div>`;
@@ -2482,7 +2487,7 @@
                 card.innerHTML = `<div class="flex items-center gap-1.5 mb-1 shrink-0 border-b border-slate-800/50 pb-1">
                     <span class="w-2 h-2 rounded-full bg-${meta.color}-500 shrink-0"></span>
                     <span class="text-[11px] font-black text-white tracking-wider">${meta.icon} ${meta.name}</span>
-                    <span class="ml-auto text-[9px] font-bold text-slate-500 font-mono bg-slate-800/60 px-1.5 py-0.5 rounded border border-slate-700/50">🥇 ${entries[0].score.toFixed(1)}%</span>
+                    <span class="ml-auto text-[9px] font-bold text-slate-500 font-mono bg-slate-800/60 px-1.5 py-0.5 rounded border border-slate-700/50">🥇 ${_fmt4(entries[0].score, d.id)}%</span>
                 </div>
                 <div class="flex-1 flex flex-col gap-px min-h-0">${rows}</div>`;
             });
@@ -2497,7 +2502,7 @@
                     loserHtml += `<div class="flex items-center gap-1.5 px-2 py-1 rounded" style="background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.25);">
                         <span class="text-[12px] font-bold text-slate-400">${meta.name.split(' &')[0]}</span>
                         <span class="text-slate-200 text-[12px] font-extrabold">${worst.ws.label}</span>
-                        <span class="num-hl text-red-400 text-[12px] font-bold">${worst.score.toFixed(1)}%</span>
+                        <span class="num-hl text-red-400 text-[12px] font-bold">${_fmt4(worst.score, d.id)}%</span>
                     </div>`;
                 }
             });
