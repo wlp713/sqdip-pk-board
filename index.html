@@ -759,6 +759,12 @@
                 <div id="admin-t2-inputs" class="space-y-4"></div>
                 </div>
             </section>
+            <div class="mt-3 pt-2 border-t border-slate-700/50">
+                <button onclick="copyT2ToAllDates()" class="w-full py-2 px-3 bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold rounded transition flex items-center justify-center gap-2">
+                    📋 应用当前T2产出目标到所有日期
+                </button>
+                <p class="text-[9px] text-slate-600 text-center mt-1">复制产出数据的线别Day/Night目标及实际到所有已有数据的日期</p>
+            </div>
             <!-- ★ User Management -->
             <section>
                 <h3 class="title-h3 text-amber-400 mb-4 border-b border-slate-800 pb-2 mt-6">👥 用户管理 / USERS</h3>
@@ -1442,16 +1448,29 @@
                 });
             };
             // Each line split 50/50 into Day & Night shifts
-            state.t2.PRO1 = {
-                S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } },
-                H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } }
-            };
-            state.t2.PRO2 = {
-                A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } },
-                B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } },
-                C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } },
-                D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } }
-            };
+            /* ★ Try to load default T2 targets first (from 'apply to all dates') */
+            var defT2 = localStorage.getItem('_defaultT2Targets');
+            if (defT2) {
+                try {
+                    var parsedT2 = JSON.parse(defT2);
+                    state.t2.PRO1 = parsedT2.PRO1 || {
+                        S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } },
+                        H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } }
+                    };
+                    state.t2.PRO2 = parsedT2.PRO2 || {
+                        A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } },
+                        B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } },
+                        C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } },
+                        D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } }
+                    };
+                } catch(e) {
+                    state.t2.PRO1 = { S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } }, H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } } };
+                    state.t2.PRO2 = { A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } }, B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } }, C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } }, D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } } };
+                }
+            } else {
+                state.t2.PRO1 = { S: { day: { t: 500, a: 480 }, night: { t: 500, a: 485 } }, H: { day: { t: 900, a: 825 }, night: { t: 900, a: 835 } } };
+                state.t2.PRO2 = { A: { day: { t: 2700, a: 2600 }, night: { t: 2700, a: 2620 } }, B: { day: { t: 1650, a: 1675 }, night: { t: 1650, a: 1680 } }, C: { day: { t: 1650, a: 1520 }, night: { t: 1650, a: 1530 } }, D: { day: { t: 600, a: 575 }, night: { t: 0, a: 0 } } };
+            }
         };
 
         const setDateInit = () => {
@@ -3141,6 +3160,84 @@
                 if (afLocal === 0) msg = '没有找到其他日期的数据(localStorage中无 mbs_state_* 键)。目标已保存为默认值。';
                 alert(msg);
             }
+        };
+
+        window.copyT2ToAllDates = function() {
+            // ★ Step 1: Read current T2 target values from DOM inputs
+            var targets = { PRO1: {}, PRO2: {} };
+            ['PRO1','PRO2'].forEach(function(wsName) {
+                Object.keys(state.t2[wsName]).forEach(function(l) {
+                    if (!targets[wsName][l]) targets[wsName][l] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
+                    var dT = document.getElementById('inp-t2-' + wsName + '-' + l + '-Day-t');
+                    var dA = document.getElementById('inp-t2-' + wsName + '-' + l + '-Day-a');
+                    var nT = document.getElementById('inp-t2-' + wsName + '-' + l + '-Night-t');
+                    var nA = document.getElementById('inp-t2-' + wsName + '-' + l + '-Night-a');
+                    targets[wsName][l].day.t = dT ? Number(dT.value) || 0 : state.t2[wsName][l].day.t;
+                    targets[wsName][l].day.a = dA ? Number(dA.value) || 0 : state.t2[wsName][l].day.a;
+                    targets[wsName][l].night.t = nT ? Number(nT.value) || 0 : state.t2[wsName][l].night.t;
+                    targets[wsName][l].night.a = nA ? Number(nA.value) || 0 : state.t2[wsName][l].night.a;
+                });
+            });
+
+            if (!confirm('确定将当前T2产出目标应用到所有已有数据的日期?')) return;
+
+            // ★ Step 2: Save as permanent default
+            localStorage.setItem('_defaultT2Targets', JSON.stringify(targets));
+
+            // ★ Step 2b: Also sync to Firebase
+            if (firebaseReady && fbDb) {
+                try {
+                    var configRef = firebaseModules.ref(fbDb, '_config/defaultT2Targets');
+                    firebaseModules.set(configRef, targets).catch(function(e) {
+                        console.warn('Firebase T2 config save failed:', e.message);
+                    });
+                } catch(e) {}
+            }
+
+            // ★ Step 3: Collect all date strings that have data
+            var allDates = {};
+            for (var i = 0; i < localStorage.length; i++) {
+                var localKey = localStorage.key(i);
+                if (localKey && localKey.startsWith('mbs_state_')) {
+                    allDates[localKey.replace('mbs_state_', '')] = true;
+                }
+            }
+            delete allDates[currentDate];
+
+            // ★ Step 4: Update each date
+            var afLocal = 0;
+            Object.keys(allDates).forEach(function(dateStr) {
+                try {
+                    var raw = localStorage.getItem('mbs_state_' + dateStr);
+                    if (!raw) return;
+                    var data = JSON.parse(raw);
+                    if (!data.t2) data.t2 = { PRO1: {}, PRO2: {} };
+                    ['PRO1','PRO2'].forEach(function(wsName) {
+                        if (!data.t2[wsName]) data.t2[wsName] = {};
+                        Object.keys(targets[wsName]).forEach(function(l) {
+                            if (!data.t2[wsName][l]) data.t2[wsName][l] = { day: { t: 0, a: 0 }, night: { t: 0, a: 0 } };
+                            data.t2[wsName][l].day.t = targets[wsName][l].day.t;
+                            data.t2[wsName][l].day.a = targets[wsName][l].day.a;
+                            data.t2[wsName][l].night.t = targets[wsName][l].night.t;
+                            data.t2[wsName][l].night.a = targets[wsName][l].night.a;
+                        });
+                    });
+                    localStorage.setItem('mbs_state_' + dateStr, JSON.stringify(data));
+                    if (firebaseReady && fbDb) {
+                        var dateRef = firebaseModules.ref(fbDb, 'mbs_dm_board_data/' + dateStr);
+                        firebaseModules.set(dateRef, data).catch(function(e) {
+                            console.warn('Firebase T2 save failed for', dateStr, ':', e.message);
+                        });
+                    }
+                    afLocal++;
+                } catch(e) {
+                    console.warn('Failed T2 for', dateStr, ':', e.message);
+                }
+            });
+
+            var msg = '已完成!已更新 ' + afLocal + ' 个日期的T2产出数据。\n默认T2目标已保存,新建日期自动使用此值。';
+            if (afLocal === 0) msg = '没有找到其他日期的数据。默认T2目标已保存。';
+            alert(msg);
         };
 
         window.toggleLock = () => {
