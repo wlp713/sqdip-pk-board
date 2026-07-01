@@ -1570,30 +1570,6 @@
             updateUI();
         };
 
-        /* ★ p2月模式临时覆盖(仅截图/报表用,不存后端) */
-        var _p2MonthOverrides = {};
-        window.onCellEditP2 = function(el) {
-            if (!el || !el.dataset) return;
-            var wsName = el.dataset.ws, line = el.dataset.line, shift = el.dataset.shift, field = el.dataset.field;
-            if (!wsName || !line || !shift || !field) return;
-            var raw = el.textContent.trim();
-            var val = parseFloat(raw);
-            if (isNaN(val)) {
-                if (_p2MonthOverrides[wsName] && _p2MonthOverrides[wsName][line] && _p2MonthOverrides[wsName][line][shift])
-                    delete _p2MonthOverrides[wsName][line][shift][field];
-                updateUI(); return;
-            }
-            if (!_p2MonthOverrides[wsName]) _p2MonthOverrides[wsName] = {};
-            if (!_p2MonthOverrides[wsName][line]) _p2MonthOverrides[wsName][line] = {};
-            if (!_p2MonthOverrides[wsName][line][shift]) _p2MonthOverrides[wsName][line][shift] = {};
-            _p2MonthOverrides[wsName][line][shift][field] = val;
-            updateUI();
-        };
-        window.clearP2Overrides = function() {
-            _p2MonthOverrides = {};
-            updateUI();
-        };
-
         window.triggerSave = () => {
             const syncUI = document.getElementById('sync-status');
             syncUI.classList.remove('hidden');
@@ -2300,55 +2276,37 @@
                         const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
                         const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
                         const lineT = dayT + nightT, lineA = dayA + nightA;
-
-                        /* ★ 月模式: 编辑班次数据,线体自动计算 */
-                        var _ovrP2 = _p2MonthOverrides[wsName] && _p2MonthOverrides[wsName][l] || {};
-                        var dipDayT = _ovrP2.day && _ovrP2.day.t !== undefined ? _ovrP2.day.t : dayT;
-                        var dipDayA = _ovrP2.day && _ovrP2.day.a !== undefined ? _ovrP2.day.a : dayA;
-                        var dipNightT = _ovrP2.night && _ovrP2.night.t !== undefined ? _ovrP2.night.t : nightT;
-                        var dipNightA = _ovrP2.night && _ovrP2.night.a !== undefined ? _ovrP2.night.a : nightA;
-                        const adjLineT = dipDayT + dipNightT;
-                        const adjLineA = dipDayA + dipNightA;
-                        sumT += adjLineT; sumA += adjLineA;
-                        var isEditable = pkPeriod === 'month';
-                        var eDayT = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-shift="day" data-field="t" onblur="onCellEditP2(this)"' : '';
-                        var eDayA = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-shift="day" data-field="a" onblur="onCellEditP2(this)"' : '';
-                        var eNightT = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-shift="night" data-field="t" onblur="onCellEditP2(this)"' : '';
-                        var eNightA = isEditable ? 'contenteditable="true" data-ws="'+wsName+'" data-line="'+l+'" data-shift="night" data-field="a" onblur="onCellEditP2(this)"' : '';
-                        const lineRate = adjLineT === 0 ? 0 : (adjLineA/adjLineT)*100;
+                        sumT += lineT; sumA += lineA;
 
                         const dayRate  = dayT === 0 ? 0 : (dayA/dayT)*100;
                         const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
+                        const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
 
                         const daySt  = '<span class="status-emoji">' + (dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')) + '</span>';
                         const nightSt = '<span class="status-emoji">' + (nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')) + '</span>';
                         const lineSt = '<span class="status-emoji">' + (lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴')) + '</span>';
 
-                        // Line total row (自动根据班次数据计算,不可编辑)
+                        // Line total row
                         html += `<tr class="border-b border-slate-700/20">
                             <td class="font-bold text-slate-200 text-[12px] py-[5px]">${l} LINE</td>
-                            <td class="num-font num-muted text-[12px] py-[5px]">${adjLineT.toLocaleString()}</td>
-                            <td class="num-font num-light text-[12px] py-[5px]">${adjLineA.toLocaleString()}</td>
+                            <td class="num-font num-muted text-[12px] py-[5px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[5px]">${lineA}</td>
                             <td class="py-[5px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
-                        // Day shift sub-row (可编辑)
-                        var dayRate2 = dipDayT === 0 ? 0 : (dipDayA/dipDayT)*100;
-                        var daySt2 = dayRate2 >= 100 ? '🟢' : (dayRate2 >= 90 ? '🟡' : '🔴');
+                        // Day shift sub-row
                         html += `<tr class="text-[9px]">
                             <td class="pl-4 text-slate-500 py-[1px] leading-[18px]">☀ Day</td>
-                            <td class="num-font text-slate-500 py-[1px] leading-[18px]" ${eDayT}>${dipDayT.toLocaleString()}</td>
-                            <td class="num-font text-slate-300 py-[1px] leading-[18px]" ${eDayA}>${dipDayA.toLocaleString()}</td>
-                            <td class="py-[1px] leading-[18px] status-cell"><span class="status-emoji">${daySt2}</span><span class="num-font text-[8px] text-slate-500 ml-1">${dayRate2.toFixed(1)}%</span></td>
+                            <td class="num-font text-slate-500 py-[1px] leading-[18px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-[1px] leading-[18px]">${dayA}</td>
+                            <td class="py-[1px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
-                        // Night shift sub-row (可编辑)
+                        // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
                         if (l !== 'D' && (nightT > 0 || nightA > 0)) {
-                        var nightRate2 = dipNightT === 0 ? 0 : (dipNightA/dipNightT)*100;
-                        var nightSt2 = nightRate2 >= 100 ? '🟢' : (nightRate2 >= 90 ? '🟡' : '🔴');
                         html += `<tr class="text-[9px] border-b border-slate-800/30">
                             <td class="pl-4 text-slate-500 pb-[3px] leading-[18px]">🌙 Night</td>
-                            <td class="num-font text-slate-500 pb-[3px] leading-[18px]" ${eNightT}>${dipNightT.toLocaleString()}</td>
-                            <td class="num-font text-slate-300 pb-[3px] leading-[18px]" ${eNightA}>${dipNightA.toLocaleString()}</td>
-                            <td class="pb-[3px] leading-[18px] status-cell"><span class="status-emoji">${nightSt2}</span><span class="num-font text-[8px] text-slate-500 ml-1">${nightRate2.toFixed(1)}%</span></td>
+                            <td class="num-font text-slate-500 pb-[3px] leading-[18px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[3px] leading-[18px]">${nightA}</td>
+                            <td class="pb-[3px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                         }
                     } else {
