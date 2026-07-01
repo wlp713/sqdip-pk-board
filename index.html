@@ -46,6 +46,11 @@
             transition: all 0.3s ease;
         }
 
+        /* ★ Editable cells in cards: no visible border/frame, just pointer cursor */
+        .data-table td[contenteditable] { cursor: text; }
+        .data-table td[contenteditable]:focus { outline: none; }
+        .data-table td[contenteditable]:hover { background: rgba(148,163,184,0.06); }
+
         .badge-saf { color: var(--dim-saf-text); background: var(--dim-saf-bg); border: 1px solid var(--dim-saf-border); }
         .badge-pro { color: var(--dim-pro-text); background: var(--dim-pro-bg); border: 1px solid var(--dim-pro-border); }
         .badge-qua { color: var(--dim-qua-text); background: var(--dim-qua-bg); border: 1px solid var(--dim-qua-border); }
@@ -1517,6 +1522,26 @@
         };
 
         let saveTimer;
+        /* ★ Card cell inline edit handler: no border/frame, looks like normal display */
+        window.onCellEdit = function(el) {
+            if (!el || !el.dataset) return;
+            var wsId = el.dataset.ws, dimId = el.dataset.dim, field = el.dataset.field;
+            if (!wsId || !dimId || !field) return;
+            var raw = el.textContent.trim();
+            var val = parseFloat(raw);
+            if (isNaN(val)) { el.textContent = state.t1[wsId] && state.t1[wsId][dimId] ? state.t1[wsId][dimId][field] : 0; return; }
+            /* ★ Update state */
+            if (!state.t1[wsId]) state.t1[wsId] = {};
+            if (!state.t1[wsId][dimId]) state.t1[wsId][dimId] = { t: 0, a: 0 };
+            state.t1[wsId][dimId][field] = val;
+            /* ★ Sync admin drawer input if it exists */
+            var inp = document.getElementById('inp-t1-' + wsId + '-' + dimId + '-' + field);
+            if (inp) inp.value = val;
+            /* ★ Trigger save & re-render */
+            triggerSave();
+            updateUI();
+        };
+
         window.triggerSave = () => {
             const syncUI = document.getElementById('sync-status');
             syncUI.classList.remove('hidden');
@@ -1780,8 +1805,8 @@
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted text-[11px]">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
-                        <td class="num-font num-light text-[11px]">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(a)):Number(a).toFixed(2)}</td>
+                        <td class="num-font num-muted text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="t" onblur="onCellEdit(this)">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
+                        <td class="num-font num-light text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="a" onblur="onCellEdit(this)">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(a)):Number(a).toFixed(2)}</td>
                         <td class="num-font num-hl text-[11px] ${rc}">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(rate):rate.toFixed(2)}%</td>
                     </tr>`;
                 }).join('');
