@@ -2479,7 +2479,7 @@
                         <span class="w-4 text-center text-[10px] shrink-0">${rankEmoji}</span>
                         <span class="flex-1 font-bold truncate text-[10px]">${e.ws.label}</span>
                         <span class="num-hl ${scoreColor} text-[10px] font-bold shrink-0">${_fmt4(e.score, d.id)}%</span>
-                        <span class="text-[8px] text-slate-600 font-mono shrink-0">${e.t}→${e.a}</span>
+                        <span class="text-[8px] text-slate-600 font-mono shrink-0">${d.id==='pro' ? Number(e.t).toFixed(2)+'→'+Number(e.a).toFixed(2) : Math.round(Number(e.t))+'→'+Math.round(Number(e.a))}</span>
                         <span class="text-[12px] shrink-0 rank-flag${isBest ? ' rank-flag-winner' : (isWorst ? ' rank-flag-loser' : '')}">${isBest ? '🚩' : (isWorst ? '⚫' : '')}</span>
                     </div>`;
                 });
