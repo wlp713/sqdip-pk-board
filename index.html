@@ -2412,8 +2412,12 @@
                 workshops.forEach(ws => {
                     const data = t1Src[ws.id] && t1Src[ws.id][d.id];
                     if (data && data.t > 0) {
-                        const score = calcDimRate(d, data.t, data.a, ws.id);
-                        entries.push({ ws: ws, score: score, t: data.t, a: data.a });
+                        /* ★ Apply card overrides (ephemeral screenshot edits on SQDIP page) */
+                        var _ov = _cardOverrides[ws.id] && _cardOverrides[ws.id][d.id];
+                        var _t = _ov && _ov.t !== undefined ? _ov.t : data.t;
+                        var _a = _ov && _ov.a !== undefined ? _ov.a : data.a;
+                        const score = calcDimRate(d, _t, _a, ws.id);
+                        entries.push({ ws: ws, score: score, t: _t, a: _a });
                     }
                 });
                 /* Sort: for std type higher is better, for qua/rev type higher is also better (the formula already converts) */
@@ -2636,8 +2640,10 @@
             let currentScores = workshops.map(ws => {
                 let sum=0, count=0;
                 dims.forEach(d => {
-                    const t = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].t)||0 : 0;
-                    const a = t1Src[ws.id] && t1Src[ws.id][d.id] ? Number(t1Src[ws.id][d.id].a)||0 : 0;
+                    var _ov = _cardOverrides[ws.id] && _cardOverrides[ws.id][d.id];
+                    const base = t1Src[ws.id] && t1Src[ws.id][d.id] ? t1Src[ws.id][d.id] : { t: 0, a: 0 };
+                    const t = _ov && _ov.t !== undefined ? Number(_ov.t) : (Number(base.t) || 0);
+                    const a = _ov && _ov.a !== undefined ? Number(_ov.a) : (Number(base.a) || 0);
                     const rate = calcDimRate(d, t, a, ws.id);
                     sum += rate; count++;
                 });
