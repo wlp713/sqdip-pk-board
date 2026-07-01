@@ -1522,23 +1522,28 @@
         };
 
         let saveTimer;
-        /* ★ Card cell inline edit handler: no border/frame, looks like normal display */
+        /* ★ 纯前端截图用: 编辑月的目标/达成, 不存任何后端/admin/数据库, 刷新即失 */
+        var _cardOverrides = {};
         window.onCellEdit = function(el) {
             if (!el || !el.dataset) return;
             var wsId = el.dataset.ws, dimId = el.dataset.dim, field = el.dataset.field;
             if (!wsId || !dimId || !field) return;
             var raw = el.textContent.trim();
             var val = parseFloat(raw);
-            if (isNaN(val)) { el.textContent = state.t1[wsId] && state.t1[wsId][dimId] ? state.t1[wsId][dimId][field] : 0; return; }
-            /* ★ Update state */
-            if (!state.t1[wsId]) state.t1[wsId] = {};
-            if (!state.t1[wsId][dimId]) state.t1[wsId][dimId] = { t: 0, a: 0 };
-            state.t1[wsId][dimId][field] = val;
-            /* ★ Sync admin drawer input if it exists */
-            var inp = document.getElementById('inp-t1-' + wsId + '-' + dimId + '-' + field);
-            if (inp) inp.value = val;
-            /* ★ Trigger save & re-render */
-            triggerSave();
+            if (isNaN(val)) {
+                /* ★ 输入无效 → 删除该覆盖, 恢复原始数据 */
+                if (_cardOverrides[wsId] && _cardOverrides[wsId][dimId]) delete _cardOverrides[wsId][dimId][field];
+                updateUI(); return;
+            }
+            /* ★ 只存临时覆盖, 不碰 state/admin/localStorage */
+            if (!_cardOverrides[wsId]) _cardOverrides[wsId] = {};
+            if (!_cardOverrides[wsId][dimId]) _cardOverrides[wsId][dimId] = {};
+            _cardOverrides[wsId][dimId][field] = val;
+            updateUI();
+        };
+        /* ★ 一键清除所有临时覆盖, 恢复原始数据 */
+        window.clearCardOverrides = function() {
+            _cardOverrides = {};
             updateUI();
         };
 
@@ -1798,8 +1803,9 @@
             cardsContainer.innerHTML = visWs.map(ws => {
                 let sum = 0, count = 0;
                 let rows = dims.map(d => {
-                    let t = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0;
-                    let a = displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].a : 0;
+                    var _ovr = _cardOverrides[ws.id] && _cardOverrides[ws.id][d.id];
+                    let t = _ovr && _ovr.t !== undefined ? _ovr.t : (displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0);
+                    let a = _ovr && _ovr.a !== undefined ? _ovr.a : (displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].a : 0);
                     let rate = calcDimRate(d, t, a, ws.id);
                     sum += rate; count++;
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
