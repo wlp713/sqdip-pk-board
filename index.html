@@ -3259,7 +3259,8 @@
 
         /* ★ 导入6月产出通报Excel数据（覆盖实际值，保留目标） */
         window.seedJuneData = function() {
-            var A={
+            /* ★ 直接从Excel数据写入localStorage + Firebase */
+            var A={ 
                 1:{PRO1:{H:{day:{a:0},night:{a:0}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}},
                 2:{PRO1:{H:{day:{a:820},night:{a:794}},S:{day:{a:392},night:{a:170}}},PRO2:{A:{day:{a:269},night:{a:758}},B:{day:{a:957},night:{a:1946}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}},
                 3:{PRO1:{H:{day:{a:0},night:{a:0}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}},
@@ -3290,9 +3291,8 @@
                 28:{PRO1:{H:{day:{a:1601},night:{a:0}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}},
                 29:{PRO1:{H:{day:{a:1534},night:{a:1574}},S:{day:{a:693},night:{a:0}}},PRO2:{A:{day:{a:2691},night:{a:3098}},B:{day:{a:2924},night:{a:3325}},C:{day:{a:2518},night:{a:2657}},D:{day:{a:1190},night:{a:0}}}},
                 30:{PRO1:{H:{day:{a:1633},night:{a:1486}},S:{day:{a:616},night:{a:0}}},PRO2:{A:{day:{a:2882},night:{a:3083}},B:{day:{a:3036},night:{a:3020}},C:{day:{a:2835},night:{a:3202}},D:{day:{a:522},night:{a:0}}}},
-            };
-            function c(x){return JSON.parse(JSON.stringify(x))}
-            var n=0,sk=0;
+             };
+            var n=0,sk=0,failed=0;
             for(var d=1;d<=30;d++){
                 var a=A[d];if(!a)continue;
                 var ok=false;for(var w in a)for(var l in a[w])if(a[w][l].day.a||a[w][l].night.a)ok=true;
@@ -3315,13 +3315,31 @@
                 });
                 if(!state.t1)state.t1={};
                 if(!state.t1T2)state.t1T2={};
+                /* 写入localStorage */
                 localStorage.setItem('mbs_state_'+ds,JSON.stringify(state));
+                /* 直写Firebase */
+                if(typeof firebaseModules!=='undefined' && firebaseModules.ref && firebaseModules.set && typeof fbDb!=='undefined'){
+                    try{
+                        var path='mbs_dm_board_data/'+ds;
+                        var ref=firebaseModules.ref(fbDb,path);
+                        state._writeCounter=Date.now();
+                        state._clientId=_clientId||'seed';
+                        state._updatedAt=Date.now();
+                        firebaseModules.set(ref,state).then(function(){
+                            console.log('[seed] Firebase写成功:'+ds);
+                        }).catch(function(e){
+                            console.warn('[seed] Firebase写失败:'+ds,e.message);
+                            failed++;
+                        });
+                    }catch(e){
+                        console.warn('[seed] Firebase写异常:'+ds,e.message);
+                        failed++;
+                    }
+                }
                 n++;
             }
-            if(typeof forceSaveToFirebase==='function'){forceSaveToFirebase();}
-            alert('导入完成!已更新 '+n+' 天数据'+(sk?'(跳过 '+sk+' 天无数据的日期)':'')+'\n刷新页面即可查看');
+            alert('导入完成!已更新 '+n+' 天数据到localStorage'+(sk?'(跳过 '+sk+' 天无数据)':'')+(failed?'\nFirebase写入失败 '+failed+' 天(请刷新检查)':'')+'\n请刷新页面查看');
         };
-
         window.toggleLock = () => {
             const locked = document.getElementById('lock-target-toggle').checked;
             document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
