@@ -1300,10 +1300,8 @@
                     dims.forEach(d => {
                         const entry = data.t1[ws.id][d.id];
                         if (!entry) return;
-                        /* ★ 月模式: 休息日仅累PRO2.Loss和PRO4&5.Safety */
-                        if (mode === 'month' && isRestDay(ds)) {
-                            if (!(ws.id === 'PRO2' && d.id === 'los') && !(ws.id === 'PRO4_5' && d.id === 'saf')) return;
-                        }
+                        /* ★ 月模式: 休息日不纳入sqdip累计 */
+                        if (mode === 'month' && isRestDay(ds)) return;
                         const vT = Number(entry.t) || 0;
                         const vA = Number(entry.a) || 0;
                         if (!acc[ws.id][d.id]) { acc[ws.id][d.id] = { t: 0, a: 0 }; cnt[ws.id][d.id] = 0; }
@@ -2072,6 +2070,8 @@
             } else {
                 /* ★ Week/Month: 趋势折线图 (直接取各车间输出达成率) */
                 var _trendDates = getDateRange(pkPeriod, currentDate);
+                /* ★ 趋势图排除休息日(不展示休息日数据点) */
+                if (pkPeriod === 'month') _trendDates = _trendDates.filter(function(ds) { return !isRestDay(ds); });
                 var _trendLabels = _trendDates.map(function(ds) { return String(parseInt(ds.slice(8))); });
                 var _seriesList = [];
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
