@@ -1245,8 +1245,6 @@
             dates.forEach(ds => {
                 const data = loadDayData(ds);
                 if (!data || !data.t2) return;
-                /* ★ t2产出数据: 休息日不纳入月累计 */
-                if (mode === 'month' && isRestDay(ds)) return;
                 ['PRO1','PRO2'].forEach(ws => {
                     if (!data.t2[ws]) return;
                     if (!cnt[ws]) cnt[ws] = {};
