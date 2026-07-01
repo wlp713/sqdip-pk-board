@@ -1237,7 +1237,7 @@
         }
 
         /* ── Accumulate T2 (PRO1/PRO2 output) across dates ── */
-        function accumulateT2(mode) {
+        function accumulateT2(mode, includeRestDays) {
             const dates = getDateRange(mode, currentDate);
             const acc = { PRO1: {}, PRO2: {} };
             const cnt = { PRO1: {}, PRO2: {} };  /* per (ws, line, shift) date counter */
@@ -1245,6 +1245,8 @@
             dates.forEach(ds => {
                 const data = loadDayData(ds);
                 if (!data || !data.t2) return;
+                /* ★ 默认排除休息日(page1), includeRestDays=true时不排除(page2) */
+                if (mode === 'month' && isRestDay(ds) && !includeRestDays) return;
                 ['PRO1','PRO2'].forEach(ws => {
                     if (!data.t2[ws]) return;
                     if (!cnt[ws]) cnt[ws] = {};
@@ -1785,15 +1787,18 @@
 
         window.updateUI = () => {
             /* ── Determine data source: daily vs cumulative ── */
-            let displayT1, displayT2;
+            let displayT1, displayT2, displayT2All;
             if (pkPeriod === 'day') {
                 displayT1 = state.t1;
                 displayT2 = state.t2;
+                displayT2All = state.t2;
             } else {
                 const accT1 = accumulateT1(pkPeriod);
-                const accT2 = accumulateT2(pkPeriod);
+                const accT2 = accumulateT2(pkPeriod);       /* 排除休息日 */
+                const accT2All = accumulateT2(pkPeriod, true); /* 不排除休息日(page2) */
                 displayT1 = accT1 || state.t1;
                 displayT2 = accT2 || state.t2;
+                displayT2All = accT2All || state.t2;
             }
 
             /* ── Update period labels ── */
@@ -2263,7 +2268,7 @@
             }
             const calcP2 = (wsName, domPrefix, bgClass) => {
                 let sumT = 0, sumA = 0, html = '';
-                const wsData = displayT2[wsName] || {};
+                const wsData = displayT2All[wsName] || {};
                 for(let l in wsData) {
                     let d = wsData[l];
                     if (d.day !== undefined) {
