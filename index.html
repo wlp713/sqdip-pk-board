@@ -2013,7 +2013,7 @@
             } else {
                 /* ★ Week/Month: 趋势折线图 (直接取各车间输出达成率) */
                 var _trendDates = getDateRange(pkPeriod, currentDate);
-                var _trendLabels = _trendDates.map(function(ds) { return ds.slice(5); });
+                var _trendLabels = _trendDates.map(function(ds) { return String(parseInt(ds.slice(8))); });
                 var _seriesList = [];
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
 
@@ -2825,7 +2825,7 @@
                 trendDays.forEach((d, i) => {
                     const lx = padL + (i / (trendDays.length - 1)) * cw;
                     if (i % xLabelStep === 0) {
-                        xLblHtml += `<text x="${lx}" y="${VH-5}" text-anchor="middle" fill="#64748b" font-size="${xFSize}">${d.date.slice(5)}</text>`;
+                        xLblHtml += `<text x="${lx}" y="${VH-5}" text-anchor="middle" fill="#64748b" font-size="${xFSize}">${String(parseInt(d.date.slice(8)))}</text>`;
                     }
                     xLineHtml += `<line x1="${lx}" y1="${padT}" x2="${lx}" y2="${padT+ch}" stroke="#1e293b" stroke-width="0.2"/>`;
                 });
