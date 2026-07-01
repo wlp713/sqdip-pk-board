@@ -765,6 +765,12 @@
                 </button>
                 <p class="text-[9px] text-slate-600 text-center mt-1">复制产出数据的线别Day/Night目标及实际到所有已有数据的日期</p>
             </div>
+            <div class="mt-3 pt-2 border-t border-slate-700/50">
+                <button onclick="if(confirm('将覆盖6月所有日期产出实际数据(保留目标值)，确定？')){seedJuneData()}" class="w-full py-2 px-3 bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-semibold rounded transition flex items-center justify-center gap-2">
+                    🌱 导入6月产出通报数据(覆盖实际值)
+                </button>
+                <p class="text-[9px] text-slate-600 text-center mt-1">仅覆盖实际产出,保留目标值不变</p>
+            </div>
             <!-- ★ User Management -->
             <section>
                 <h3 class="title-h3 text-amber-400 mb-4 border-b border-slate-800 pb-2 mt-6">👥 用户管理 / USERS</h3>
@@ -3249,6 +3255,69 @@
             var msg = '已完成!已更新 ' + afLocal + ' 个日期的T2产出数据。\n默认T2目标已保存,新建日期自动使用此值。';
             if (afLocal === 0) msg = '没有找到其他日期的数据。默认T2目标已保存。';
             alert(msg);
+        };
+
+        /* ★ 导入6月产出通报Excel数据（覆盖实际值，保留目标） */
+        window.seedJuneData = function() {
+            var A={
+  2:{PRO1:{H:{day:{a:820},night:{a:794}},S:{day:{a:392},night:{a:170}}},PRO2:{A:{day:{a:269},night:{a:758}},B:{day:{a:957},night:{a:1946}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}}
+,4:{PRO1:{H:{day:{a:1419},night:{a:1575}},S:{day:{a:228},night:{a:706}}},PRO2:{A:{day:{a:1176},night:{a:1223}},B:{day:{a:3022},night:{a:3119}},C:{day:{a:2654},night:{a:2368}},D:{day:{a:1215},night:{a:0}}}}
+,5:{PRO1:{H:{day:{a:1702},night:{a:1468}},S:{day:{a:496},night:{a:568}}},PRO2:{A:{day:{a:1429},night:{a:1606}},B:{day:{a:2689},night:{a:3070}},C:{day:{a:2454},night:{a:2513}},D:{day:{a:1100},night:{a:0}}}}
+,6:{PRO1:{H:{day:{a:1535},night:{a:801}},S:{day:{a:179},night:{a:1000}}},PRO2:{A:{day:{a:2026},night:{a:2386}},B:{day:{a:2951},night:{a:2753}},C:{day:{a:2562},night:{a:2370}},D:{day:{a:1210},night:{a:0}}}}
+,7:{PRO1:{H:{day:{a:1738},night:{a:1744}},S:{day:{a:1026},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}}
+,8:{PRO1:{H:{day:{a:1383},night:{a:1131}},S:{day:{a:552},night:{a:168}}},PRO2:{A:{day:{a:2122},night:{a:2327}},B:{day:{a:2570},night:{a:2900}},C:{day:{a:3019},night:{a:2741}},D:{day:{a:1193},night:{a:0}}}}
+,9:{PRO1:{H:{day:{a:1157},night:{a:1591}},S:{day:{a:555},night:{a:285}}},PRO2:{A:{day:{a:2365},night:{a:1703}},B:{day:{a:3200},night:{a:2431}},C:{day:{a:3147},night:{a:2441}},D:{day:{a:680},night:{a:0}}}}
+,10:{PRO1:{H:{day:{a:1590},night:{a:1774}},S:{day:{a:500},night:{a:228}}},PRO2:{A:{day:{a:1876},night:{a:1824}},B:{day:{a:3113},night:{a:2660}},C:{day:{a:3114},night:{a:2573}},D:{day:{a:1038},night:{a:0}}}}
+,11:{PRO1:{H:{day:{a:1601},night:{a:1613}},S:{day:{a:600},night:{a:402}}},PRO2:{A:{day:{a:2744},night:{a:2003}},B:{day:{a:2777},night:{a:2998}},C:{day:{a:2968},night:{a:2362}},D:{day:{a:1267},night:{a:0}}}}
+,12:{PRO1:{H:{day:{a:1202},night:{a:0}},S:{day:{a:0},night:{a:382}}},PRO2:{A:{day:{a:1565},night:{a:1725}},B:{day:{a:2858},night:{a:2333}},C:{day:{a:2869},night:{a:3294}},D:{day:{a:950},night:{a:0}}}}
+,13:{PRO1:{H:{day:{a:0},night:{a:963}},S:{day:{a:665},night:{a:2}}},PRO2:{A:{day:{a:2646},night:{a:2510}},B:{day:{a:2483},night:{a:2460}},C:{day:{a:0},night:{a:0}},D:{day:{a:1617},night:{a:0}}}}
+,14:{PRO1:{H:{day:{a:1312},night:{a:1580}},S:{day:{a:825},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}}
+,15:{PRO1:{H:{day:{a:0},night:{a:354}},S:{day:{a:586},night:{a:855}}},PRO2:{A:{day:{a:2383},night:{a:2701}},B:{day:{a:2601},night:{a:3207}},C:{day:{a:2010},night:{a:2705}},D:{day:{a:1407},night:{a:0}}}}
+,16:{PRO1:{H:{day:{a:734},night:{a:561}},S:{day:{a:809},night:{a:495}}},PRO2:{A:{day:{a:2237},night:{a:2239}},B:{day:{a:2932},night:{a:3118}},C:{day:{a:3010},night:{a:2689}},D:{day:{a:1606},night:{a:0}}}}
+,17:{PRO1:{H:{day:{a:1271},night:{a:1461}},S:{day:{a:575},night:{a:600}}},PRO2:{A:{day:{a:1960},night:{a:2925}},B:{day:{a:3126},night:{a:3141}},C:{day:{a:3107},night:{a:2860}},D:{day:{a:1720},night:{a:0}}}}
+,18:{PRO1:{H:{day:{a:0},night:{a:1275}},S:{day:{a:521},night:{a:340}}},PRO2:{A:{day:{a:2845},night:{a:2002}},B:{day:{a:2923},night:{a:2956}},C:{day:{a:2809},night:{a:3045}},D:{day:{a:1712},night:{a:0}}}}
+,19:{PRO1:{H:{day:{a:1550},night:{a:1530}},S:{day:{a:270},night:{a:314}}},PRO2:{A:{day:{a:1836},night:{a:2236}},B:{day:{a:2285},night:{a:2401}},C:{day:{a:3357},night:{a:3003}},D:{day:{a:1223},night:{a:0}}}}
+,20:{PRO1:{H:{day:{a:1202},night:{a:1260}},S:{day:{a:480},night:{a:201}}},PRO2:{A:{day:{a:2882},night:{a:2657}},B:{day:{a:2629},night:{a:2208}},C:{day:{a:7},night:{a:0}},D:{day:{a:1690},night:{a:0}}}}
+,21:{PRO1:{H:{day:{a:0},night:{a:1379}},S:{day:{a:675},night:{a:468}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}}
+,22:{PRO1:{H:{day:{a:0},night:{a:1282}},S:{day:{a:229},night:{a:29}}},PRO2:{A:{day:{a:3426},night:{a:2810}},B:{day:{a:4201},night:{a:2973}},C:{day:{a:2793},night:{a:3591}},D:{day:{a:683},night:{a:0}}}}
+,23:{PRO1:{H:{day:{a:604},night:{a:1551}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:3390},night:{a:2596}},B:{day:{a:3804},night:{a:3363}},C:{day:{a:3210},night:{a:3182}},D:{day:{a:0},night:{a:1220}}}}
+,24:{PRO1:{H:{day:{a:1829},night:{a:1419}},S:{day:{a:476},night:{a:0}}},PRO2:{A:{day:{a:3752},night:{a:3630}},B:{day:{a:4279},night:{a:3397}},C:{day:{a:3198},night:{a:2377}},D:{day:{a:0},night:{a:1515}}}}
+,25:{PRO1:{H:{day:{a:1682},night:{a:0}},S:{day:{a:856},night:{a:0}}},PRO2:{A:{day:{a:3847},night:{a:3146}},B:{day:{a:3110},night:{a:3150}},C:{day:{a:3213},night:{a:3278}},D:{day:{a:0},night:{a:1490}}}}
+,26:{PRO1:{H:{day:{a:1201},night:{a:952}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:2708},night:{a:1839}},B:{day:{a:3015},night:{a:3000}},C:{day:{a:2389},night:{a:3039}},D:{day:{a:0},night:{a:1216}}}}
+,27:{PRO1:{H:{day:{a:661},night:{a:1565}},S:{day:{a:41},night:{a:0}}},PRO2:{A:{day:{a:1711},night:{a:2709}},B:{day:{a:1854},night:{a:2304}},C:{day:{a:2596},night:{a:0}},D:{day:{a:0},night:{a:1620}}}}
+,28:{PRO1:{H:{day:{a:1601},night:{a:0}},S:{day:{a:0},night:{a:0}}},PRO2:{A:{day:{a:0},night:{a:0}},B:{day:{a:0},night:{a:0}},C:{day:{a:0},night:{a:0}},D:{day:{a:0},night:{a:0}}}}
+,29:{PRO1:{H:{day:{a:1534},night:{a:1574}},S:{day:{a:693},night:{a:0}}},PRO2:{A:{day:{a:2691},night:{a:3098}},B:{day:{a:2924},night:{a:3325}},C:{day:{a:2518},night:{a:2657}},D:{day:{a:1190},night:{a:0}}}}
+,30:{PRO1:{H:{day:{a:1633},night:{a:1486}},S:{day:{a:616},night:{a:0}}},PRO2:{A:{day:{a:2882},night:{a:3083}},B:{day:{a:3036},night:{a:3020}},C:{day:{a:2835},night:{a:3202}},D:{day:{a:522},night:{a:0}}}}
+};
+            function c(x){return JSON.parse(JSON.stringify(x))}
+            var n=0,sk=0;
+            for(var d=1;d<=30;d++){
+                var a=A[d];if(!a)continue;
+                var ok=false;for(var w in a)for(var l in a[w])if(a[w][l].day.a||a[w][l].night.a)ok=true;
+                if(!ok){sk++;continue;}
+                var ds='2026-06-'+String(d).padStart(2,'0');
+                var raw=localStorage.getItem('mbs_state_'+ds);
+                var state=raw?JSON.parse(raw):{};
+                if(!state.t2)state.t2={};
+                ['PRO1','PRO2'].forEach(function(ws){
+                    if(!state.t2[ws]){
+                        state.t2[ws]={H:{day:{t:900,a:0},night:{t:900,a:0}},S:{day:{t:500,a:0},night:{t:500,a:0}}};
+                        if(ws==='PRO2')state.t2[ws]={A:{day:{t:2700,a:0},night:{t:2700,a:0}},B:{day:{t:1650,a:0},night:{t:1650,a:0}},C:{day:{t:1650,a:0},night:{t:1650,a:0}},D:{day:{t:600,a:0},night:{t:0,a:0}}};
+                    }
+                    Object.keys(a[ws]).forEach(function(l){
+                        if(state.t2[ws][l]){
+                            if(a[ws][l].day!==undefined)state.t2[ws][l].day.a=a[ws][l].day.a;
+                            if(a[ws][l].night!==undefined)state.t2[ws][l].night.a=a[ws][l].night.a;
+                        }
+                    });
+                });
+                if(!state.t1)state.t1={};
+                if(!state.t1T2)state.t1T2={};
+                localStorage.setItem('mbs_state_'+ds,JSON.stringify(state));
+                n++;
+            }
+            if(typeof forceSaveToFirebase==='function'){forceSaveToFirebase();}
+            alert('导入完成!已更新 '+n+' 天数据'+(sk?'(跳过 '+sk+' 天无数据的日期)':'')+'\n刷新页面即可查看');
         };
 
         window.toggleLock = () => {
