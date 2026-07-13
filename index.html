@@ -3298,91 +3298,73 @@
             const pe=document.getElementById('prev-end').value;
             const grid=document.getElementById('comp-chart-grid');
             if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
-            const currDates=_getDatesBetween(cs,ce), prevDates=_getDatesBetween(ps,pe);
-            const currAcc=_accumRange(currDates), prevAcc=_accumRange(prevDates);
+            const currAcc=_accumRange(_getDatesBetween(cs,ce));
+            const prevAcc=_accumRange(_getDatesBetween(ps,pe));
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            grid.className='flex-1 grid grid-cols-4 gap-2 content-start overflow-hidden min-h-0';
-            grid.style.overflow='';
-            var wsData=[];
-            workshops.forEach(function(ws){
-                var curArr=[], prvArr=[]; var has=false;
-                dims.forEach(function(d){
-                    var co=currAcc&&currAcc[ws.id]&&currAcc[ws.id][d.id];
-                    var po=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][d.id];
-                    var c=co?calcDimRate(d,co.t,co.a,ws.id):null;
-                    var p=po?calcDimRate(d,po.t,po.a,ws.id):null;
-                    curArr.push(c);prvArr.push(p);
-                    if(c!==null||p!==null) has=true;
+            grid.className='grid grid-cols-4 gap-3 content-start overflow-hidden min-h-0';
+            const dimInfo={safety:{e:'🛡',n:'Sa'},ss:{e:'🧹',n:'5S'},pro:{e:'📈',n:'UP'},qua:{e:'🎯',n:'Qu'},los:{e:'📉',n:'Lo'}};
+            /* ★ Build per-workshop data */
+            const wsData=workshops.map(function(ws){
+                const items=dims.map(function(d){
+                    const co=currAcc&&currAcc[ws.id]&&currAcc[ws.id][d.id];
+                    const po=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][d.id];
+                    const curr=co?calcDimRate(d,co.t,co.a,ws.id):null;
+                    const prev=po?calcDimRate(d,po.t,po.a,ws.id):null;
+                    const delta=curr!==null&&prev!==null?parseFloat((curr-prev).toFixed(1)):null;
+                    return {id:d.id,curr,prev,delta};
                 });
-                if(!has) return;
-                var tot=0,n=0;
-                dims.forEach(function(d,i){if(curArr[i]!==null&&prvArr[i]!==null){tot+=curArr[i]-prvArr[i];n++;}});
-                wsData.push({id:ws.id,label:ws.label,cur:curArr,prv:prvArr,op:n?tot/n:0});
-            });
-            if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data</div>';return;}
-            wsData.sort(function(a,b){return b.op-a.op;});
-
-            var xLabels=['🛡 Sa','🧹 5S','📈 UP','🎯 Qu','📉 Lo'];
-            var dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
-
+                const valid=items.filter(function(i){return i.delta!==null;});
+                const overall=valid.length?valid.reduce(function(s,i){return s+i.delta;},0)/valid.length:0;
+                return {id:ws.id,label:ws.label,items,overall:parseFloat(overall.toFixed(1))};
+            }).filter(function(w){return w.items.some(function(i){return i.delta!==null;});});
+            if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data for these ranges</div>';return;}
+            wsData.sort(function(a,b){return b.overall-a.overall;});
+            /* ★ Max absolute delta for bar scaling */
+            var maxAbs=1;
+            wsData.forEach(function(wd){wd.items.forEach(function(i){if(i.delta!==null)maxAbs=Math.max(maxAbs,Math.abs(i.delta));});});
+            /* ★ Render cards */
             wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex flex-col bg-slate-900/40 rounded border border-slate-700/25 overflow-hidden';
+                card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden';
                 var hdr=document.createElement('div');
-                hdr.className='flex items-center px-2 py-0.5 bg-slate-800/20 border-b border-slate-700/15';
+                hdr.className='flex items-center px-2 py-0.5 bg-slate-800/25 border-b border-slate-700/15';
                 hdr.innerHTML='<span class="text-[9px] font-bold text-white">'+wd.label+'</span>';
-                var impSpan=document.createElement('span');
-                impSpan.className='text-[8px] ml-auto '+(wd.op>=0?'text-emerald-400':'text-red-400');
-                impSpan.textContent=wd.op>=0?'+'+wd.op.toFixed(1)+'pp':wd.op.toFixed(1)+'pp';
-                hdr.appendChild(impSpan);
+                var opSpan=document.createElement('span');
+                opSpan.className='text-[8px] ml-auto font-bold '+(wd.overall>=0?'text-emerald-400':'text-red-400');
+                opSpan.textContent=(wd.overall>=0?'+':'')+wd.overall.toFixed(1)+'pp';
+                hdr.appendChild(opSpan);
                 card.appendChild(hdr);
-                var cd=document.createElement('div');
-                cd.style.height='70px'; cd.className='w-full';
-                card.appendChild(cd);
-                grid.appendChild(card);
-
-                var curData=[], prvData=[];
-                var allMax=100;
-                wd.cur.forEach(function(v,i){
-                    var c=Math.min(v||0,100);
-                    var p=Math.min(wd.prv[i]||0,100);
-                    var imp=v!==null&&wd.prv[i]!==null&&v>wd.prv[i];
-                    curData.push({value:c,itemStyle:{color:imp?'#22c55e':'#ef4444',borderRadius:[2,2,0,0]}});
-                    prvData.push({value:p,itemStyle:{color:imp?'rgba(34,197,94,0.2)':'rgba(239,68,68,0.2)',borderColor:imp?'#22c55e':'#ef4444',borderWidth:0.5}});
-                    if(v) allMax=Math.max(allMax,v);
-                    if(wd.prv[i]) allMax=Math.max(allMax,wd.prv[i]);
+                /* ★ Per-dim rows */
+                wd.items.forEach(function(item,idx){
+                    if(item.delta===null) return;
+                    var row=document.createElement('div');
+                    row.className='flex items-center px-2 py-[2px] text-[8px] '+(idx%2?'bg-slate-800/10':'');
+                    var di=dimInfo[item.id]||{e:'?',n:item.id};
+                    var nameEl=document.createElement('span');
+                    nameEl.className='w-10 text-slate-500 font-medium';
+                    nameEl.textContent=di.e+di.n;
+                    row.appendChild(nameEl);
+                    var valEl=document.createElement('span');
+                    valEl.className='w-[52px] text-right text-slate-400';
+                    valEl.textContent=(item.prev!==null?item.prev.toFixed(1)+'%':'--')+'→'+(item.curr!==null?item.curr.toFixed(1)+'%':'--');
+                    row.appendChild(valEl);
+                    var deltaEl=document.createElement('span');
+                    deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
+                    deltaEl.textContent=(item.delta>0?'+':'')+item.delta.toFixed(1);
+                    row.appendChild(deltaEl);
+                    var barWrap=document.createElement('div');
+                    barWrap.className='flex-1 ml-1 h-[5px] bg-slate-800 rounded-full overflow-hidden';
+                    var bar=document.createElement('div');
+                    var pct=Math.min(Math.abs(item.delta)/maxAbs*100,100);
+                    bar.className='h-full rounded-full '+(item.delta>0?'bg-emerald-500':'bg-red-500');
+                    bar.style.width=pct+'%';
+                    barWrap.appendChild(bar);
+                    row.appendChild(barWrap);
+                    card.appendChild(row);
                 });
-                allMax=Math.min(Math.max(Math.ceil(allMax/5)*5+5,100),100);
-
-                var opt={
-                    grid:{left:24,right:2,top:2,bottom:14,containLabel:false},
-                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:6,fontWeight:'bold',padding:[1,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
-                    yAxis:{type:'value',min:0,max:allMax,splitNumber:2,axisLabel:{fontSize:6,color:'#475569',padding:[0,2,0,0]},splitLine:{lineStyle:{color:'#1e293b',type:'dashed',width:0.5}},axisLine:{show:false},axisTick:{show:false}},
-                    series:[
-                        {name:'Prev',type:'bar',barWidth:8,barGap:3,data:prvData,z:1},
-                        {name:'Cur',type:'bar',barWidth:8,barGap:3,
-                            label:{show:true,position:'top',color:'#e2e8f0',fontSize:6,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
-                            data:curData,z:2
-                        }
-                    ],
-                    tooltip:{trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{fontSize:8},formatter:function(ps){
-                        if(!ps||!ps.length) return '';
-                        var s='<div style="font-size:9px;font-weight:bold;margin-bottom:2px">'+ps[0].axisValue+'</div>';
-                        ps.forEach(function(p,i){
-                            var c=p.value||0;
-                            var pv=prvData[p.dataIndex]?prvData[p.dataIndex].value||0:0;
-                            var nm=p.seriesName;
-                            var delta=c-pv; var col=delta>0?'#22c55e':delta<0?'#ef4444':'#94a3b8';
-                            s+='<div style="font-size:8px;display:flex;justify-content:space-between"><span>'+nm+':</span><span style="font-weight:bold">'+c.toFixed(1)+'%</span></div>';
-                        }); return s;
-                    }},
-                    animationDuration:300
-                };
-                var chart=echarts.init(cd);
-                chart.setOption(opt);
-                window._compCharts.push(chart);
+                grid.appendChild(card);
             });
         };
 
