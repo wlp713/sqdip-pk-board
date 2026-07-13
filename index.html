@@ -14,6 +14,7 @@
 
         :root {
             --dim-saf-text: #34d399; --dim-saf-bg: rgba(16, 185, 129, 0.15); --dim-saf-border: rgba(16, 185, 129, 0.3);
+            --dim-ss-text: #2dd4bf; --dim-ss-bg: rgba(45, 212, 191, 0.15); --dim-ss-border: rgba(45, 212, 191, 0.3);
             --dim-pro-text: #60a5fa; --dim-pro-bg: rgba(59, 130, 246, 0.15); --dim-pro-border: rgba(59, 130, 246, 0.3);
             --dim-qua-text: #c084fc; --dim-qua-bg: rgba(139, 92, 246, 0.15); --dim-qua-border: rgba(139, 92, 246, 0.3);
             --dim-los-text: #fbbf24; --dim-los-bg: rgba(245, 158, 11, 0.15); --dim-los-border: rgba(245, 158, 11, 0.3);
@@ -52,6 +53,7 @@
         .data-table td[contenteditable]:hover { background: rgba(148,163,184,0.06); }
 
         .badge-saf { color: var(--dim-saf-text); background: var(--dim-saf-bg); border: 1px solid var(--dim-saf-border); }
+        .badge-ss { color: var(--dim-ss-text); background: var(--dim-ss-bg); border: 1px solid var(--dim-ss-border); }
         .badge-pro { color: var(--dim-pro-text); background: var(--dim-pro-bg); border: 1px solid var(--dim-pro-border); }
         .badge-qua { color: var(--dim-qua-text); background: var(--dim-qua-bg); border: 1px solid var(--dim-qua-border); }
         .badge-los { color: var(--dim-los-text); background: var(--dim-los-bg); border: 1px solid var(--dim-los-border); }
@@ -423,7 +425,9 @@
 
             <!-- ★ 指标说明: 卡片和趋势图之间的空白处 -->
             <div class="flex items-center gap-3 px-1 text-[11px] text-white/90 font-medium shrink-0">
-                <span class="flex items-center gap-1"><span class="text-emerald-400">🛡️</span> Safety &amp; 5S: 每月10项改善, 每周≥2项</span>
+                <span class="flex items-center gap-1"><span class="text-emerald-400">🛡️</span> Safety: 目标0事故, 超过0即0%</span>
+                <span class="text-slate-600">|</span>
+                <span class="flex items-center gap-1"><span class="text-cyan-400">🧹</span> 5S: 改善达成/目标</span>
                 <span class="text-slate-600">|</span>
                 <span class="flex items-center gap-1"><span class="text-amber-400">📉</span> Loss: PRO1/3/4=影响装配台数, PRO2=作业完成率</span>
             </div>
@@ -445,7 +449,8 @@
                             <!-- Dim filter (all modes) -->
                             <select id="p1-dim-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
                                 <option value="all">All Dim</option>
-                                <option value="saf">Safety</option>
+                                <option value="safety">Safety</option>
+                                <option value="ss">5S</option>
                                 <option value="pro">UPPH</option>
                                 <option value="qua">Quality</option>
                                 <option value="los">Loss</option>
@@ -704,9 +709,10 @@
                 <div id="p4-loser-badges" class="flex gap-1.5 flex-1 flex-wrap"></div>
             </div>
 
-            <!-- 2x2 grid: 4 dimension ranking cards -->
-            <div class="flex-1 grid grid-cols-2 gap-2 min-h-0">
-                <div id="p4-card-saf" class="panel-card flex flex-col p-2 border-t-2 border-t-emerald-500/60 min-h-0 overflow-hidden"></div>
+            <!-- 5 dimension ranking cards -->
+            <div class="flex-1 grid grid-cols-3 gap-2 min-h-0 auto-rows-[1fr]">
+                <div id="p4-card-safety" class="panel-card flex flex-col p-2 border-t-2 border-t-emerald-500/60 min-h-0 overflow-hidden"></div>
+                <div id="p4-card-ss" class="panel-card flex flex-col p-2 border-t-2 border-t-cyan-500/60 min-h-0 overflow-hidden"></div>
                 <div id="p4-card-pro" class="panel-card flex flex-col p-2 border-t-2 border-t-blue-500/60 min-h-0 overflow-hidden"></div>
                 <div id="p4-card-qua" class="panel-card flex flex-col p-2 border-t-2 border-t-purple-500/60 min-h-0 overflow-hidden"></div>
                 <div id="p4-card-los" class="panel-card flex flex-col p-2 border-t-2 border-t-amber-500/60 min-h-0 overflow-hidden"></div>
@@ -1320,12 +1326,15 @@
                         if (!cnt[ws.id][d.id] || cnt[ws.id][d.id] === 0) return;
                         if (d.id === 'los') {
                             /* ★ Loss: t和a都累计(总目标/总实际) */
-                        } else if (d.id === 'saf') {
+                        } else if (d.id === 'safety') {
+                            /* ★ Safety: 目标始终为0, 实际正常累计 */
+                            acc[ws.id][d.id].t = 0;
+                        } else if (d.id === 'ss') {
                             if (mode === 'month') {
-                                /* ★ 月Safety & 5S: 目标固定10, 实际累计 */
+                                /* ★ 月5S: 目标固定10, 实际累计 */
                                 acc[ws.id][d.id].t = 10;
                             } else {
-                                /* ★ 周Safety & 5S: t平均, a累计 */
+                                /* ★ 周5S: t平均, a累计 */
                                 acc[ws.id][d.id].t = acc[ws.id][d.id].t / cnt[ws.id][d.id];
                             }
                         } else {
@@ -1355,7 +1364,8 @@
         };
 
         const dims = [
-            { id: 'saf', name: 'Safety & 5S', type: 'std', colorClass: 'badge-saf' },
+            { id: 'safety', name: 'Safety', type: 'safety', colorClass: 'badge-saf' },
+            { id: 'ss', name: '5S', type: 'std', colorClass: 'badge-ss' },
             { id: 'pro', name: 'UPPH', type: 'std', colorClass: 'badge-pro' },
             { id: 'qua', name: 'Quality', type: 'qua', colorClass: 'badge-qua' },
             { id: 'los', name: 'Loss', type: 'rev', colorClass: 'badge-los' }
@@ -1443,12 +1453,12 @@
                 } catch(e) {
                     // Fall through to hardcoded defaults
                     workshops.forEach(ws => {
-                        state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
+                        state.t1[ws.id] = { safety: {t:0,a:0}, ss: {t:10,a:10}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
                     });
                 }
             } else {
                 workshops.forEach(ws => {
-                    state.t1[ws.id] = { saf: {t:100,a:98}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
+                    state.t1[ws.id] = { safety: {t:0,a:0}, ss: {t:10,a:10}, pro: {t:100,a:95}, qua: {t:100,a:99}, los: {t:5,a:4} };
                 });
             };
             // Each line split 50/50 into Day & Night shifts
@@ -1770,7 +1780,12 @@
                 if (a <= 0) return 100;
                 return Math.min((t / a) * 100, 100);
             }
-            /* ★ Safety&5S / UPPH(std) */
+            /* ★ Safety: 目标0, 超过0即0% */
+            if (d.id === 'safety') {
+                if (a > 0) return 0;
+                return 100;
+            }
+            /* ★ 5S / UPPH(std) */
             if (d.type === 'std') {
                 if (a <= 0) return 0;
                 return (a / t) * 100;
@@ -1837,9 +1852,9 @@
                     let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
                     return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
-                        <td class="num-font num-muted text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="t" onblur="onCellEdit(this)">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
-                        <td class="num-font num-light text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="a" onblur="onCellEdit(this)">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(Number(a)):Number(a).toFixed(2)}</td>
-                        <td class="num-font num-hl text-[11px] ${rc}">${d.id==="saf"||d.id==="los"||d.id==="qua"?Math.round(rate):rate.toFixed(2)}%</td>
+                        <td class="num-font num-muted text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="t" onblur="onCellEdit(this)">${d.id==="safety"||d.id==="ss"||d.id==="los"||d.id==="qua"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
+                        <td class="num-font num-light text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="a" onblur="onCellEdit(this)">${d.id==="safety"||d.id==="ss"||d.id==="los"||d.id==="qua"?Math.round(Number(a)):Number(a).toFixed(2)}</td>
+                        <td class="num-font num-hl text-[11px] ${rc}">${d.id==="safety"||d.id==="ss"||d.id==="los"||d.id==="qua"?Math.round(rate):rate.toFixed(2)}%</td>
                     </tr>`;
                 }).join('');
 
@@ -1930,7 +1945,7 @@
                             padding: [10,14],
                             formatter: function(ps) {
                                 var p = ps[0];
-                                var clrs = ["#34d399","#60a5fa","#c084fc","#fbbf24"];
+                                var clrs = ["#34d399","#2dd4bf","#60a5fa","#c084fc","#fbbf24"];
                                 var i = p.dataIndex;
                                 return "<span style='display:inline-block;width:10px;height:10px;border-radius:3px;background:"+clrs[i]+";margin-right:6px'></span>" +
                                     "<b>"+p.name+"</b><br/>" +
@@ -1960,7 +1975,7 @@
                                 data: _dimBarData.map(function(d){return d.value;}),
                                 itemStyle: {
                                     color: function(p) {
-                                        var clrs = ["#34d399","#60a5fa","#c084fc","#fbbf24"];
+                                        var clrs = ["#34d399","#2dd4bf","#60a5fa","#c084fc","#fbbf24"];
                                         return new echarts.graphic.LinearGradient(0,0,0,1, [
                                             {offset:0,color:clrs[p.dataIndex % clrs.length]},
                                             {offset:1,color:clrs[p.dataIndex % clrs.length]+"66"}
@@ -2408,7 +2423,8 @@
 
             /* ── Compute per-dimension rankings ── */
             const dimMeta = {
-                saf: { name: 'Safety & 5S', icon: '🛡️', color: 'emerald', bg: 'bg-emerald-900/10', border: 'border-emerald-500/30', text: 'text-emerald-300' },
+                safety: { name: 'Safety', icon: '🛡️', color: 'emerald', bg: 'bg-emerald-900/10', border: 'border-emerald-500/30', text: 'text-emerald-300' },
+                ss: { name: '5S', icon: '🧹', color: 'cyan', bg: 'bg-cyan-900/10', border: 'border-cyan-500/30', text: 'text-cyan-300' },
                 pro: { name: 'UPPH',          icon: '⚡',   color: 'blue',    bg: 'bg-blue-900/10', border: 'border-blue-500/30', text: 'text-blue-300' },
                 qua: { name: 'Quality',       icon: '💎',   color: 'purple',  bg: 'bg-purple-900/10', border: 'border-purple-500/30', text: 'text-purple-300' },
                 los: { name: 'Loss',          icon: '📉',   color: 'amber',   bg: 'bg-amber-900/10', border: 'border-amber-500/30', text: 'text-amber-300' }
