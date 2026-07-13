@@ -428,19 +428,6 @@
                 <!-- JS Inject -->
             </div>
 
-            <!-- ★ 指标说明: 卡片和趋势图之间的空白处 -->
-            <div class="flex items-center gap-1 px-1 text-[10px] text-white/80 font-medium shrink-0">
-                <span class="flex items-center gap-0.5"><span class="text-emerald-400">🛡️</span><span class="text-[9px]">Safety</span></span>
-                <span class="text-slate-600 text-[8px]">|</span>
-                <span class="flex items-center gap-0.5"><span class="text-cyan-400">🧹</span><span class="text-[9px]">5S</span></span>
-                <span class="text-slate-600 text-[8px]">|</span>
-                <span class="flex items-center gap-0.5"><span class="text-blue-400">📈</span><span class="text-[9px]">UPPH</span></span>
-                <span class="text-slate-600 text-[8px]">|</span>
-                <span class="flex items-center gap-0.5"><span class="text-purple-400">🎯</span><span class="text-[9px]">Quality</span></span>
-                <span class="text-slate-600 text-[8px]">|</span>
-                <span class="flex items-center gap-0.5"><span class="text-amber-400">📉</span><span class="text-[9px]">Loss</span></span>
-            </div>
-
             <div class="flex gap-3 h-[53%]">
                 <div class="panel-card p-1.5 flex-1 flex flex-col relative overflow-visible">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
@@ -1912,15 +1899,30 @@
             } else {
                 cardsContainer.className = 'grid grid-cols-4 gap-2 h-[50%]';
             }
-            cardsContainer.innerHTML = visWs.map(ws => {
-                let sum = 0, count = 0;
-                let rows = dims.map(d => {
-                    var _ovr = _cardOverrides[ws.id] && _cardOverrides[ws.id][d.id];
-                    let t = _ovr && _ovr.t !== undefined ? _ovr.t : (displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].t : 0);
-                    let a = _ovr && _ovr.a !== undefined ? _ovr.a : (displayT1[ws.id] && displayT1[ws.id][d.id] ? displayT1[ws.id][d.id].a : 0);
-                    let rate = calcDimRate(d, t, a, ws.id);
-                    sum += rate; count++;
-                    let rc = rate >= 100 ? 'text-good' : (rate >= 90 ? 'text-warn' : 'text-bad');
+
+            /* ★ First pass: compute scores + find champion */
+            var wsScores=visWs.map(function(ws){
+                var s=0,c=0;
+                dims.forEach(function(d){
+                    var o=_cardOverrides[ws.id]&&_cardOverrides[ws.id][d.id];
+                    var t=o&&o.t!==undefined?o.t:(displayT1[ws.id]&&displayT1[ws.id][d.id]?displayT1[ws.id][d.id].t:0);
+                    var a=o&&o.a!==undefined?o.a:(displayT1[ws.id]&&displayT1[ws.id][d.id]?displayT1[ws.id][d.id].a:0);
+                    s+=calcDimRate(d,t,a,ws.id);c++;
+                });
+                return{ws:ws,avg:c?s/c:0};
+            });
+            wsScores.sort(function(a,b){return b.avg-a.avg;});
+            var champLabel=wsScores[0]&&wsScores[0].ws?wsScores[0].ws.label:'';
+
+            cardsContainer.innerHTML = wsScores.map(function(si) {
+                var ws=si.ws; var avg=si.avg;
+                var isChamp=ws.label===champLabel;
+                var rows = dims.map(function(d) {
+                    var o=_cardOverrides[ws.id]&&_cardOverrides[ws.id][d.id];
+                    var t=o&&o.t!==undefined?o.t:(displayT1[ws.id]&&displayT1[ws.id][d.id]?displayT1[ws.id][d.id].t:0);
+                    var a=o&&o.a!==undefined?o.a:(displayT1[ws.id]&&displayT1[ws.id][d.id]?displayT1[ws.id][d.id].a:0);
+                    var rate=calcDimRate(d,t,a,ws.id);
+                    var rc=rate>=100?'text-good':(rate>=90?'text-warn':'text-bad');
                     return `<tr class="leading-relaxed">
                         <td><span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.colorClass}">${d.name}</span></td>
                         <td class="num-font num-muted text-[11px]" contenteditable="true" data-ws="${ws.id}" data-dim="${d.id}" data-field="t" onblur="onCellEdit(this)">${d.id==="safety"||d.id==="ss"||d.id==="los"||d.id==="qua"?Math.round(Number(t)):Number(t).toFixed(2)}</td>
@@ -1929,27 +1931,22 @@
                     </tr>`;
                 }).join('');
 
-                let avg = count ? sum/count : 0;
-                scores.push({name: ws.label, score: avg});
-
-                var isSingle = visWs.length === 1;
                 return `
-                    <div class="panel-card flex flex-col p-2 min-h-0 ${isSingle ? 'ws-card' : ''}">
-                        <div class="flex justify-between items-center ${isSingle ? '' : 'border-b border-slate-700 pb-1.5 mb-1.5'}">
+                    <div class="panel-card flex flex-col p-2 min-h-0 ${isChamp?'champ-card':''}" style="${isChamp?'border-top:2px solid rgba(251,191,36,0.4);border-right:1px solid rgba(251,191,36,0.1);':''}">
+                        <div class="flex justify-between items-center ${isSingle?'':'border-b border-slate-700 pb-1.5 mb-1.5'}">
                             <div class="flex flex-col items-start">
-                                <span class="${isSingle ? 'ws-name title-h2' : 'title-h2 text-sm'} text-white">${ws.label}</span>
-                                <span class="${isSingle ? 'ws-pic' : 'text-[10px]'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
+                                <span class="${isSingle?'ws-name title-h2':'title-h2 text-sm'} text-white">${ws.label}${isChamp?' <span class="text-[11px]">🏆</span>':''}</span>
+                                <span class="${isSingle?'ws-pic':'text-[10px]'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
                             </div>
-                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle ? 'ws-score' : 'text-sm'}">${avg.toFixed(2)}</span>
+                            <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle?'ws-score':'text-sm'}">${avg.toFixed(2)}</span>
                         </div>
-                        ${isSingle ? '<hr class="dash-hr">' : ''}
+                        ${isSingle?'<hr class="dash-hr">':''}
                         <table class="data-table"><thead><tr><th class="text-[9px]">Dim</th><th class="text-[9px]">Target</th><th class="text-[9px]">Actual</th><th class="text-[9px]">ACH%</th></tr></thead><tbody>${rows}</tbody></table>
                     </div>
                 `;
             }).join('');
 
-            scores.sort((a,b) => b.score - a.score);
-            document.getElementById('p1-winner-text').innerHTML = scores[0].name;
+            document.getElementById('p1-winner-text').innerHTML = champLabel;
             /* ★ Build ranking list: all workshops with champion highlighted */
             const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
             const rankColors = [
@@ -1961,11 +1958,11 @@
             ];
             const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
             const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
-            document.getElementById('p1-rank-list').innerHTML = scores.map((s, i) => {
+            document.getElementById('p1-rank-list').innerHTML = wsScores.map(function(s, i) {
                 return `<div class="flex items-center py-0.5 px-1 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
                     <span class="text-[10px] mr-0.5">${medals[i]}</span>
-                    <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.name}</span>
-                    <span class="text-[10px] num-hl ${scoreColors[i]}">${s.score.toFixed(2)}%</span>
+                    <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.ws.label}</span>
+                    <span class="text-[10px] num-hl ${scoreColors[i]}">${s.avg.toFixed(2)}%</span>
                 </div>`;
             }).join('');
             /* ★ Update date in header */
@@ -3306,73 +3303,107 @@
             /* ★ Clear old chart instances */
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
-            const dColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
             grid.innerHTML='';
             /* ★ Build data per workshop */
             var wsDataList=[]; var anyOverall=false;
             workshops.forEach(function(ws){
-                var prv=[], cur=[]; var has=false;
-                dims.forEach(function(dim,di){
+                var items=[]; var has=false;
+                dims.forEach(function(dim){
                     const cObj=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
                     const pObj=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
                     const cRate=cObj?parseFloat(calcDimRate(dim,cObj.t,cObj.a,ws.id).toFixed(1)):null;
                     const pRate=pObj?parseFloat(calcDimRate(dim,pObj.t,pObj.a,ws.id).toFixed(1)):null;
-                    prv.push(pRate!==null?{v:pRate,c:dColors[di]}:null);
-                    cur.push(cRate!==null?{v:cRate,c:dColors[di]}:null);
+                    items.push({cRate:pRate,cur:cRate,prv:pRate});
                     if(cRate!==null||pRate!==null) has=true;
                 });
                 if(!has) return;
                 anyOverall=true;
-                wsDataList.push({id:ws.id,label:ws.label,prv:prv,cur:cur});
+                wsDataList.push({id:ws.id,label:ws.label,items:items});
             });
             if(!anyOverall){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>'; return; }
-            /* ★ Render chart per workshop */
-            var xLabels=['🛡Sa','🧹5S','📈UP','🎯Qu','📉Lo'];
+            /* ★ Calc improvement to find overall best */
             wsDataList.forEach(function(wd){
-                var div=document.createElement('div');
-                div.className='flex-1 min-w-0 flex flex-col items-center';
-                var lbl=document.createElement('div');
-                lbl.className='text-[9px] font-bold text-slate-300 mt-px leading-tight';
-                lbl.textContent=wd.label;
-                div.appendChild(lbl);
-                var cd=document.createElement('div');
-                cd.className='flex-1 w-full';
-                div.appendChild(cd);
-                grid.appendChild(div);
-                var chart=echarts.init(cd);
-                window._compCharts.push(chart);
-                /* ★ 2-series grouped bar: Prev(45% 透明) + Current(实色) per dim */
-                var prevData=wd.prv.map(function(d){
-                    return d!==null?{value:d.v,itemStyle:{color:d.c+'73',borderColor:d.c,borderWidth:0.5}}:{value:0,itemStyle:{color:'transparent'}};
+                var totImp=0, totN=0;
+                wd.items.forEach(function(it){
+                    if(it.cur!==null&&it.prv!==null){totImp+=it.cur-it.prv; totN++;}
                 });
-                var curData=wd.cur.map(function(d){
-                    return d!==null?{value:d.v,itemStyle:{color:d.c,borderRadius:[2,2,0,0]}}:{value:0,itemStyle:{color:'transparent'}};
-                });
-                chart.setOption({
-                    grid:{top:12,bottom:10,left:4,right:4},
-                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#64748b',fontSize:7,fontWeight:'bold',interval:0},axisLine:{show:false},axisTick:{show:false},splitLine:{show:false}},
-                    yAxis:{type:'value',min:0,max:100,axisLabel:{color:'#475569',fontSize:6,show:false},splitLine:{lineStyle:{color:'#1e293b',type:'solid'}},axisLine:{show:false},axisTick:{show:false}},
-                    series:[
-                        {name:'Prev',type:'bar',barWidth:7,barGap:'25%',barCategoryGap:'25%',data:prevData,z:1},
-                        {name:'Current',type:'bar',barWidth:7,barGap:'25%',barCategoryGap:'25%',
-                            data:curData,
-                            label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
-                            z:2}
-                    ],
-                    tooltip:{trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{color:'#f8fafc',fontSize:8},formatter:function(ps){
-                        if(!ps||!ps.length) return '';
-                        var di=ps[0].dataIndex;
-                        var clr=dColors[di%5]||'#94a3b8';
-                        var nm=xLabels[di]||'?';
-                        var s='<div style="font-size:10px;font-weight:bold;margin-bottom:2px">'+wd.label+'</div><div style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:'+clr+'"></span><b>'+nm+'</b></div>';
-                        ps.forEach(function(p){
-                            s+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;padding-left:10px"><b>'+p.seriesName+':</b> <span style="font-family:monospace;font-weight:bold">'+p.value+'%</span></div>';
-                        });
-                        return s;
-                    }},
-                    animationDuration:300
-                });
+                wd.overallImp=totN?totImp/totN:0;
             });
+            wsDataList.sort(function(a,b){return b.overallImp-a.overallImp;});
+            /* ★ Colors & labels */
+            var dLabels=[{e:'🛡️',n:'Safe'},{e:'🧹',n:'5S'},{e:'📈',n:'UPPH'},{e:'🎯',n:'Qual'},{e:'📉',n:'Loss'}];
+            var xLabels=dLabels.map(function(d){return d.e+d.n;});
+            /* ★ Render per workshop: vertical stacked cards */
+            grid.style.overflowY='auto';
+            wsDataList.forEach(function(wd,wi){
+                var card=document.createElement('div');
+                card.className='flex-shrink-0 flex flex-col bg-slate-900/60 rounded border border-slate-700/50 mb-1 last:mb-0 overflow-hidden';
+                var header=document.createElement('div');
+                header.className='flex items-center gap-2 px-2 py-1 bg-slate-800/40 border-b border-slate-700/30';
+                header.innerHTML='<span class="text-[10px] font-bold text-white">'+wd.label+'</span><span class="text-[8px] text-slate-500 ml-auto">'+wd.overallImp.toFixed(1)+'pp</span>';
+                card.appendChild(header);
+                var cd=document.createElement('div');
+                cd.style.height='120px'; cd.className='w-full';
+                card.appendChild(cd);
+                grid.appendChild(card);
+                /* ★ Build series: each dim = prev+cur bars, colored green (improved) or red (not) */
+                var dimSeries=[]; var allMax=100;
+                wd.items.forEach(function(it,di){
+                    var improved=it.cur!==null&&it.prv!==null&&it.cur>it.prv;
+                    var noPrev=it.prv===null&&it.cur!==null;
+                    var color=improved?'#22c55e':'#ef4444';
+                    var prvColor=improved?'#22c55e':'#ef4444';
+                    /* Prev bar (semi-transparent) - smaller width */
+                    var prvArr=[]; for(var j=0;j<5;j++) prvArr.push(j===di&&it.prv!==null?{value:it.prv,itemStyle:{color:prvColor+'55',borderColor:prvColor,borderWidth:0.5}}:0);
+                    /* Cur bar */
+                    var curArr=[]; for(var j=0;j<5;j++) curArr.push(j===di&&it.cur!==null?{value:it.cur,itemStyle:{color:color,borderRadius:[2,2,0,0]}}:0);
+                    if(it.cur!==null) allMax=Math.max(allMax,it.cur);
+                    if(it.prv!==null) allMax=Math.max(allMax,it.prv);
+                    dimSeries.push(prvArr,curArr);
+                });
+                allMax=Math.min(Math.ceil(allMax/10)*10+10,100);
+                /* ★ eCharts option */
+                var eChartsOption={
+                    grid:[], series:[], xAxis:[], yAxis:[]
+                };
+                /* 5 independent small grids side by side */
+                var cellW=100/5;
+                for(var di=0;di<5;di++){
+                    var left=(cellW*di)+'%'; var width=cellW+'%';
+                    eChartsOption.grid.push({id:'g'+di,left:left,width:width,top:12,bottom:14,show:di>0,backgroundColor:di>0?'rgba(30,41,59,0.3)':'transparent',borderWidth:0});
+                    eChartsOption.xAxis.push({id:'x'+di,gridId:'g'+di,type:'category',data:[xLabels[di]],axisLabel:{color:'#94a3b8',fontSize:6,fontWeight:'bold'},axisLine:{show:false},axisTick:{show:false}});
+                    eChartsOption.yAxis.push({id:'y'+di,gridId:'g'+di,type:'value',min:0,max:allMax,axisLabel:{show:false},splitLine:{show:di===0?true:false,lineStyle:{color:'#1e293b'}},axisLine:{show:false},axisTick:{show:false}});
+                    /* Prev then Cur */
+                    var si=di*2;
+                    eChartsOption.series.push({
+                        xAxisId:'x'+di,yAxisId:'y'+di,
+                        name:'Prev',type:'bar',barWidth:8,barGap:'10%',barCategoryGap:'10%',
+                        data:dimSeries[si],
+                        z:1
+                    });
+                    eChartsOption.series.push({
+                        xAxisId:'x'+di,yAxisId:'y'+di,
+                        name:'Cur',type:'bar',barWidth:8,barGap:'10%',barCategoryGap:'10%',
+                        data:dimSeries[si+1],
+                        label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
+                        z:2
+                    });
+                }
+                eChartsOption.tooltip={trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{color:'#f8fafc',fontSize:8},formatter:function(ps){
+                    if(!ps||!ps.length) return '';
+                    var dimIdx=Math.floor(ps[0].seriesIndex/2);
+                    var s='<div style="font-size:10px;font-weight:bold;margin-bottom:2px">'+dLabels[dimIdx].e+' '+dLabels[dimIdx].n+'</div>';
+                    ps.forEach(function(p){
+                        s+='<div style="font-size:9px"><b>'+p.seriesName+':</b> <span style="font-family:monospace;font-weight:bold">'+p.value+'%</span></div>';
+                    });
+                    return s;
+                }};
+                eChartsOption.animationDuration=300;
+                var chart=echarts.init(cd);
+                chart.setOption(eChartsOption);
+                window._compCharts.push(chart);
+            });
+            grid.style.overflowY='';
             /* ★ Resize on next frame */
             setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){ try{c.resize();}catch(e){} }); }, 50);
         };
