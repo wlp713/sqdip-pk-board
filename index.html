@@ -3261,13 +3261,30 @@
         }
         function _accumRange(dates) {
             const acc={}; let hasData=false;
-            dates.forEach(ds=>{
-                const d=loadDayData(ds);
+            function _liveT1(){
+                const l={};
+                workshops.forEach(function(ws){
+                    l[ws.id]={};
+                    dims.forEach(function(d){
+                        const base=state.t1[ws.id]&&state.t1[ws.id][d.id]?state.t1[ws.id][d.id]:{t:0,a:0};
+                        var tVal=base.t,aVal=base.a;
+                        if(_cardOverrides[ws.id]&&_cardOverrides[ws.id][d.id]){
+                            const o=_cardOverrides[ws.id][d.id];
+                            if(o.t!==undefined) tVal=o.t;
+                            if(o.a!==undefined) aVal=o.a;
+                        }
+                        l[ws.id][d.id]={t:tVal,a:aVal};
+                    });
+                });
+                return l;
+            }
+            dates.forEach(function(ds){
+                const d=ds===currentDate?{t1:_liveT1()}:loadDayData(ds);
                 if(!d||!d.t1) return;
-                workshops.forEach(ws=>{
+                workshops.forEach(function(ws){
                     if(!d.t1[ws.id]) return;
                     if(!acc[ws.id]) acc[ws.id]={};
-                    dims.forEach(dim=>{
+                    dims.forEach(function(dim){
                         const e=d.t1[ws.id][dim.id];
                         if(!e) return;
                         if(!acc[ws.id][dim.id]) acc[ws.id][dim.id]={t:0,a:0,c:0};
@@ -3279,9 +3296,9 @@
                 });
             });
             if(!hasData) return null;
-            workshops.forEach(ws=>{
+            workshops.forEach(function(ws){
                 if(!acc[ws.id]) return;
-                dims.forEach(dim=>{
+                dims.forEach(function(dim){
                     const c=acc[ws.id][dim.id];
                     if(!c||c.c===0) return;
                     if(dim.id==='safety') c.t=0;
@@ -3303,7 +3320,7 @@
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            grid.className='grid grid-cols-4 gap-3 content-start overflow-hidden min-h-0';
+            grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0';
             const dimInfo={safety:{e:'🛡',n:'Sa'},ss:{e:'🧹',n:'5S'},pro:{e:'📈',n:'UP'},qua:{e:'🎯',n:'Qu'},los:{e:'📉',n:'Lo'}};
             /* ★ Build per-workshop data */
             const wsData=workshops.map(function(ws){
@@ -3329,7 +3346,7 @@
                 var card=document.createElement('div');
                 card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden';
                 var hdr=document.createElement('div');
-                hdr.className='flex items-center px-2 py-0.5 bg-slate-800/25 border-b border-slate-700/15';
+                hdr.className='flex items-center px-2 py-1 bg-slate-800/25 border-b border-slate-700/15';
                 hdr.innerHTML='<span class="text-[9px] font-bold text-white">'+wd.label+'</span>';
                 var opSpan=document.createElement('span');
                 opSpan.className='text-[8px] ml-auto font-bold '+(wd.overall>=0?'text-emerald-400':'text-red-400');
@@ -3340,7 +3357,7 @@
                 wd.items.forEach(function(item,idx){
                     if(item.delta===null) return;
                     var row=document.createElement('div');
-                    row.className='flex items-center px-2 py-[2px] text-[8px] '+(idx%2?'bg-slate-800/10':'');
+                    row.className='flex items-center px-2 py-1 text-[8px] '+(idx%2?'bg-slate-800/10':'');
                     var di=dimInfo[item.id]||{e:'?',n:item.id};
                     var nameEl=document.createElement('span');
                     nameEl.className='w-10 text-slate-500 font-medium';
