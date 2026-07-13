@@ -480,28 +480,7 @@
                     </div>
                 </div>
 
-                <div class="panel-card champion-card p-1.5 w-[25%] flex flex-col items-center text-center relative overflow-visible">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
-
-                    <!-- ★ Champion visual: trophy + name + score -->
-                    <div class="flex items-center gap-1.5 mt-1.5">
-                        <div class="trophy-float text-[1.6rem]">🏆</div>
-                        <div class="flex flex-col items-start">
-                            <span class="title-h3 text-amber-400/80 text-[8px] tracking-[0.15em]">CHAMPION</span>
-                            <div id="p1-winner-text" class="text-xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
-                        </div>
-                    </div>
-
-                    <!-- ★ Ranking list: all workshops with champion highlighted -->
-                    <div class="w-full flex-1 flex flex-col justify-center space-y-0.5 px-0.5 mt-0.5" id="p1-rank-list"></div>
-
-                    <!-- ★ Badge at bottom -->
-                    <div class="mt-auto mb-0.5 flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">
-                        <span class="text-[8px]">🏆</span>
-                        <span class="text-[7px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
-                        <span id="p1-header-date" class="text-[7px] text-amber-500/60 font-mono ml-1"></span>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -3352,8 +3331,9 @@
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0';
+            grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0 text-nowrap whitespace-nowrap';
             const dimInfo={safety:{n:'Safety'},ss:{n:'5S'},pro:{n:'UPPH'},qua:{n:'Quality'},los:{n:'Loss'}};
+            const wsColorMap={'PRO1':'text-blue-400','PRO2':'text-indigo-400','PRO3':'text-emerald-400','PRO4_5':'text-amber-400'};
             /* ★ Build per-workshop data */
             const wsData=workshops.map(function(ws){
                 const items=dims.map(function(d){
@@ -3399,10 +3379,10 @@
             /* ★ Render cards */
             wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden';
+                card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden text-nowrap';
                 var hdr=document.createElement('div');
                 hdr.className='flex items-center px-2 py-1 bg-slate-800/25 border-b border-slate-700/15';
-                hdr.innerHTML='<span class="text-[9px] font-bold text-white">#'+wd.rank+' '+wd.label+'</span>';
+                hdr.innerHTML='<span class="text-[9px] font-bold "+wsColorMap[wd.id]||"text-white">#'+wd.rank+' '+wd.label+'</span>';
                 var opSpan=document.createElement('span');
                 opSpan.className='text-[8px] ml-auto font-bold '+(wd.overall>=0?'text-emerald-400':'text-red-400');
                 opSpan.textContent=(wd.overall>=0?'+'+wd.overall.toFixed(1)+'%':wd.overall.toFixed(1)+'%');
@@ -3412,7 +3392,7 @@
                 wd.items.forEach(function(item,idx){
                     if(item.delta===null) return;
                     var row=document.createElement('div');
-                    row.className='flex items-center px-2 py-[6px] text-[8px] '+(idx%2?'bg-slate-800/10':'');
+                    row.className='flex items-center px-2 py-[6px] text-[8px] text-nowrap '+(idx%2?'bg-slate-800/10':'');
                     var di=dimInfo[item.id]||{e:'?',n:item.id};
                     var nameEl=document.createElement('span');
                     nameEl.className='w-[48px] text-slate-400 font-medium text-[9px]';
