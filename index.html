@@ -3339,10 +3339,18 @@
                 const items=dims.map(function(d){
                     const co=currAcc&&currAcc[ws.id]&&currAcc[ws.id][d.id];
                     const po=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][d.id];
-                    const curr=co?calcDimRate(d,co.t,co.a,ws.id):null;
-                    const prev=po?calcDimRate(d,po.t,po.a,ws.id):null;
-                    const delta=curr!==null&&prev!==null?parseFloat((curr-prev).toFixed(1)):null;
-                    return {id:d.id,curr,prev,delta};
+                    /* ★ Actual values instead of achievement rates */
+                    const prevActual=po?po.a:null;
+                    const currActual=co?co.a:null;
+                    /* ★ Improvement rate: positive=improvement, negative=decline */
+                    var delta=null;
+                    if(prevActual!==null&&currActual!==null&&prevActual!==0){
+                        const change=d.id==='safety'||d.id==='los'?prevActual-currActual:currActual-prevActual;
+                        delta=parseFloat((change/Math.abs(prevActual)*100).toFixed(1));
+                    }else if(prevActual!==null&&currActual!==null&&prevActual===0){
+                        delta=currActual>0?(d.id==='safety'||d.id==='los'?-100:100):0;
+                    }
+                    return {id:d.id,curr:currActual,prev:prevActual,delta};
                 });
                 const valid=items.filter(function(i){return i.delta!==null;});
                 const overall=valid.length?valid.reduce(function(s,i){return s+i.delta;},0)/valid.length:0;
@@ -3364,10 +3372,17 @@
                     });
                 });
             }
-            /* ★ Recalculate overall deltas after overrides */
+            /* ★ Recalculate overall deltas as improvement rates after overrides */
             wsData.forEach(function(wd){
                 var valid=wd.items.filter(function(i){return i.curr!==null&&i.prev!==null;});
-                valid.forEach(function(item){item.delta=parseFloat((item.curr-item.prev).toFixed(1));});
+                valid.forEach(function(item){
+                    if(item.prev===0){
+                        item.delta=item.curr>0?(item.id==='safety'||item.id==='los'?-100:100):0;
+                    }else{
+                        const change=item.id==='safety'||item.id==='los'?item.prev-item.curr:item.curr-item.prev;
+                        item.delta=parseFloat((change/Math.abs(item.prev)*100).toFixed(1));
+                    }
+                });
                 var tot=valid.reduce(function(s,i){return s+i.delta;},0);
                 wd.overall=parseFloat((valid.length?tot/valid.length:0).toFixed(1));
             });
@@ -3400,7 +3415,7 @@
                     row.appendChild(nameEl);
                     var valEl=document.createElement('span');
                     valEl.className='w-[52px] text-right text-slate-400 leading-none';
-                    valEl.innerHTML='<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="prev" onblur="onPeriodRateEdit(this)">'+(item.prev!==null?item.prev.toFixed(1):'--')+'</span>%→<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="curr" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>%';
+                    valEl.innerHTML='<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="prev" onblur="onPeriodRateEdit(this)">'+(item.prev!==null?item.prev.toFixed(1):'--')+'</span>→<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="curr" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>';
                     row.appendChild(valEl);
                     var deltaEl=document.createElement('span');
                     deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
