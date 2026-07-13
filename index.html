@@ -1729,6 +1729,8 @@
                 }
                 /* ★ Standings data changed → mark cache dirty */
                 _standingsDirty = true;
+                /* ★ Admin saved → clear panel overrides so admin data takes priority */
+                _cardOverrides = {};
                 updateUI();
                 renderDimRank();
             }, 800);
