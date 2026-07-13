@@ -1819,6 +1819,11 @@
 
         /* ★ Rate calculator: handles std/qua/rev types */
         const calcDimRate = (d, t, a, wsId) => {
+            /* ★ Safety: 最先处理—目标0, 超过0即0% */
+            if (d.id === 'safety') {
+                if (a > 0) return 0;
+                return 100;
+            }
             if (t <= 0) return 0;
             /* ★ PRO2 Loss: 实际达成/目标 (完成率) — a=0时0% */
             if (wsId === 'PRO2' && d.id === 'los') {
@@ -1829,11 +1834,6 @@
             if (d.type === 'rev') {
                 if (a <= 0) return 100;
                 return Math.min((t / a) * 100, 100);
-            }
-            /* ★ Safety: 目标0, 超过0即0% */
-            if (d.id === 'safety') {
-                if (a > 0) return 0;
-                return 100;
             }
             /* ★ 5S / UPPH(std) */
             if (d.type === 'std') {
@@ -2173,7 +2173,7 @@
                             if (_e) {
                                 var _t = Number(_e.t) || 0;
                                 var _a = Number(_e.a) || 0;
-                                if (_t > 0) { _sum += calcDimRate(d, _t, _a, wsId); _cnt++; }
+                                _sum += calcDimRate(d, _t, _a, wsId); _cnt++;
                             }
                         });
                         if (_cnt > 0) return parseFloat((_sum / _cnt).toFixed(1));
@@ -2198,7 +2198,7 @@
                                 var _e = _day.t1[ws.id][_selDim.id];
                                 var _t = Number(_e.t) || 0;
                                 var _a = Number(_e.a) || 0;
-                                return _t > 0 ? parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1)) : null;
+                                return parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1));
                             }
                             return null;
                         });
