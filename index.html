@@ -432,7 +432,7 @@
                 <div class="panel-card p-1.5 flex-1 flex flex-col relative overflow-visible">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-1 pl-2">
-                        <h2 class="title-h3 text-[11px]">Overall ACH% Analysis</h2>
+                        <h2 class="title-h3 text-[11px]">improvement rate RANK</h2>
                         <div class="flex items-center gap-1.5" id="p1-chart-filters">
                             <!-- WS filter (admin only) -->
                             <select id="p1-ws-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
@@ -466,9 +466,9 @@
                             <span class="text-[8px] text-slate-600">~</span>
                             <input type="date" id="comp-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <span class="text-[9px] text-slate-500 font-bold">vs</span>
-                            <input type="date" id="prev-start" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <input type="date" id="prev-start" class="hidden text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <span class="text-[8px] text-slate-600">~</span>
-                            <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <input type="date" id="prev-end" class="hidden text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
                         </div>
                         <div id="comp-chart-grid" class="flex-1 grid grid-cols-4 gap-2 content-start overflow-hidden min-h-0">
@@ -3259,7 +3259,7 @@
             for(let c=new Date(s); c<=e; c.setDate(c.getDate()+1)) r.push(_dateStr(c));
             return r;
         }
-        function _accumRange(dates) {
+        function _accumRange(dates,useLive) {
             const acc={}; let hasData=false;
             function _liveT1(){
                 const l={};
@@ -3279,7 +3279,7 @@
                 return l;
             }
             dates.forEach(function(ds){
-                const d=ds===currentDate?{t1:_liveT1()}:loadDayData(ds);
+                const d=useLive!==false&&ds===currentDate?{t1:_liveT1()}:loadDayData(ds);
                 if(!d||!d.t1) return;
                 workshops.forEach(function(ws){
                     if(!d.t1[ws.id]) return;
@@ -3308,15 +3308,16 @@
             });
             return acc;
         }
+        function _lastMonthDates(){ var n=new Date(),y=n.getFullYear(),m=n.getMonth(); if(m===0){m=12;y--} var d=new Date(y,m,0).getDate(),r=[]; for(var i=1;i<=d;i++){var ds=y+"-"+String(m).padStart(2,"0")+"-"+String(i).padStart(2,"0");r.push(ds)} return r; }
         window.renderPeriodComparison = function(){
             const cs=document.getElementById('comp-start').value;
             const ce=document.getElementById('comp-end').value;
-            const ps=document.getElementById('prev-start').value;
-            const pe=document.getElementById('prev-end').value;
+            const lmDates=_lastMonthDates();
+            
             const grid=document.getElementById('comp-chart-grid');
-            if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
+            if(!cs||!ce){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currAcc=_accumRange(_getDatesBetween(cs,ce));
-            const prevAcc=_accumRange(_getDatesBetween(ps,pe));
+            const prevAcc=_accumRange(lmDates,false);
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
@@ -3338,6 +3339,7 @@
             }).filter(function(w){return w.items.some(function(i){return i.delta!==null;});});
             if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data for these ranges</div>';return;}
             wsData.sort(function(a,b){return b.overall-a.overall;});
+            wsData.forEach(function(wd,i){wd.rank=i+1;});
             /* ★ Max absolute delta for bar scaling */
             var maxAbs=1;
             wsData.forEach(function(wd){wd.items.forEach(function(i){if(i.delta!==null)maxAbs=Math.max(maxAbs,Math.abs(i.delta));});});
@@ -3347,10 +3349,10 @@
                 card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden';
                 var hdr=document.createElement('div');
                 hdr.className='flex items-center px-2 py-1 bg-slate-800/25 border-b border-slate-700/15';
-                hdr.innerHTML='<span class="text-[9px] font-bold text-white">'+wd.label+'</span>';
+                hdr.innerHTML='<span class="text-[9px] font-bold text-white">#'+wd.rank+' '+wd.label+'</span>';
                 var opSpan=document.createElement('span');
                 opSpan.className='text-[8px] ml-auto font-bold '+(wd.overall>=0?'text-emerald-400':'text-red-400');
-                opSpan.textContent=(wd.overall>=0?'+':'')+wd.overall.toFixed(1)+'pp';
+                opSpan.textContent=(wd.overall>=0?'+'+wd.overall.toFixed(1)+'%':wd.overall.toFixed(1)+'%');
                 hdr.appendChild(opSpan);
                 card.appendChild(hdr);
                 /* ★ Per-dim rows */
@@ -3369,7 +3371,7 @@
                     row.appendChild(valEl);
                     var deltaEl=document.createElement('span');
                     deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
-                    deltaEl.textContent=(item.delta>0?'+':'')+item.delta.toFixed(1);
+                    deltaEl.textContent=item.delta>0?"+"+item.delta.toFixed(1)+"%":item.delta<0?item.delta.toFixed(1)+"%":"0.0%";
                     row.appendChild(deltaEl);
                     var barWrap=document.createElement('div');
                     barWrap.className='flex-1 ml-1 h-[5px] bg-slate-800 rounded-full overflow-hidden';
