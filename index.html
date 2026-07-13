@@ -51,6 +51,11 @@
         .data-table td[contenteditable] { cursor: text; }
         .data-table td[contenteditable]:focus { outline: none; }
         .data-table td[contenteditable]:hover { background: rgba(148,163,184,0.06); }
+        /* ★ Editable rate in comparison cards */
+        .editable-rate { min-width: 14px; display: inline-block; text-align: right; cursor: text; }
+        .editable-rate:focus { outline: none; border-color: #10b981 !important; background: rgba(16,185,129,0.06); }
+        .editable-rate:hover { border-color: #6b7280; }
+        .editable-rate:empty:before { content: '--'; color: #64748b; }
 
         .badge-saf { color: var(--dim-saf-text); background: var(--dim-saf-bg); border: 1px solid var(--dim-saf-border); }
         .badge-ss { color: var(--dim-ss-text); background: var(--dim-ss-bg); border: 1px solid var(--dim-ss-border); }
@@ -1613,6 +1618,7 @@
         let saveTimer;
         /* ★ 纯前端截图用: 编辑月的目标/达成, 不存任何后端/admin/数据库, 刷新即失 */
         var _cardOverrides = {};
+        var _periodOverrides = {};
         window.onCellEdit = function(el) {
             if (!el || !el.dataset) return;
             var wsId = el.dataset.ws, dimId = el.dataset.dim, field = el.dataset.field;
@@ -1631,8 +1637,18 @@
             updateUI();
         };
         /* ★ 一键清除所有临时覆盖, 恢复原始数据 */
+        window.onPeriodRateEdit = function(el){
+            const wsId=el.dataset.ws, dimId=el.dataset.dim;
+            const raw=el.textContent.trim();
+            const val=parseFloat(raw);
+            if(isNaN(val)){ updateUI(); return; }
+            if(!_periodOverrides[wsId]) _periodOverrides[wsId]={};
+            _periodOverrides[wsId][dimId]=val;
+            renderPeriodComparison();
+        };
         window.clearCardOverrides = function() {
             _cardOverrides = {};
+            _periodOverrides = {};
             updateUI();
         };
 
@@ -3279,7 +3295,22 @@
                 return l;
             }
             dates.forEach(function(ds){
-                const d=useLive!==false&&ds===currentDate?{t1:_liveT1()}:loadDayData(ds);
+                /* ★ Every date gets _cardOverrides merged in — not just currentDate */
+                const saved=loadDayData(ds);
+                if(saved&&saved.t1){
+                    workshops.forEach(function(ws){
+                        dims.forEach(function(dim){
+                            const ov=_cardOverrides[ws.id]&&_cardOverrides[ws.id][dim.id];
+                            if(ov&&(ov.t!==undefined||ov.a!==undefined)){
+                                if(!saved.t1[ws.id]) saved.t1[ws.id]={};
+                                if(!saved.t1[ws.id][dim.id]) saved.t1[ws.id][dim.id]={t:0,a:0};
+                                if(ov.t!==undefined) saved.t1[ws.id][dim.id].t=ov.t;
+                                if(ov.a!==undefined) saved.t1[ws.id][dim.id].a=ov.a;
+                            }
+                        });
+                    });
+                }
+                const d=ds===currentDate&&useLive!==false?saved||{t1:_liveT1()}:saved;
                 if(!d||!d.t1) return;
                 workshops.forEach(function(ws){
                     if(!d.t1[ws.id]) return;
@@ -3318,6 +3349,7 @@
             if(!cs||!ce){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currAcc=_accumRange(_getDatesBetween(cs,ce));
             const prevAcc=_accumRange(lmDates,false);
+            
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
@@ -3338,6 +3370,24 @@
                 return {id:ws.id,label:ws.label,items,overall:parseFloat(overall.toFixed(1))};
             }).filter(function(w){return w.items.some(function(i){return i.delta!==null;});});
             if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data for these ranges</div>';return;}
+            /* ★ Merge _periodOverrides into calculated rates */
+            if(Object.keys(_periodOverrides).length){
+                wsData.forEach(function(wd){
+                    dims.forEach(function(d){
+                        if(_periodOverrides[wd.id]&&_periodOverrides[wd.id][d.id]!==undefined){
+                            var idx=dims.indexOf(d);
+                            if(idx>=0&&wd.items[idx]) wd.items[idx].curr=_periodOverrides[wd.id][d.id];
+                        }
+                    });
+                });
+            }
+            /* ★ Recalculate overall deltas after overrides */
+            wsData.forEach(function(wd){
+                var valid=wd.items.filter(function(i){return i.curr!==null&&i.prev!==null;});
+                valid.forEach(function(item){item.delta=parseFloat((item.curr-item.prev).toFixed(1));});
+                var tot=valid.reduce(function(s,i){return s+i.delta;},0);
+                wd.overall=parseFloat((valid.length?tot/valid.length:0).toFixed(1));
+            });
             wsData.sort(function(a,b){return b.overall-a.overall;});
             wsData.forEach(function(wd,i){wd.rank=i+1;});
             /* ★ Max absolute delta for bar scaling */
@@ -3367,7 +3417,7 @@
                     row.appendChild(nameEl);
                     var valEl=document.createElement('span');
                     valEl.className='w-[52px] text-right text-slate-400';
-                    valEl.textContent=(item.prev!==null?item.prev.toFixed(1)+'%':'--')+'→'+(item.curr!==null?item.curr.toFixed(1)+'%':'--');
+                    valEl.innerHTML=(item.prev!==null?item.prev.toFixed(1)+'%':'--')+'→<span contenteditable class="editable-rate outline-none border-b border-dashed border-slate-600 hover:border-emerald-500 focus:border-emerald-400 px-0.5" data-ws="'+wd.id+'" data-dim="'+item.id+'" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>%';
                     row.appendChild(valEl);
                     var deltaEl=document.createElement('span');
                     deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
