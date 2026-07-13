@@ -2142,42 +2142,20 @@
                 var _seriesList = [];
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
 
-                /* ★ 辅助：取某车间某天的输出达成率 */
-                /* ★ 取某车间某天的达成率: 优先t2产出达成, 无则回退t1维度平均 */
+                /* ★ 取某车间某日的SQDIP综合评分(各维度平均), 与上面面板一致 */
                 function _wsAchPct(wsId, ds) {
                     var _day = loadDayData(ds);
-                    if (!_day) return null;
-                    // 1) t2 产出达成 (PRO1/PRO2)
-                    if (_day.t2 && _day.t2[wsId]) {
-                        var wsT2 = _day.t2[wsId];
-                        var tT = 0, tA = 0;
-                        Object.keys(wsT2).forEach(function(line) {
-                            var entry = wsT2[line];
-                            if (entry.day !== undefined) {
-                                tT += Number(entry.day.t) || 0;
-                                tA += Number(entry.day.a) || 0;
-                                tT += Number(entry.night.t) || 0;
-                                tA += Number(entry.night.a) || 0;
-                            } else if (entry.t !== undefined) {
-                                tT += Number(entry.t) || 0;
-                                tA += Number(entry.a) || 0;
-                            }
-                        });
-                        if (tT > 0) return parseFloat(((tA / tT) * 100).toFixed(1));
-                    }
-                    // 2) 回退: t1 维度均值 (PRO3 / PRO4&5)
-                    if (_day.t1 && _day.t1[wsId]) {
-                        var _sum = 0, _cnt = 0;
-                        dims.forEach(function(d) {
-                            var _e = _day.t1[wsId][d.id];
-                            if (_e) {
-                                var _t = Number(_e.t) || 0;
-                                var _a = Number(_e.a) || 0;
-                                _sum += calcDimRate(d, _t, _a, wsId); _cnt++;
-                            }
-                        });
-                        if (_cnt > 0) return parseFloat((_sum / _cnt).toFixed(1));
-                    }
+                    if (!_day || !_day.t1 || !_day.t1[wsId]) return null;
+                    var _sum = 0, _cnt = 0;
+                    dims.forEach(function(d) {
+                        var _e = _day.t1[wsId][d.id];
+                        if (_e) {
+                            var _t = Number(_e.t) || 0;
+                            var _a = Number(_e.a) || 0;
+                            _sum += calcDimRate(d, _t, _a, wsId); _cnt++;
+                        }
+                    });
+                    if (_cnt > 0) return parseFloat((_sum / _cnt).toFixed(1));
                     return null;
                 }
 
@@ -2208,7 +2186,7 @@
                     });
                 }
 
-                /* ★ 整体趋势线 = 各车间输出达成率的均值 */
+                /* ★ 整体趋势线 = 各车间SQDIP综合评分的均值 */
                 var _overallTrendData = _trendDates.map(function(ds) {
                     var _sum = 0, _cnt = 0;
                     _chartWSs.forEach(function(ws) {
