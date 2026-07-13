@@ -3345,10 +3345,10 @@
                     /* ★ Improvement rate: positive=improvement, negative=decline */
                     var delta=null;
                     if(prevActual!==null&&currActual!==null&&prevActual!==0){
-                        const change=d.id==='safety'||d.id==='los'?prevActual-currActual:currActual-prevActual;
+                        const change=d.id==='safety'||d.id==='los'||d.id==='qua'?prevActual-currActual:currActual-prevActual;
                         delta=parseFloat((change/Math.abs(prevActual)*100).toFixed(1));
                     }else if(prevActual!==null&&currActual!==null&&prevActual===0){
-                        delta=currActual>0?(d.id==='safety'||d.id==='los'?-100:100):0;
+                        delta=currActual>0?(d.id==='safety'||d.id==='los'||d.id==='qua'?-100:100):0;
                     }
                     return {id:d.id,curr:currActual,prev:prevActual,delta};
                 });
@@ -3377,9 +3377,9 @@
                 var valid=wd.items.filter(function(i){return i.curr!==null&&i.prev!==null;});
                 valid.forEach(function(item){
                     if(item.prev===0){
-                        item.delta=item.curr>0?(item.id==='safety'||item.id==='los'?-100:100):0;
+                        item.delta=item.curr>0?(item.id==='safety'||item.id==='los'||item.id==='qua'?-100:100):0;
                     }else{
-                        const change=item.id==='safety'||item.id==='los'?item.prev-item.curr:item.curr-item.prev;
+                        const change=item.id==='safety'||item.id==='los'||item.id==='qua'?item.prev-item.curr:item.curr-item.prev;
                         item.delta=parseFloat((change/Math.abs(item.prev)*100).toFixed(1));
                     }
                 });
