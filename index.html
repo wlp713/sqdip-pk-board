@@ -471,7 +471,7 @@
                             <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
                         </div>
-                        <div id="comp-chart-grid" class="flex-1 flex flex-row items-stretch gap-0 overflow-hidden min-h-0">
+                        <div id="comp-chart-grid" class="flex-1 flex flex-col gap-1 overflow-y-auto px-0.5 min-h-0">
                             <div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>
                         </div>
                     </div>
@@ -3303,8 +3303,8 @@
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            grid.style.overflow='hidden';
-            /* ★ Build per-workshop data */
+            grid.style.overflow='';
+            grid.className='flex-1 flex flex-col gap-1 overflow-y-auto px-0.5 min-h-0';
             var wsData=[];
             workshops.forEach(function(ws){
                 var curArr=[], prvArr=[]; var has=false;
@@ -3317,58 +3317,52 @@
                     if(c!==null||p!==null) has=true;
                 });
                 if(!has) return;
-                /* overall op */
                 var tot=0,n=0;
-                dims.forEach(function(d,i){
-                    if(curArr[i]!==null&&prvArr[i]!==null){tot+=curArr[i]-prvArr[i];n++;}
-                });
+                dims.forEach(function(d,i){if(curArr[i]!==null&&prvArr[i]!==null){tot+=curArr[i]-prvArr[i];n++;}});
                 wsData.push({id:ws.id,label:ws.label,cur:curArr,prv:prvArr,op:n?tot/n:0});
             });
             if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data</div>';return;}
             wsData.sort(function(a,b){return b.op-a.op;});
 
-            var dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
             var xLabels=['🛡 Sa','🧹 5S','📈 UP','🎯 Qu','📉 Lo'];
+            var dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
 
             wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex-1 min-w-0 flex flex-col bg-slate-900/50 rounded border border-slate-700/30 overflow-hidden';
+                card.className='flex-shrink-0 w-full flex flex-col bg-slate-900/40 rounded border border-slate-700/25 overflow-hidden';
                 var hdr=document.createElement('div');
-                hdr.className='flex items-center px-2 py-1 bg-slate-800/30 border-b border-slate-700/20';
+                hdr.className='flex items-center px-2.5 py-0.5 bg-slate-800/20 border-b border-slate-700/15';
                 hdr.innerHTML='<span class="text-[10px] font-bold text-white">'+wd.label+'</span>';
                 var impSpan=document.createElement('span');
                 impSpan.className='text-[9px] ml-auto '+(wd.op>=0?'text-emerald-400':'text-red-400');
                 impSpan.textContent=wd.op>=0?'+'+wd.op.toFixed(1)+'pp':wd.op.toFixed(1)+'pp';
                 hdr.appendChild(impSpan);
                 card.appendChild(hdr);
-
                 var cd=document.createElement('div');
-                cd.style.height='100px'; cd.className='w-full';
+                cd.style.height='80px'; cd.className='w-full';
                 card.appendChild(cd);
                 grid.appendChild(card);
 
-                /* ── ONE CHART per workshop, 2 series (Prev semi + Cur solid), 5 cats ── */
                 var curData=[], prvData=[];
                 var allMax=100;
                 wd.cur.forEach(function(v,i){
                     var c=Math.min(v||0,100);
                     var p=Math.min(wd.prv[i]||0,100);
                     var imp=v!==null&&wd.prv[i]!==null&&v>wd.prv[i];
-                    var dc=dimColors[i];
                     curData.push({value:c,itemStyle:{color:imp?'#22c55e':'#ef4444',borderRadius:[2,2,0,0]}});
-                    prvData.push({value:p,itemStyle:{color:imp?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)',borderColor:imp?'#22c55e':'#ef4444',borderWidth:0.5,borderRadius:2}});
+                    prvData.push({value:p,itemStyle:{color:imp?'rgba(34,197,94,0.2)':'rgba(239,68,68,0.2)',borderColor:imp?'#22c55e':'#ef4444',borderWidth:0.5,borderRadius:2}});
                     if(v) allMax=Math.max(allMax,v);
                     if(wd.prv[i]) allMax=Math.max(allMax,wd.prv[i]);
                 });
                 allMax=Math.min(Math.max(Math.ceil(allMax/5)*5+5,100),100);
 
                 var opt={
-                    grid:{left:0,right:0,top:6,bottom:16,containLabel:false},
-                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:7,fontWeight:'bold',padding:[1,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
+                    grid:{left:28,right:4,top:4,bottom:16,containLabel:false},
+                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:7,fontWeight:'bold',padding:[2,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
                     yAxis:{type:'value',min:0,max:allMax,splitNumber:2,axisLabel:{fontSize:6,color:'#475569',padding:[0,2,0,0]},splitLine:{lineStyle:{color:'#1e293b',type:'dashed',width:0.5}},axisLine:{show:false},axisTick:{show:false}},
                     series:[
-                        {name:'Prev',type:'bar',barWidth:'85%',barGap:'5%',data:prvData,z:1},
-                        {name:'Cur',type:'bar',barWidth:'70%',barGap:'10%',
+                        {name:'Prev',type:'bar',barWidth:'30%',barGap:'30%',data:prvData,z:1},
+                        {name:'Cur',type:'bar',barWidth:'30%',barGap:'30%',
                             label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
                             data:curData,z:2
                         }
@@ -3380,11 +3374,9 @@
                             var c=p.value||0;
                             var pv=prvData[p.dataIndex]?prvData[p.dataIndex].value||0:0;
                             var nm=p.seriesName;
-                            var delta=c-pv;
-                            var col=delta>0?'#22c55e':delta<0?'#ef4444':'#94a3b8';
-                            s+='<div style="font-size:9px;display:flex;justify-content:space-between;gap:10px"><span>'+nm+':</span><span style="font-weight:bold">'+c.toFixed(1)+'%</span></div>';
-                        });
-                        return s;
+                            var delta=c-pv; var col=delta>0?'#22c55e':delta<0?'#ef4444':'#94a3b8';
+                            s+='<div style="font-size:9px;display:flex;justify-content:space-between"><span>'+nm+':</span><span style="font-weight:bold">'+c.toFixed(1)+'%</span></div>';
+                        }); return s;
                     }},
                     animationDuration:300
                 };
@@ -3392,8 +3384,6 @@
                 chart.setOption(opt);
                 window._compCharts.push(chart);
             });
-
-            setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){try{c.resize();}catch(e){}}); }, 80);
         };
 
         window.toggleLock = () => {
