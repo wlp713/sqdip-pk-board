@@ -51,11 +51,9 @@
         .data-table td[contenteditable] { cursor: text; }
         .data-table td[contenteditable]:focus { outline: none; }
         .data-table td[contenteditable]:hover { background: rgba(148,163,184,0.06); }
-        /* ★ Editable rate in comparison cards */
-        .editable-rate { min-width: 14px; display: inline-block; text-align: right; cursor: text; }
-        .editable-rate:focus { outline: none; border-color: #10b981 !important; background: rgba(16,185,129,0.06); }
-        .editable-rate:hover { border-color: #6b7280; }
-        .editable-rate:empty:before { content: '--'; color: #64748b; }
+        /* ★ Editable numbers in comparison cards — no visible indicator */
+        .editable-num { cursor: text; min-width: 10px; display: inline-block; }
+        .editable-num:focus { outline: none; }
 
         .badge-saf { color: var(--dim-saf-text); background: var(--dim-saf-bg); border: 1px solid var(--dim-saf-border); }
         .badge-ss { color: var(--dim-ss-text); background: var(--dim-ss-bg); border: 1px solid var(--dim-ss-border); }
@@ -1618,7 +1616,7 @@
         let saveTimer;
         /* ★ 纯前端截图用: 编辑月的目标/达成, 不存任何后端/admin/数据库, 刷新即失 */
         var _cardOverrides = {};
-        var _periodOverrides = {};
+        var _rateOverrides = {};
         window.onCellEdit = function(el) {
             if (!el || !el.dataset) return;
             var wsId = el.dataset.ws, dimId = el.dataset.dim, field = el.dataset.field;
@@ -1638,17 +1636,18 @@
         };
         /* ★ 一键清除所有临时覆盖, 恢复原始数据 */
         window.onPeriodRateEdit = function(el){
-            const wsId=el.dataset.ws, dimId=el.dataset.dim;
+            const wsId=el.dataset.ws, dimId=el.dataset.dim, field=el.dataset.field;
             const raw=el.textContent.trim();
             const val=parseFloat(raw);
-            if(isNaN(val)){ updateUI(); return; }
-            if(!_periodOverrides[wsId]) _periodOverrides[wsId]={};
-            _periodOverrides[wsId][dimId]=val;
+            if(isNaN(val)){ renderPeriodComparison(); return; }
+            if(!_rateOverrides[wsId]) _rateOverrides[wsId]={};
+            if(!_rateOverrides[wsId][dimId]) _rateOverrides[wsId][dimId]={};
+            _rateOverrides[wsId][dimId][field]=val;
             renderPeriodComparison();
         };
         window.clearCardOverrides = function() {
             _cardOverrides = {};
-            _periodOverrides = {};
+            _rateOverrides = {};
             updateUI();
         };
 
@@ -3370,13 +3369,17 @@
                 return {id:ws.id,label:ws.label,items,overall:parseFloat(overall.toFixed(1))};
             }).filter(function(w){return w.items.some(function(i){return i.delta!==null;});});
             if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data for these ranges</div>';return;}
-            /* ★ Merge _periodOverrides into calculated rates */
-            if(Object.keys(_periodOverrides).length){
+            /* ★ Merge _rateOverrides into calculated rates */
+            if(Object.keys(_rateOverrides).length){
                 wsData.forEach(function(wd){
                     dims.forEach(function(d){
-                        if(_periodOverrides[wd.id]&&_periodOverrides[wd.id][d.id]!==undefined){
-                            var idx=dims.indexOf(d);
-                            if(idx>=0&&wd.items[idx]) wd.items[idx].curr=_periodOverrides[wd.id][d.id];
+                        var ro=_rateOverrides[wd.id]&&_rateOverrides[wd.id][d.id];
+                        if(ro){
+                            var ridx=dims.indexOf(d);
+                            if(ridx>=0&&wd.items[ridx]){
+                                if(ro.prev!==undefined) wd.items[ridx].prev=ro.prev;
+                                if(ro.curr!==undefined) wd.items[ridx].curr=ro.curr;
+                            }
                         }
                     });
                 });
@@ -3416,8 +3419,8 @@
                     nameEl.textContent=di.n;
                     row.appendChild(nameEl);
                     var valEl=document.createElement('span');
-                    valEl.className='w-[52px] text-right text-slate-400';
-                    valEl.innerHTML=(item.prev!==null?item.prev.toFixed(1)+'%':'--')+'→<span contenteditable class="editable-rate outline-none border-b border-dashed border-slate-600 hover:border-emerald-500 focus:border-emerald-400 px-0.5" data-ws="'+wd.id+'" data-dim="'+item.id+'" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>%';
+                    valEl.className='w-[52px] text-right text-slate-400 leading-none';
+                    valEl.innerHTML='<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="prev" onblur="onPeriodRateEdit(this)">'+(item.prev!==null?item.prev.toFixed(1):'--')+'</span>%→<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="curr" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>%';
                     row.appendChild(valEl);
                     var deltaEl=document.createElement('span');
                     deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
