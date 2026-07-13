@@ -429,12 +429,16 @@
             </div>
 
             <!-- ★ 指标说明: 卡片和趋势图之间的空白处 -->
-            <div class="flex items-center gap-3 px-1 text-[11px] text-white/90 font-medium shrink-0">
-                <span class="flex items-center gap-1"><span class="text-emerald-400">🛡️</span> Safety: 目标0事故, 超过0即0%</span>
-                <span class="text-slate-600">|</span>
-                <span class="flex items-center gap-1"><span class="text-cyan-400">🧹</span> 5S: 改善达成/目标</span>
-                <span class="text-slate-600">|</span>
-                <span class="flex items-center gap-1"><span class="text-amber-400">📉</span> Loss: PRO1/3/4=影响装配台数, PRO2=作业完成率</span>
+            <div class="flex items-center gap-1 px-1 text-[10px] text-white/80 font-medium shrink-0">
+                <span class="flex items-center gap-0.5"><span class="text-emerald-400">🛡️</span><span class="text-[9px]">Safety</span></span>
+                <span class="text-slate-600 text-[8px]">|</span>
+                <span class="flex items-center gap-0.5"><span class="text-cyan-400">🧹</span><span class="text-[9px]">5S</span></span>
+                <span class="text-slate-600 text-[8px]">|</span>
+                <span class="flex items-center gap-0.5"><span class="text-blue-400">📈</span><span class="text-[9px]">UPPH</span></span>
+                <span class="text-slate-600 text-[8px]">|</span>
+                <span class="flex items-center gap-0.5"><span class="text-purple-400">🎯</span><span class="text-[9px]">Quality</span></span>
+                <span class="text-slate-600 text-[8px]">|</span>
+                <span class="flex items-center gap-0.5"><span class="text-amber-400">📉</span><span class="text-[9px]">Loss</span></span>
             </div>
 
             <div class="flex gap-3 h-[53%]">
@@ -3299,74 +3303,77 @@
             if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currDates=_getDatesBetween(cs,ce), prevDates=_getDatesBetween(ps,pe);
             const currAcc=_accumRange(currDates), prevAcc=_accumRange(prevDates);
-            /* ★ Clear old charts */
+            /* ★ Clear old chart instances */
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
-            /* ★ Build chart divs and render */
-            const dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
-            const dimNames=['Safety','5S','UPPH','Quality','Loss'];
+            const dColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
             grid.innerHTML='';
-            let anyOverall=false;
-            workshops.forEach(function(ws,wi){
-                /* ★ Build data for this workshop */
-                var prvRates=[], curRates=[]; var hasData=false;
+            /* ★ Build data per workshop */
+            var wsDataList=[]; var anyOverall=false;
+            workshops.forEach(function(ws){
+                var prv=[], cur=[]; var has=false;
                 dims.forEach(function(dim,di){
-                    const cur=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
-                    const prv=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
-                    const curRate=cur?parseFloat(calcDimRate(dim,cur.t,cur.a,ws.id).toFixed(1)):null;
-                    const prvRate=prv?parseFloat(calcDimRate(dim,prv.t,prv.a,ws.id).toFixed(1)):null;
-                    curRates.push(curRate); prvRates.push(prvRate);
-                    if(curRate!==null||prvRate!==null) hasData=true;
+                    const cObj=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
+                    const pObj=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
+                    const cRate=cObj?parseFloat(calcDimRate(dim,cObj.t,cObj.a,ws.id).toFixed(1)):null;
+                    const pRate=pObj?parseFloat(calcDimRate(dim,pObj.t,pObj.a,ws.id).toFixed(1)):null;
+                    prv.push(pRate!==null?{v:pRate,c:dColors[di]}:null);
+                    cur.push(cRate!==null?{v:cRate,c:dColors[di]}:null);
+                    if(cRate!==null||pRate!==null) has=true;
                 });
-                if(!hasData) return;
+                if(!has) return;
                 anyOverall=true;
-                /* ★ Create chart div */
+                wsDataList.push({id:ws.id,label:ws.label,prv:prv,cur:cur});
+            });
+            if(!anyOverall){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>'; return; }
+            /* ★ Render chart per workshop */
+            var xLabels=['🛡Sa','🧹5S','📈UP','🎯Qu','📉Lo'];
+            wsDataList.forEach(function(wd){
                 var div=document.createElement('div');
                 div.className='flex-1 min-w-0 flex flex-col items-center';
-                var label=document.createElement('div');
-                label.className='text-[9px] font-bold text-slate-300 mt-0.5 mb-0 leading-tight';
-                label.textContent=ws.label;
-                div.appendChild(label);
-                var chartDiv=document.createElement('div');
-                chartDiv.className='flex-1 w-full';
-                div.appendChild(chartDiv);
+                var lbl=document.createElement('div');
+                lbl.className='text-[9px] font-bold text-slate-300 mt-px leading-tight';
+                lbl.textContent=wd.label;
+                div.appendChild(lbl);
+                var cd=document.createElement('div');
+                cd.className='flex-1 w-full';
+                div.appendChild(cd);
                 grid.appendChild(div);
-                /* ★ Init chart */
-                var chart=echarts.init(chartDiv);
+                var chart=echarts.init(cd);
                 window._compCharts.push(chart);
-                var series=[];
-                var gridTop=14, gridBottom=12, gridLeft=28, gridRight=8;
-                dimNames.forEach(function(nm,di){
-                    var c=dimColors[di%dimColors.length];
-                    series.push({
-                        name: nm+'(Prev)', type:'bar', barWidth:6, barGap:0, barCategoryGap:'20%',
-                        data: prvRates[di]!==null?prvRates[di]:0,
-                        itemStyle:{ color: c+'66', borderColor:c, borderWidth:0.5, borderRadius:[0,0,0,0] },
-                        emphasis:{ itemStyle:{ color:c+'88' } },
-                        z:1
-                    });
-                    series.push({
-                        name: nm, type:'bar', barWidth:6, barGap:'30%',
-                        data: curRates[di]!==null?curRates[di]:0,
-                        itemStyle:{ color:c, borderRadius:[2,2,0,0] },
-                        label:{ show:true, position:'top', color:'#e2e8f0', fontSize:7, fontWeight:'bold', fontFamily:'monospace', formatter:function(p){
-                            return p.value>0?p.value+'%':'';
-                        }},
-                        emphasis:{ itemStyle:{ color:c } },
-                        z:2
-                    });
+                /* ★ 2-series grouped bar: Prev(45% 透明) + Current(实色) per dim */
+                var prevData=wd.prv.map(function(d){
+                    return d!==null?{value:d.v,itemStyle:{color:d.c+'73',borderColor:d.c,borderWidth:0.5}}:{value:0,itemStyle:{color:'transparent'}};
+                });
+                var curData=wd.cur.map(function(d){
+                    return d!==null?{value:d.v,itemStyle:{color:d.c,borderRadius:[2,2,0,0]}}:{value:0,itemStyle:{color:'transparent'}};
                 });
                 chart.setOption({
-                    grid:{ top:gridTop, bottom:10, left:22, right:4 },
-                    xAxis:{ type:'category', data:['🛡Sa','🧹5S','📉UP','🎯Qu','⚡Lo'], axisLabel:{ color:'#64748b', fontSize:6, fontWeight:'bold', interval:0 }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ show:false } },
-                    yAxis:{ type:'value', min:0, max:100, axisLabel:{ color:'#475569', fontSize:6, show:false }, splitLine:{ lineStyle:{ color:'#1e293b', type:'solid' } }, axisLine:{ show:false }, axisTick:{ show:false } },
-                    series: series,
-                    tooltip:{ trigger:'axis', backgroundColor:'#1e293b', borderColor:'#475569', textStyle:{ color:'#f8fafc', fontSize:8 } },
+                    grid:{top:12,bottom:10,left:4,right:4},
+                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#64748b',fontSize:7,fontWeight:'bold',interval:0},axisLine:{show:false},axisTick:{show:false},splitLine:{show:false}},
+                    yAxis:{type:'value',min:0,max:100,axisLabel:{color:'#475569',fontSize:6,show:false},splitLine:{lineStyle:{color:'#1e293b',type:'solid'}},axisLine:{show:false},axisTick:{show:false}},
+                    series:[
+                        {name:'Prev',type:'bar',barWidth:7,barGap:'25%',barCategoryGap:'25%',data:prevData,z:1},
+                        {name:'Current',type:'bar',barWidth:7,barGap:'25%',barCategoryGap:'25%',
+                            data:curData,
+                            label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
+                            z:2}
+                    ],
+                    tooltip:{trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{color:'#f8fafc',fontSize:8},formatter:function(ps){
+                        if(!ps||!ps.length) return '';
+                        var di=ps[0].dataIndex;
+                        var clr=dColors[di%5]||'#94a3b8';
+                        var nm=xLabels[di]||'?';
+                        var s='<div style="font-size:10px;font-weight:bold;margin-bottom:2px">'+wd.label+'</div><div style="display:flex;align-items:center;gap:4px;font-size:9px"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:'+clr+'"></span><b>'+nm+'</b></div>';
+                        ps.forEach(function(p){
+                            s+='<div style="display:flex;align-items:center;gap:4px;font-size:9px;padding-left:10px"><b>'+p.seriesName+':</b> <span style="font-family:monospace;font-weight:bold">'+p.value+'%</span></div>';
+                        });
+                        return s;
+                    }},
                     animationDuration:300
                 });
             });
-            if(!anyOverall) grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>';
-            /* ★ Resize charts on next frame */
+            /* ★ Resize on next frame */
             setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){ try{c.resize();}catch(e){} }); }, 50);
         };
 
