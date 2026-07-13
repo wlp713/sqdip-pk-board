@@ -471,7 +471,7 @@
                             <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
                         </div>
-                        <div id="comp-chart-grid" class="flex-1 flex flex-row items-stretch gap-1 px-0.5 overflow-hidden min-h-0">
+                        <div id="comp-chart-grid" class="flex-1 flex flex-row items-stretch gap-0 overflow-hidden min-h-0">
                             <div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>
                         </div>
                     </div>
@@ -3332,7 +3332,7 @@
 
             wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex-shrink-0 flex flex-col bg-slate-900/50 rounded border border-slate-700/40 overflow-hidden';
+                card.className='flex-1 min-w-0 flex flex-col bg-slate-900/50 rounded border border-slate-700/30 overflow-hidden';
                 var hdr=document.createElement('div');
                 hdr.className='flex items-center px-2 py-1 bg-slate-800/30 border-b border-slate-700/20';
                 hdr.innerHTML='<span class="text-[10px] font-bold text-white">'+wd.label+'</span>';
@@ -3363,11 +3363,11 @@
                 allMax=Math.min(Math.max(Math.ceil(allMax/5)*5+5,100),100);
 
                 var opt={
-                    grid:{left:2,right:8,top:8,bottom:18,containLabel:false},
-                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:7,fontWeight:'bold',padding:[2,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
+                    grid:{left:0,right:0,top:6,bottom:16,containLabel:false},
+                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:7,fontWeight:'bold',padding:[1,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
                     yAxis:{type:'value',min:0,max:allMax,splitNumber:2,axisLabel:{fontSize:6,color:'#475569',padding:[0,2,0,0]},splitLine:{lineStyle:{color:'#1e293b',type:'dashed',width:0.5}},axisLine:{show:false},axisTick:{show:false}},
                     series:[
-                        {name:'Prev',type:'bar',barWidth:'70%',barGap:'10%',data:prvData,z:1},
+                        {name:'Prev',type:'bar',barWidth:'85%',barGap:'5%',data:prvData,z:1},
                         {name:'Cur',type:'bar',barWidth:'70%',barGap:'10%',
                             label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
                             data:curData,z:2
