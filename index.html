@@ -395,6 +395,12 @@
                 <button id="btn-period-day" onclick="setPeriod('day')" class="period-btn px-2 py-1 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm transition-colors">📅 Day</button>
                 <button id="btn-period-week" onclick="setPeriod('week')" class="period-btn px-2 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📆 Wk</button>
                 <button id="btn-period-month" onclick="setPeriod('month')" class="period-btn px-2 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📊 Mo</button>
+                <button id="btn-period-custom" onclick="setPeriod('custom')" class="period-btn px-2 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">📌 Rang</button>
+            </div>
+            <div id="custom-range-container" class="flex items-center gap-1.5 ml-1" style="display:none">
+                <input type="date" id="custom-start" onchange="onCustomRangeChange()" class="bg-[#1e293b] border border-slate-700/50 rounded text-[10px] text-slate-200 px-1 py-0.5 outline-none w-[110px]">
+                <span class="text-slate-500 text-[10px]">~</span>
+                <input type="date" id="custom-end" onchange="onCustomRangeChange()" class="bg-[#1e293b] border border-slate-700/50 rounded text-[10px] text-slate-200 px-1 py-0.5 outline-none w-[110px]">
             </div>
         </div>
 
@@ -1180,7 +1186,9 @@
 
         let currentDate = "";
         let chartInstance = null;
-        let pkPeriod = 'day'; // 'day' | 'week' | 'month'
+        let pkPeriod = 'day'; // 'day' | 'week' | 'month' | 'custom'
+        let customRangeStart = '';
+        let customRangeEnd = '';
 
         /* ★ Write counter: prevents Firebase onValue cache from rolling back user's latest write (MEMORY.md v2.16 fix) */
         let _localWriteCounter = parseInt(localStorage.getItem('_mbs_write_seq') || '0');
@@ -1209,6 +1217,18 @@
         }
         function getDateRange(mode, refDate) {
             if (mode === 'day') return [refDate];
+            if (mode === 'custom') {
+                if (!customRangeStart || !customRangeEnd) return [refDate];
+                const start = new Date(customRangeStart + 'T00:00:00');
+                const end = new Date(customRangeEnd + 'T00:00:00');
+                const dates = [];
+                let cur = new Date(start);
+                while (cur <= end) {
+                    dates.push(`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`);
+                    cur.setDate(cur.getDate() + 1);
+                }
+                return dates;
+            }
             const today = new Date(refDate + 'T00:00:00');
             let start;
             if (mode === 'week') {
@@ -1231,6 +1251,10 @@
         }
         function getPeriodLabel(mode) {
             if (mode === 'day') return 'DAY';
+            if (mode === 'custom') {
+                if (!customRangeStart || !customRangeEnd) return 'CUSTOM RANGE';
+                return `CUSTOM (${customRangeStart} ~ ${customRangeEnd})`;
+            }
             if (mode === 'week') {
                 const mon = getWeekMonday(currentDate);
                 return `WEEK (${mon} ~ ${currentDate})`;
@@ -1359,8 +1383,33 @@
                 activeBtn.classList.remove('text-slate-500','hover:text-slate-300');
                 activeBtn.classList.add('bg-blue-600','text-white','shadow-md');
             }
+            /* ★ Show/hide custom date range inputs */
+            const container = document.getElementById('custom-range-container');
+            if (mode === 'custom') {
+                container.style.display = 'flex';
+                /* ★ Default: current week if empty */
+                if (!customRangeStart) {
+                    customRangeStart = getWeekMonday(currentDate);
+                    document.getElementById('custom-start').value = customRangeStart;
+                }
+                if (!customRangeEnd) {
+                    customRangeEnd = currentDate;
+                    document.getElementById('custom-end').value = customRangeEnd;
+                }
+            } else {
+                container.style.display = 'none';
+            }
             updateUI();
             renderAdmin();
+        };
+
+        window.onCustomRangeChange = () => {
+            customRangeStart = document.getElementById('custom-start').value;
+            customRangeEnd = document.getElementById('custom-end').value;
+            updateUI();
+            renderAdmin();
+            var _t2Cen = document.getElementById('t2-center-date');
+            if (_t2Cen) _t2Cen.textContent = customRangeStart ? `${customRangeStart} ~ ${customRangeEnd}` : 'CUSTOM';
         };
 
         const dims = [
@@ -2087,6 +2136,7 @@
                 var _trendDates = getDateRange(pkPeriod, currentDate);
                 /* ★ 趋势图排除休息日(不展示休息日数据点) */
                 if (pkPeriod === 'month') _trendDates = _trendDates.filter(function(ds) { return !isRestDay(ds); });
+                /* ★ Custom: 不过滤休息日(用户自己选择的范围) */;
                 var _trendLabels = _trendDates.map(function(ds) { return String(parseInt(ds.slice(8))); });
                 var _seriesList = [];
                 var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
@@ -2858,7 +2908,7 @@
             // Update period label in header
             const trendLabel = document.getElementById('p3-trend-label');
             if (trendLabel) {
-                trendLabel.textContent = '📈 ' + (pkPeriod === 'day' ? 'DAILY' : pkPeriod === 'week' ? 'WEEKLY' : 'MONTHLY') + ' ACH%';
+                trendLabel.textContent = '📈 ' + (pkPeriod === 'day' ? 'DAILY' : pkPeriod === 'week' ? 'WEEKLY' : pkPeriod === 'month' ? 'MONTHLY' : 'CUSTOM RANGE') + ' ACH%';
             }
             const chartEl = document.getElementById('p3-trend-chart');
             // Determine which dates to show based on period
