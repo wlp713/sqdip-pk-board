@@ -1940,7 +1940,7 @@
                 `;
             }).join('');
 
-            document.getElementById('p1-winner-text').innerHTML = champLabel;
+            var _p1w=document.getElementById('p1-winner-text');if(_p1w)_p1w.innerHTML=champLabel;
             /* ★ Build ranking list: all workshops with champion highlighted */
             const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
             const rankColors = [
@@ -1952,7 +1952,7 @@
             ];
             const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
             const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
-            document.getElementById('p1-rank-list').innerHTML = wsScores.map(function(s, i) {
+            var _p1r=document.getElementById('p1-rank-list');if(_p1r)_p1r.innerHTML=wsScores.map(function(s,i){
                 return `<div class="flex items-center py-0.5 px-1 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
                     <span class="text-[10px] mr-0.5">${medals[i]}</span>
                     <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.ws.label}</span>
@@ -1961,10 +1961,10 @@
             }).join('');
             /* ★ Update date in header */
             if (pkPeriod === 'day') {
-                document.getElementById('p1-header-date').innerText = currentDate;
+                var _p1h=document.getElementById('p1-header-date');if(_p1h)_p1h.innerText=currentDate;
             } else {
                 const range = getDateRange(pkPeriod, currentDate);
-                document.getElementById('p1-header-date').innerText = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
+                if(_p1h)_p1h.innerText=range.length===1?currentDate:`${range[0]}~${range[range.length-1]}`;
             }
 
             /* ★ 显示/隐藏 WS 选择器 (仅管理员可见) */
@@ -2303,7 +2303,7 @@
 
             const range = getDateRange(pkPeriod, currentDate);
             const periodLabel = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
-            document.getElementById('p4-period-tag').innerText = periodLabel;
+            var _p4t=document.getElementById('p4-period-tag');if(_p4t)_p4t.innerText=periodLabel;
 
             /* ★ Flag images (base64-embedded, resized from originals) */
 
