@@ -3321,7 +3321,7 @@
             window._compCharts=[];
             grid.innerHTML='';
             grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0';
-            const dimInfo={safety:{e:'🛡',n:'Sa'},ss:{e:'🧹',n:'5S'},pro:{e:'📈',n:'UP'},qua:{e:'🎯',n:'Qu'},los:{e:'📉',n:'Lo'}};
+            const dimInfo={safety:{n:'Safety'},ss:{n:'5S'},pro:{n:'UPPH'},qua:{n:'Quality'},los:{n:'Loss'}};
             /* ★ Build per-workshop data */
             const wsData=workshops.map(function(ws){
                 const items=dims.map(function(d){
@@ -3357,11 +3357,11 @@
                 wd.items.forEach(function(item,idx){
                     if(item.delta===null) return;
                     var row=document.createElement('div');
-                    row.className='flex items-center px-2 py-1 text-[8px] '+(idx%2?'bg-slate-800/10':'');
+                    row.className='flex items-center px-2 py-[6px] text-[8px] '+(idx%2?'bg-slate-800/10':'');
                     var di=dimInfo[item.id]||{e:'?',n:item.id};
                     var nameEl=document.createElement('span');
-                    nameEl.className='w-10 text-slate-500 font-medium';
-                    nameEl.textContent=di.e+di.n;
+                    nameEl.className='w-[48px] text-slate-400 font-medium text-[9px]';
+                    nameEl.textContent=di.n;
                     row.appendChild(nameEl);
                     var valEl=document.createElement('span');
                     valEl.className='w-[52px] text-right text-slate-400';
