@@ -3357,12 +3357,12 @@
                     });
                 });
                 chart.setOption({
-                    grid:{ top:gridTop, bottom:gridBottom, left:gridLeft, right:gridRight },
-                    xAxis:{ type:'category', data:['Sa','5S','UP','Qu','Lo'], axisLabel:{ color:'#64748b', fontSize:7, fontWeight:'bold' }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ show:false } },
-                    yAxis:{ type:'value', min:0, max:100, axisLabel:{ color:'#475569', fontSize:7 }, splitLine:{ lineStyle:{ color:'#1e293b', type:'solid' } }, axisLine:{ show:false }, axisTick:{ show:false } },
+                    grid:{ top:gridTop, bottom:10, left:22, right:4 },
+                    xAxis:{ type:'category', data:['🛡Sa','🧹5S','📉UP','🎯Qu','⚡Lo'], axisLabel:{ color:'#64748b', fontSize:6, fontWeight:'bold', interval:0 }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ show:false } },
+                    yAxis:{ type:'value', min:0, max:100, axisLabel:{ color:'#475569', fontSize:6, show:false }, splitLine:{ lineStyle:{ color:'#1e293b', type:'solid' } }, axisLine:{ show:false }, axisTick:{ show:false } },
                     series: series,
-                    tooltip:{ trigger:'axis', backgroundColor:'#1e293b', borderColor:'#475569', textStyle:{ color:'#f8fafc', fontSize:9 } },
-                    animationDuration:400
+                    tooltip:{ trigger:'axis', backgroundColor:'#1e293b', borderColor:'#475569', textStyle:{ color:'#f8fafc', fontSize:8 } },
+                    animationDuration:300
                 });
             });
             if(!anyOverall) grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>';
