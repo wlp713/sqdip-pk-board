@@ -480,8 +480,8 @@
                             <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
                         </div>
-                        <div id="comp-body" class="flex-1 overflow-y-auto space-y-1.5 px-0.5">
-                            <div class="flex items-center justify-center h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>
+                        <div id="comp-chart-grid" class="flex-1 flex flex-row items-stretch gap-1 px-0.5 overflow-hidden min-h-0">
+                            <div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>
                         </div>
                     </div>
                 </div>
@@ -3295,48 +3295,79 @@
             const ce=document.getElementById('comp-end').value;
             const ps=document.getElementById('prev-start').value;
             const pe=document.getElementById('prev-end').value;
-            const body=document.getElementById('comp-body');
-            if(!cs||!ce||!ps||!pe){ body.innerHTML='<div class="flex items-center justify-center h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
+            const grid=document.getElementById('comp-chart-grid');
+            if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currDates=_getDatesBetween(cs,ce), prevDates=_getDatesBetween(ps,pe);
             const currAcc=_accumRange(currDates), prevAcc=_accumRange(prevDates);
-            const dimColorsBg={safety:'bg-emerald-900/40 text-emerald-300',ss:'bg-cyan-900/40 text-cyan-300',pro:'bg-blue-900/40 text-blue-300',qua:'bg-purple-900/40 text-purple-300',los:'bg-amber-900/40 text-amber-300'};
-            let html='';
-            workshops.forEach(function(ws){
-                let wsRows=''; let anyData=false;
-                dims.forEach(function(dim){
+            /* ★ Clear old charts */
+            if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
+            window._compCharts=[];
+            /* ★ Build chart divs and render */
+            const dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
+            const dimNames=['Safety','5S','UPPH','Quality','Loss'];
+            grid.innerHTML='';
+            let anyOverall=false;
+            workshops.forEach(function(ws,wi){
+                /* ★ Build data for this workshop */
+                var prvRates=[], curRates=[]; var hasData=false;
+                dims.forEach(function(dim,di){
                     const cur=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
                     const prv=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
-                    const curRate=cur?calcDimRate(dim,cur.t,cur.a,ws.id):null;
-                    const prvRate=prv?calcDimRate(dim,prv.t,prv.a,ws.id):null;
-                    if(curRate===null&&prvRate===null) return;
-                    anyData=true;
-                    const curStr=curRate!==null?curRate.toFixed(1)+'%':'--';
-                    const prvStr=prvRate!==null?prvRate.toFixed(1)+'%':'--';
-                    let deltaStr='--',deltaCls='text-slate-500',arrow='→';
-                    if(curRate!==null&&prvRate!==null){
-                        const d=parseFloat((curRate-prvRate).toFixed(1));
-                        deltaStr=(d>0?'+':'')+d+'pp';
-                        deltaCls=d>0?'text-emerald-400':d<0?'text-red-400':'text-slate-500';
-                        arrow=d>0?'↑':d<0?'↓':'→';
-                    }
-                    const dbg=dimColorsBg[dim.id]||'bg-slate-800 text-slate-300';
-                    wsRows+=`<div class="grid grid-cols-[50px_1fr_auto_1fr_auto_1fr_18px] items-center gap-0.5 text-[9px] py-[2px] border-b border-slate-800/50 last:border-0">
-                        <span class="${dbg} font-bold text-[8px] rounded px-1 py-[1px] text-center truncate">${dim.name}</span>
-                        <span class="text-right text-slate-500 font-mono">${prvStr}</span>
-                        <span class="text-slate-700 px-0.5 text-[10px]">→</span>
-                        <span class="text-right text-slate-200 font-mono font-semibold">${curStr}</span>
-                        <span class="text-right font-mono font-bold ${deltaCls}">${deltaStr}</span>
-                        <span class="${deltaCls} text-[12px] text-center font-bold">${arrow}</span>
-                    </div>`;
+                    const curRate=cur?parseFloat(calcDimRate(dim,cur.t,cur.a,ws.id).toFixed(1)):null;
+                    const prvRate=prv?parseFloat(calcDimRate(dim,prv.t,prv.a,ws.id).toFixed(1)):null;
+                    curRates.push(curRate); prvRates.push(prvRate);
+                    if(curRate!==null||prvRate!==null) hasData=true;
                 });
-                if(!anyData) return;
-                html+=`<div class="bg-slate-900/50 border border-slate-800/60 rounded p-1">
-                    <div class="text-[10px] font-bold text-slate-200 mb-0.5 pl-0.5">${ws.label}</div>
-                    ${wsRows}
-                </div>`;
+                if(!hasData) return;
+                anyOverall=true;
+                /* ★ Create chart div */
+                var div=document.createElement('div');
+                div.className='flex-1 min-w-0 flex flex-col items-center';
+                var label=document.createElement('div');
+                label.className='text-[9px] font-bold text-slate-300 mt-0.5 mb-0 leading-tight';
+                label.textContent=ws.label;
+                div.appendChild(label);
+                var chartDiv=document.createElement('div');
+                chartDiv.className='flex-1 w-full';
+                div.appendChild(chartDiv);
+                grid.appendChild(div);
+                /* ★ Init chart */
+                var chart=echarts.init(chartDiv);
+                window._compCharts.push(chart);
+                var series=[];
+                var gridTop=14, gridBottom=12, gridLeft=28, gridRight=8;
+                dimNames.forEach(function(nm,di){
+                    var c=dimColors[di%dimColors.length];
+                    series.push({
+                        name: nm+'(Prev)', type:'bar', barWidth:6, barGap:0, barCategoryGap:'20%',
+                        data: prvRates[di]!==null?prvRates[di]:0,
+                        itemStyle:{ color: c+'66', borderColor:c, borderWidth:0.5, borderRadius:[0,0,0,0] },
+                        emphasis:{ itemStyle:{ color:c+'88' } },
+                        z:1
+                    });
+                    series.push({
+                        name: nm, type:'bar', barWidth:6, barGap:'30%',
+                        data: curRates[di]!==null?curRates[di]:0,
+                        itemStyle:{ color:c, borderRadius:[2,2,0,0] },
+                        label:{ show:true, position:'top', color:'#e2e8f0', fontSize:7, fontWeight:'bold', fontFamily:'monospace', formatter:function(p){
+                            return p.value>0?p.value+'%':'';
+                        }},
+                        emphasis:{ itemStyle:{ color:c } },
+                        z:2
+                    });
+                });
+                chart.setOption({
+                    grid:{ top:gridTop, bottom:gridBottom, left:gridLeft, right:gridRight },
+                    xAxis:{ type:'category', data:['Sa','5S','UP','Qu','Lo'], axisLabel:{ color:'#64748b', fontSize:7, fontWeight:'bold' }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ show:false } },
+                    yAxis:{ type:'value', min:0, max:100, axisLabel:{ color:'#475569', fontSize:7 }, splitLine:{ lineStyle:{ color:'#1e293b', type:'solid' } }, axisLine:{ show:false }, axisTick:{ show:false } },
+                    series: series,
+                    tooltip:{ trigger:'axis', backgroundColor:'#1e293b', borderColor:'#475569', textStyle:{ color:'#f8fafc', fontSize:9 } },
+                    animationDuration:400
+                });
             });
-            if(!html) html='<div class="flex items-center justify-center h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>';
-            body.innerHTML=html;
+            if(!anyOverall) grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>';
+            /* ★ Resize charts on next frame */
+            setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){ try{c.resize();}catch(e){} }); }, 50);
         };
 
         window.toggleLock = () => {
