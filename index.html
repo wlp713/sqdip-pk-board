@@ -467,6 +467,23 @@
                     </div>
 
                     <div id="p1-chart" class="flex-1 w-full" style="min-height:0"></div>
+                    <!-- ★ Period Comparison Module (replaces trend chart for week/month/custom) -->
+                    <div id="comp-module" class="flex-1 w-full flex flex-col overflow-hidden" style="display:none">
+                        <div class="flex items-center gap-2 mb-1.5 flex-wrap px-1 mt-[-2px]">
+                            <span class="text-[10px] font-bold text-emerald-400">📊 Comparison</span>
+                            <input type="date" id="comp-start" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <span class="text-[8px] text-slate-600">~</span>
+                            <input type="date" id="comp-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <span class="text-[9px] text-slate-500 font-bold">vs</span>
+                            <input type="date" id="prev-start" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <span class="text-[8px] text-slate-600">~</span>
+                            <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
+                        </div>
+                        <div id="comp-body" class="flex-1 overflow-y-auto space-y-1.5 px-0.5">
+                            <div class="flex items-center justify-center h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="panel-card champion-card p-1.5 w-[25%] flex flex-col items-center text-center relative overflow-visible">
@@ -1971,6 +1988,9 @@
                 : workshops.filter(function(w) { return w.id === _authRole; });
 
             if (!chartInstance) chartInstance = echarts.init(document.getElementById('p1-chart'));
+            /* ★ 切换显示: Day→chart / 其他→comparison module */
+            document.getElementById('p1-chart').style.display = pkPeriod === 'day' ? '' : 'none';
+            document.getElementById('comp-module').style.display = pkPeriod === 'day' ? 'none' : 'flex';
 
             if (pkPeriod === 'day') {
                 /* ★ Day模式: 维度柱状图 (不斜字体) */
@@ -2133,182 +2153,24 @@
                     });
                 }
             } else {
-                /* ★ Week/Month: 趋势折线图 (直接取各车间输出达成率) */
-                var _trendDates = getDateRange(pkPeriod, currentDate);
-                /* ★ 趋势图排除休息日(不展示休息日数据点) */
-                if (pkPeriod === 'month') _trendDates = _trendDates.filter(function(ds) { return !isRestDay(ds); });
-                /* ★ Custom: 不过滤休息日(用户自己选择的范围) */;
-                var _trendLabels = _trendDates.map(function(ds) { return String(parseInt(ds.slice(8))); });
-                var _seriesList = [];
-                var _lineColors = ['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#38bdf8','#fb923c','#e879f9'];
-
-                /* ★ 取某车间某日的SQDIP综合评分(各维度平均), 与上面面板一致 */
-                function _wsAchPct(wsId, ds) {
-                    var _day = loadDayData(ds);
-                    if (!_day || !_day.t1 || !_day.t1[wsId]) return null;
-                    var _sum = 0, _cnt = 0;
-                    dims.forEach(function(d) {
-                        var _e = _day.t1[wsId][d.id];
-                        if (_e) {
-                            var _t = Number(_e.t) || 0;
-                            var _a = Number(_e.a) || 0;
-                            _sum += calcDimRate(d, _t, _a, wsId); _cnt++;
-                        }
-                    });
-                    if (_cnt > 0) return parseFloat((_sum / _cnt).toFixed(1));
-                    return null;
+                /* ★ 非Day模式: 自动填充对比日期 (首次) */
+                const _cd = getDateRange(pkPeriod, currentDate);
+                const _csi = document.getElementById('comp-start');
+                const _cei = document.getElementById('comp-end');
+                const _psi = document.getElementById('prev-start');
+                const _pei = document.getElementById('prev-end');
+                /* ★ 注意: dateStr是局部函数(在 _getDatesBetween 上方同scope), 不可达这里。用 new Date 构造 */
+                function _compDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+                if (_cd.length > 0 && !_csi.value) {
+                    _csi.value = _cd[0];
+                    _cei.value = _cd[_cd.length - 1];
+                    const _f = new Date(_cd[0] + 'T00:00:00');
+                    _f.setDate(_f.getDate() - _cd.length);
+                    _psi.value = _compDateStr(_f);
+                    _f.setDate(_f.getDate() + _cd.length - 1);
+                    _pei.value = _compDateStr(_f);
                 }
-
-                if (_p1Dim === 'all') {
-                    // 各车间整体趋势线
-                    _chartWSs.forEach(function(ws) {
-                        var _wsData = _trendDates.map(function(ds) { return _wsAchPct(ws.id, ds); });
-                        if (_wsData.some(function(v) { return v !== null && isFinite(v); })) {
-                            _seriesList.push({ name: ws.label, data: _wsData });
-                        }
-                    });
-                } else {
-                    var _selDim = dims.find(function(d) { return d.id === _p1Dim; });
-                    _chartWSs.forEach(function(ws) {
-                        var _wsData = _trendDates.map(function(ds) {
-                            var _day = loadDayData(ds);
-                            if (_day && _day.t1 && _day.t1[ws.id] && _day.t1[ws.id][_selDim.id]) {
-                                var _e = _day.t1[ws.id][_selDim.id];
-                                var _t = Number(_e.t) || 0;
-                                var _a = Number(_e.a) || 0;
-                                return parseFloat(calcDimRate(_selDim, _t, _a, ws.id).toFixed(1));
-                            }
-                            return null;
-                        });
-                        if (_wsData.some(function(v) { return v !== null; })) {
-                            _seriesList.push({ name: ws.label, data: _wsData });
-                        }
-                    });
-                }
-
-                /* ★ 整体趋势线 = 各车间SQDIP综合评分的均值 */
-                var _overallTrendData = _trendDates.map(function(ds) {
-                    var _sum = 0, _cnt = 0;
-                    _chartWSs.forEach(function(ws) {
-                        var v = _wsAchPct(ws.id, ds);
-                        if (v !== null && isFinite(v)) { _sum += v; _cnt++; }
-                    });
-                    return _cnt > 0 ? parseFloat((_sum / _cnt).toFixed(1)) : null;
-                });
-                _seriesList.push({ name: 'Overall', data: _overallTrendData });
-
-                var _Y_CAP = 150;  /* ★ 线条最高显示到Y轴上限,数据保持真实 */
-                var _echartSeries = _seriesList.map(function(s, idx) {
-                    var _clr = idx < _lineColors.length ? _lineColors[idx] : '#94a3b8';
-                    var _ser = {
-                        name: s.name,
-                        data: s.data.map(function(v) {
-                            return v === null ? null : { value: Math.min(v, _Y_CAP), realValue: v };
-                        }),
-                        type: 'line', smooth: true,
-                        connectNulls: false,
-                        symbol: 'circle', symbolSize: 5,
-                        lineStyle: { color: _clr, width: 2 },
-                        itemStyle: { color: _clr },
-                        label: {
-                            show: true,
-                            color: '#e2e8f0', fontSize: 8, fontWeight: 'bold', fontFamily: 'monospace',
-                            fontStyle: 'normal',
-                            /* ★ 各车间标签错开位置避免重叠 */
-                            position: _seriesList.length > 2 ? (idx === 2 ? 'bottom' : idx === 3 ? 'bottom' : 'top') : 'top',
-                            distance: idx === 0 ? 2 : idx === 1 ? 2 : idx === 2 ? 2 : idx === 3 ? 2 : 2,
-                            offset: idx === 0 ? [0, -10] : idx === 1 ? [0, 10] : idx === 2 ? [-28, 8] : idx === 3 ? [28, 8] : [0, -14],
-                            formatter: function(p) {
-                                var rv = p.data && p.data.realValue !== undefined ? p.data.realValue : p.value;
-                                return rv !== null && rv !== undefined ? rv + '%' : '';
-                            }
-                        },
-                        z: 2
-                    };
-                    if (s.name === 'Overall') {
-                        _ser.lineStyle = { color: '#f8fafc', width: 3, type: 'dashed' };
-                        _ser.itemStyle = { color: '#f8fafc' };
-                        _ser.symbol = 'diamond';
-                        _ser.symbolSize = 6;
-                        _ser.z = 10;
-                        _ser.label.offset = [0, -16];
-                    }
-                    if (_seriesList.length === 1) {
-                        _ser.markLine = {
-                            silent: true,
-                            data: [{ yAxis: 100 }],
-                            lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5 },
-                            label: { formatter: 'Target: 100%', color: '#ef4444', fontSize: 10, fontWeight: 'bold' }
-                        };
-                        _ser.areaStyle = {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                {offset: 0, color: 'rgba(59,130,246,0.3)'},
-                                {offset: 1, color: 'rgba(59,130,246,0.02)'}
-                            ])
-                        };
-                    }
-                    return _ser;
-                });
-
-                /* ★ 自适应纵轴范围 (趋势图) */
-                var _allVals = [];
-                _echartSeries.forEach(function(s) {
-                    s.data.forEach(function(v) {
-                        if (v === null) return;
-                        _allVals.push(typeof v === 'object' ? v.value : v);
-                    });
-                });
-                var _yMin = 0, _yMax = 100;
-                if (_allVals.length > 0) {
-                    var _min = Math.min.apply(null, _allVals);
-                    var _max = Math.min(Math.max.apply(null, _allVals), _Y_CAP);  /* ★ Y轴上限=线条显示上限 */
-                    var _range = _max - _min;
-                    if (_range === 0) {
-                        _yMin = Math.max(0, _min - 8);
-                        _yMax = _min + 8;
-                    } else {
-                        _yMin = Math.max(0, Math.floor((_min - _range * 0.15) / 5) * 5);
-                        _yMax = Math.ceil((_max + _range * 0.15) / 5) * 5;
-                    }
-                    if (_yMax - _yMin < 10) { _yMin = Math.max(0, _yMin - 5); _yMax = _yMin + 10; }
-                }
-
-                chartInstance.clear(); chartInstance.setOption({
-                    grid: { top: 25, bottom: 35, left: 35, right: 15 },
-                    tooltip: {
-                        trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#475569',
-                        textStyle: { color: '#f8fafc', fontSize: 12 },
-                        formatter: function(params) {
-                            if (!params || !params.length) return '';
-                            var s = '<div class="text-[11px]">' + params[0].axisValueLabel + '</div>';
-                            params.forEach(function(p) {
-                                var rv = p.data && p.data.realValue !== undefined ? p.data.realValue : p.value;
-                                if (rv === null || rv === undefined) return;
-                                s += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px">';
-                                s += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + p.color + '"></span>';
-                                s += '<span style="font-weight:600">' + p.seriesName + ':</span>';
-                                s += '<span style="font-family:monospace;font-weight:700">' + rv + '%</span></div>';
-                            });
-                            return s;
-                        }
-                    },
-                    legend: {
-                        data: _seriesList.map(function(s) { return s.name; }),
-                        textStyle: { color: '#94a3b8', fontSize: 9, fontWeight: 'bold', fontStyle: 'normal' },
-                        top: 0, left: 'center', itemWidth: 12, itemHeight: 8
-                    },
-                    xAxis: { type: 'category', data: _trendLabels,
-                        axisLabel: { show: true, color: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontStyle: 'normal', hideOverlap: false, interval: 0 },
-                        axisLine: { lineStyle: { color: '#334155' } },
-                        axisTick: { show: false }
-                    },
-                    yAxis: { type: 'value', min: _yMin, max: _yMax,
-                        axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontStyle: 'normal', formatter: '{value}%' },
-                        splitLine: { lineStyle: { color: '#1e293b', type: 'solid' } },
-                        axisLine: { show: false }
-                    },
-                    series: _echartSeries
-                });
+                renderPeriodComparison();
             }
             const calcP2 = (wsName, domPrefix, bgClass) => {
                 let sumT = 0, sumA = 0, html = '';
@@ -3386,6 +3248,97 @@
             }
             alert('导入完成!已更新 '+n+' 天数据到localStorage'+(sk?'(跳过 '+sk+' 天无数据)':'')+(failed?'\nFirebase写入失败 '+failed+' 天(请刷新检查)':'')+'\n请刷新页面查看');
         };
+
+        /* ═══════════════ Period Comparison Module ═══════════════ */
+        function _dateStr(d) {
+            return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        }
+        function _getDatesBetween(start, end) {
+            const s=new Date(start+'T00:00:00'), e=new Date(end+'T00:00:00'), r=[];
+            for(let c=new Date(s); c<=e; c.setDate(c.getDate()+1)) r.push(_dateStr(c));
+            return r;
+        }
+        function _accumRange(dates) {
+            const acc={}; let hasData=false;
+            dates.forEach(ds=>{
+                const d=loadDayData(ds);
+                if(!d||!d.t1) return;
+                workshops.forEach(ws=>{
+                    if(!d.t1[ws.id]) return;
+                    if(!acc[ws.id]) acc[ws.id]={};
+                    dims.forEach(dim=>{
+                        const e=d.t1[ws.id][dim.id];
+                        if(!e) return;
+                        if(!acc[ws.id][dim.id]) acc[ws.id][dim.id]={t:0,a:0,c:0};
+                        acc[ws.id][dim.id].t+=Number(e.t)||0;
+                        acc[ws.id][dim.id].a+=Number(e.a)||0;
+                        acc[ws.id][dim.id].c++;
+                        hasData=true;
+                    });
+                });
+            });
+            if(!hasData) return null;
+            workshops.forEach(ws=>{
+                if(!acc[ws.id]) return;
+                dims.forEach(dim=>{
+                    const c=acc[ws.id][dim.id];
+                    if(!c||c.c===0) return;
+                    if(dim.id==='safety') c.t=0;
+                    else if(dim.id==='ss') c.t=10;
+                    else if(dim.id!=='los'){ c.t/=c.c; c.a/=c.c; }
+                });
+            });
+            return acc;
+        }
+        window.renderPeriodComparison = function(){
+            const cs=document.getElementById('comp-start').value;
+            const ce=document.getElementById('comp-end').value;
+            const ps=document.getElementById('prev-start').value;
+            const pe=document.getElementById('prev-end').value;
+            const body=document.getElementById('comp-body');
+            if(!cs||!ce||!ps||!pe){ body.innerHTML='<div class="flex items-center justify-center h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
+            const currDates=_getDatesBetween(cs,ce), prevDates=_getDatesBetween(ps,pe);
+            const currAcc=_accumRange(currDates), prevAcc=_accumRange(prevDates);
+            const dimColorsBg={safety:'bg-emerald-900/40 text-emerald-300',ss:'bg-cyan-900/40 text-cyan-300',pro:'bg-blue-900/40 text-blue-300',qua:'bg-purple-900/40 text-purple-300',los:'bg-amber-900/40 text-amber-300'};
+            let html='';
+            workshops.forEach(function(ws){
+                let wsRows=''; let anyData=false;
+                dims.forEach(function(dim){
+                    const cur=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
+                    const prv=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
+                    const curRate=cur?calcDimRate(dim,cur.t,cur.a,ws.id):null;
+                    const prvRate=prv?calcDimRate(dim,prv.t,prv.a,ws.id):null;
+                    if(curRate===null&&prvRate===null) return;
+                    anyData=true;
+                    const curStr=curRate!==null?curRate.toFixed(1)+'%':'--';
+                    const prvStr=prvRate!==null?prvRate.toFixed(1)+'%':'--';
+                    let deltaStr='--',deltaCls='text-slate-500',arrow='→';
+                    if(curRate!==null&&prvRate!==null){
+                        const d=parseFloat((curRate-prvRate).toFixed(1));
+                        deltaStr=(d>0?'+':'')+d+'pp';
+                        deltaCls=d>0?'text-emerald-400':d<0?'text-red-400':'text-slate-500';
+                        arrow=d>0?'↑':d<0?'↓':'→';
+                    }
+                    const dbg=dimColorsBg[dim.id]||'bg-slate-800 text-slate-300';
+                    wsRows+=`<div class="grid grid-cols-[50px_1fr_auto_1fr_auto_1fr_18px] items-center gap-0.5 text-[9px] py-[2px] border-b border-slate-800/50 last:border-0">
+                        <span class="${dbg} font-bold text-[8px] rounded px-1 py-[1px] text-center truncate">${dim.name}</span>
+                        <span class="text-right text-slate-500 font-mono">${prvStr}</span>
+                        <span class="text-slate-700 px-0.5 text-[10px]">→</span>
+                        <span class="text-right text-slate-200 font-mono font-semibold">${curStr}</span>
+                        <span class="text-right font-mono font-bold ${deltaCls}">${deltaStr}</span>
+                        <span class="${deltaCls} text-[12px] text-center font-bold">${arrow}</span>
+                    </div>`;
+                });
+                if(!anyData) return;
+                html+=`<div class="bg-slate-900/50 border border-slate-800/60 rounded p-1">
+                    <div class="text-[10px] font-bold text-slate-200 mb-0.5 pl-0.5">${ws.label}</div>
+                    ${wsRows}
+                </div>`;
+            });
+            if(!html) html='<div class="flex items-center justify-center h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>';
+            body.innerHTML=html;
+        };
+
         window.toggleLock = () => {
             const locked = document.getElementById('lock-target-toggle').checked;
             document.querySelectorAll('.input-target').forEach(el => el.readOnly = locked);
