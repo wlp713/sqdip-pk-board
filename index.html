@@ -1932,10 +1932,10 @@
                 }).join('');
 
                 return `
-                    <div class="panel-card flex flex-col p-2 min-h-0 ${isChamp?'champ-card':''}" style="${isChamp?'border-top:2px solid rgba(251,191,36,0.4);border-right:1px solid rgba(251,191,36,0.1);':''}">
+                    <div class="panel-card flex flex-col p-2 min-h-0 ${isChamp?'champ-card':''}" style="${isChamp?'border-top:3px solid rgba(251,191,36,0.6);border-left:1px solid rgba(251,191,36,0.15);border-right:1px solid rgba(251,191,36,0.15);background:linear-gradient(180deg,rgba(251,191,36,0.06) 0%,transparent 40%);box-shadow:0 0 20px rgba(251,191,36,0.08),inset 0 0 15px rgba(251,191,36,0.03);':''}">
                         <div class="flex justify-between items-center ${isSingle?'':'border-b border-slate-700 pb-1.5 mb-1.5'}">
                             <div class="flex flex-col items-start">
-                                <span class="${isSingle?'ws-name title-h2':'title-h2 text-sm'} text-white">${ws.label}${isChamp?' <span class="text-[11px]">🏆</span>':''}</span>
+                                <span class="${isSingle?'ws-name title-h2':'title-h2 text-sm'} text-white">${ws.label}${isChamp?' <span class="text-[15px] trophy-float inline-block">🏆</span>':''}</span>
                                 <span class="${isSingle?'ws-pic':'text-[10px]'} text-slate-400 font-medium">PIC: ${ws.pic}</span>
                             </div>
                             <span class="num-font num-light text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/30 ${isSingle?'ws-score':'text-sm'}">${avg.toFixed(2)}</span>
@@ -3300,112 +3300,100 @@
             if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currDates=_getDatesBetween(cs,ce), prevDates=_getDatesBetween(ps,pe);
             const currAcc=_accumRange(currDates), prevAcc=_accumRange(prevDates);
-            /* ★ Clear old chart instances */
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            /* ★ Build data per workshop */
-            var wsDataList=[]; var anyOverall=false;
+            grid.style.overflow='hidden';
+            /* ★ Build per-workshop data */
+            var wsData=[];
             workshops.forEach(function(ws){
-                var items=[]; var has=false;
-                dims.forEach(function(dim){
-                    const cObj=currAcc&&currAcc[ws.id]&&currAcc[ws.id][dim.id];
-                    const pObj=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][dim.id];
-                    const cRate=cObj?parseFloat(calcDimRate(dim,cObj.t,cObj.a,ws.id).toFixed(1)):null;
-                    const pRate=pObj?parseFloat(calcDimRate(dim,pObj.t,pObj.a,ws.id).toFixed(1)):null;
-                    items.push({cRate:pRate,cur:cRate,prv:pRate});
-                    if(cRate!==null||pRate!==null) has=true;
+                var curArr=[], prvArr=[]; var has=false;
+                dims.forEach(function(d){
+                    var co=currAcc&&currAcc[ws.id]&&currAcc[ws.id][d.id];
+                    var po=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][d.id];
+                    var c=co?calcDimRate(d,co.t,co.a,ws.id):null;
+                    var p=po?calcDimRate(d,po.t,po.a,ws.id):null;
+                    curArr.push(c);prvArr.push(p);
+                    if(c!==null||p!==null) has=true;
                 });
                 if(!has) return;
-                anyOverall=true;
-                wsDataList.push({id:ws.id,label:ws.label,items:items});
-            });
-            if(!anyOverall){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data found for selected date ranges</div>'; return; }
-            /* ★ Calc improvement to find overall best */
-            wsDataList.forEach(function(wd){
-                var totImp=0, totN=0;
-                wd.items.forEach(function(it){
-                    if(it.cur!==null&&it.prv!==null){totImp+=it.cur-it.prv; totN++;}
+                /* overall op */
+                var tot=0,n=0;
+                dims.forEach(function(d,i){
+                    if(curArr[i]!==null&&prvArr[i]!==null){tot+=curArr[i]-prvArr[i];n++;}
                 });
-                wd.overallImp=totN?totImp/totN:0;
+                wsData.push({id:ws.id,label:ws.label,cur:curArr,prv:prvArr,op:n?tot/n:0});
             });
-            wsDataList.sort(function(a,b){return b.overallImp-a.overallImp;});
-            /* ★ Colors & labels */
-            var dLabels=[{e:'🛡️',n:'Safe'},{e:'🧹',n:'5S'},{e:'📈',n:'UPPH'},{e:'🎯',n:'Qual'},{e:'📉',n:'Loss'}];
-            var xLabels=dLabels.map(function(d){return d.e+d.n;});
-            /* ★ Render per workshop: vertical stacked cards */
-            grid.style.overflowY='auto';
-            wsDataList.forEach(function(wd,wi){
+            if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data</div>';return;}
+            wsData.sort(function(a,b){return b.op-a.op;});
+
+            var dimColors=['#34d399','#2dd4bf','#60a5fa','#c084fc','#fbbf24'];
+            var xLabels=['🛡 Sa','🧹 5S','📈 UP','🎯 Qu','📉 Lo'];
+
+            wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex-shrink-0 flex flex-col bg-slate-900/60 rounded border border-slate-700/50 mb-1 last:mb-0 overflow-hidden';
-                var header=document.createElement('div');
-                header.className='flex items-center gap-2 px-2 py-1 bg-slate-800/40 border-b border-slate-700/30';
-                header.innerHTML='<span class="text-[10px] font-bold text-white">'+wd.label+'</span><span class="text-[8px] text-slate-500 ml-auto">'+wd.overallImp.toFixed(1)+'pp</span>';
-                card.appendChild(header);
+                card.className='flex-shrink-0 flex flex-col bg-slate-900/50 rounded border border-slate-700/40 overflow-hidden';
+                var hdr=document.createElement('div');
+                hdr.className='flex items-center px-2 py-1 bg-slate-800/30 border-b border-slate-700/20';
+                hdr.innerHTML='<span class="text-[10px] font-bold text-white">'+wd.label+'</span>';
+                var impSpan=document.createElement('span');
+                impSpan.className='text-[9px] ml-auto '+(wd.op>=0?'text-emerald-400':'text-red-400');
+                impSpan.textContent=wd.op>=0?'+'+wd.op.toFixed(1)+'pp':wd.op.toFixed(1)+'pp';
+                hdr.appendChild(impSpan);
+                card.appendChild(hdr);
+
                 var cd=document.createElement('div');
-                cd.style.height='120px'; cd.className='w-full';
+                cd.style.height='100px'; cd.className='w-full';
                 card.appendChild(cd);
                 grid.appendChild(card);
-                /* ★ Build series: each dim = prev+cur bars, colored green (improved) or red (not) */
-                var dimSeries=[]; var allMax=100;
-                wd.items.forEach(function(it,di){
-                    var improved=it.cur!==null&&it.prv!==null&&it.cur>it.prv;
-                    var noPrev=it.prv===null&&it.cur!==null;
-                    var color=improved?'#22c55e':'#ef4444';
-                    var prvColor=improved?'#22c55e':'#ef4444';
-                    /* Prev bar (semi-transparent) - smaller width */
-                    var prvArr=[]; for(var j=0;j<5;j++) prvArr.push(j===di&&it.prv!==null?{value:it.prv,itemStyle:{color:prvColor+'55',borderColor:prvColor,borderWidth:0.5}}:0);
-                    /* Cur bar */
-                    var curArr=[]; for(var j=0;j<5;j++) curArr.push(j===di&&it.cur!==null?{value:it.cur,itemStyle:{color:color,borderRadius:[2,2,0,0]}}:0);
-                    if(it.cur!==null) allMax=Math.max(allMax,it.cur);
-                    if(it.prv!==null) allMax=Math.max(allMax,it.prv);
-                    dimSeries.push(prvArr,curArr);
+
+                /* ── ONE CHART per workshop, 2 series (Prev semi + Cur solid), 5 cats ── */
+                var curData=[], prvData=[];
+                var allMax=100;
+                wd.cur.forEach(function(v,i){
+                    var c=Math.min(v||0,100);
+                    var p=Math.min(wd.prv[i]||0,100);
+                    var imp=v!==null&&wd.prv[i]!==null&&v>wd.prv[i];
+                    var dc=dimColors[i];
+                    curData.push({value:c,itemStyle:{color:imp?'#22c55e':'#ef4444',borderRadius:[2,2,0,0]}});
+                    prvData.push({value:p,itemStyle:{color:imp?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)',borderColor:imp?'#22c55e':'#ef4444',borderWidth:0.5,borderRadius:2}});
+                    if(v) allMax=Math.max(allMax,v);
+                    if(wd.prv[i]) allMax=Math.max(allMax,wd.prv[i]);
                 });
-                allMax=Math.min(Math.ceil(allMax/10)*10+10,100);
-                /* ★ eCharts option */
-                var eChartsOption={
-                    grid:[], series:[], xAxis:[], yAxis:[]
+                allMax=Math.min(Math.max(Math.ceil(allMax/5)*5+5,100),100);
+
+                var opt={
+                    grid:{left:2,right:8,top:8,bottom:18,containLabel:false},
+                    xAxis:{type:'category',data:xLabels,axisLabel:{color:'#94a3b8',fontSize:7,fontWeight:'bold',padding:[2,0,0,0]},axisLine:{show:false},axisTick:{show:false}},
+                    yAxis:{type:'value',min:0,max:allMax,splitNumber:2,axisLabel:{fontSize:6,color:'#475569',padding:[0,2,0,0]},splitLine:{lineStyle:{color:'#1e293b',type:'dashed',width:0.5}},axisLine:{show:false},axisTick:{show:false}},
+                    series:[
+                        {name:'Prev',type:'bar',barWidth:'70%',barGap:'10%',data:prvData,z:1},
+                        {name:'Cur',type:'bar',barWidth:'70%',barGap:'10%',
+                            label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
+                            data:curData,z:2
+                        }
+                    ],
+                    tooltip:{trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{fontSize:9},formatter:function(ps){
+                        if(!ps||!ps.length) return '';
+                        var s='<div style="font-size:10px;font-weight:bold;margin-bottom:3px">'+ps[0].axisValue+'</div>';
+                        ps.forEach(function(p,i){
+                            var c=p.value||0;
+                            var pv=prvData[p.dataIndex]?prvData[p.dataIndex].value||0:0;
+                            var nm=p.seriesName;
+                            var delta=c-pv;
+                            var col=delta>0?'#22c55e':delta<0?'#ef4444':'#94a3b8';
+                            s+='<div style="font-size:9px;display:flex;justify-content:space-between;gap:10px"><span>'+nm+':</span><span style="font-weight:bold">'+c.toFixed(1)+'%</span></div>';
+                        });
+                        return s;
+                    }},
+                    animationDuration:300
                 };
-                /* 5 independent small grids side by side */
-                var cellW=100/5;
-                for(var di=0;di<5;di++){
-                    var left=(cellW*di)+'%'; var width=cellW+'%';
-                    eChartsOption.grid.push({id:'g'+di,left:left,width:width,top:12,bottom:14,show:di>0,backgroundColor:di>0?'rgba(30,41,59,0.3)':'transparent',borderWidth:0});
-                    eChartsOption.xAxis.push({id:'x'+di,gridId:'g'+di,type:'category',data:[xLabels[di]],axisLabel:{color:'#94a3b8',fontSize:6,fontWeight:'bold'},axisLine:{show:false},axisTick:{show:false}});
-                    eChartsOption.yAxis.push({id:'y'+di,gridId:'g'+di,type:'value',min:0,max:allMax,axisLabel:{show:false},splitLine:{show:di===0?true:false,lineStyle:{color:'#1e293b'}},axisLine:{show:false},axisTick:{show:false}});
-                    /* Prev then Cur */
-                    var si=di*2;
-                    eChartsOption.series.push({
-                        xAxisId:'x'+di,yAxisId:'y'+di,
-                        name:'Prev',type:'bar',barWidth:8,barGap:'10%',barCategoryGap:'10%',
-                        data:dimSeries[si],
-                        z:1
-                    });
-                    eChartsOption.series.push({
-                        xAxisId:'x'+di,yAxisId:'y'+di,
-                        name:'Cur',type:'bar',barWidth:8,barGap:'10%',barCategoryGap:'10%',
-                        data:dimSeries[si+1],
-                        label:{show:true,position:'top',color:'#e2e8f0',fontSize:7,fontWeight:'bold',fontFamily:'monospace',formatter:function(p){return p.value>0?p.value+'%':'';}},
-                        z:2
-                    });
-                }
-                eChartsOption.tooltip={trigger:'axis',backgroundColor:'#1e293b',borderColor:'#475569',textStyle:{color:'#f8fafc',fontSize:8},formatter:function(ps){
-                    if(!ps||!ps.length) return '';
-                    var dimIdx=Math.floor(ps[0].seriesIndex/2);
-                    var s='<div style="font-size:10px;font-weight:bold;margin-bottom:2px">'+dLabels[dimIdx].e+' '+dLabels[dimIdx].n+'</div>';
-                    ps.forEach(function(p){
-                        s+='<div style="font-size:9px"><b>'+p.seriesName+':</b> <span style="font-family:monospace;font-weight:bold">'+p.value+'%</span></div>';
-                    });
-                    return s;
-                }};
-                eChartsOption.animationDuration=300;
                 var chart=echarts.init(cd);
-                chart.setOption(eChartsOption);
+                chart.setOption(opt);
                 window._compCharts.push(chart);
             });
-            grid.style.overflowY='';
-            /* ★ Resize on next frame */
-            setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){ try{c.resize();}catch(e){} }); }, 50);
+
+            setTimeout(function(){ if(window._compCharts) window._compCharts.forEach(function(c){try{c.resize();}catch(e){}}); }, 80);
         };
 
         window.toggleLock = () => {
