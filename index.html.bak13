@@ -51,9 +51,6 @@
         .data-table td[contenteditable] { cursor: text; }
         .data-table td[contenteditable]:focus { outline: none; }
         .data-table td[contenteditable]:hover { background: rgba(148,163,184,0.06); }
-        /* ★ Editable numbers in comparison cards — no visible indicator */
-        .editable-num { cursor: text; min-width: 10px; display: inline-block; }
-        .editable-num:focus { outline: none; }
 
         .badge-saf { color: var(--dim-saf-text); background: var(--dim-saf-bg); border: 1px solid var(--dim-saf-border); }
         .badge-ss { color: var(--dim-ss-text); background: var(--dim-ss-bg); border: 1px solid var(--dim-ss-border); }
@@ -113,51 +110,6 @@
 
         .data-table td.status-cell .status-emoji { font-size: 0.85rem; line-height: 1; display: inline-block; vertical-align: middle; }
 
-        /* ★ PK page refined table */
-        .data-table-pk {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        .data-table-pk th {
-            padding: 0.25rem 0.2rem;
-            font-size: 0.55rem;
-            color: #64748b;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            border-bottom: 1px solid rgba(148,163,184,0.15);
-            position: sticky;
-            top: 0;
-            background: #0f172a;
-            z-index: 2;
-        }
-        .data-table-pk th:nth-child(1) { text-align: left; width: 28%; }
-        .data-table-pk th:nth-child(2), .data-table-pk th:nth-child(3) { text-align: right; width: 24%; }
-        .data-table-pk th:nth-child(4) { text-align: right; width: 24%; }
-        .data-table-pk td {
-            padding: 0.15rem 0.2rem;
-            font-size: 0.6rem;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .data-table-pk td:nth-child(1) { text-align: left; overflow: visible; text-overflow: clip; }
-        .data-table-pk td:nth-child(2), .data-table-pk td:nth-child(3), .data-table-pk td:nth-child(4) { text-align: right; }
-        .data-table-pk tbody tr:hover td { background-color: rgba(255,255,255,0.02); }
-        .data-table-pk tbody tr:last-child td { border-bottom: none; }
-        .data-table-pk .pk-sub-row td { font-size: 0.55rem; color: #64748b; border-bottom: none; }
-        .data-table-pk .pk-sub-row td:first-child { padding-left: 0.6rem; }
-        .data-table-pk .pk-line-row td { padding-top: 0.25rem; font-weight: 600; color: #e2e8f0; font-size: 0.65rem; }
-        .data-table-pk .pk-line-row td:first-child span { display: inline-flex; align-items: center; gap: 0.2rem; }
-
-        /* ★ Custom scrollbar for PK tables */
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
-
         .text-good { color: #10b981; }
         .text-bad { color: #ef4444; }
         .text-warn { color: #f59e0b; }
@@ -202,30 +154,8 @@
         .is-winner-title {
             color: #ef4444 !important;
             text-shadow: 0 0 15px rgba(239,68,68,0.7) !important;
-            font-size: 1.8rem !important;
+            font-size: 2.25rem !important;
             animation: pulse-winner 2s infinite;
-        }
-        .winner-card-pk {
-            border-color: #ef4444 !important;
-            border-width: 2px !important;
-            box-shadow: 0 0 25px rgba(239,68,68,0.4), inset 0 0 15px rgba(239,68,68,0.1) !important;
-        }
-
-        /* ★ PK win animation */
-        .pk-win-anim {
-            animation: pkWinFadeIn 0.6s ease-out forwards;
-        }
-        @keyframes pkWinFadeIn {
-            0% { opacity: 0; transform: scale(0.8) translateY(5px); }
-            60% { transform: scale(1.05) translateY(-2px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .pk-win-anim span:first-child {
-            animation: pkWinGlow 2s ease-in-out infinite;
-        }
-        @keyframes pkWinGlow {
-            0%, 100% { filter: drop-shadow(0 0 8px rgba(239,68,68,0.4)); }
-            50% { filter: drop-shadow(0 0 20px rgba(239,68,68,0.9)); }
         }
         .winner-card {
             border-color: #ef4444 !important;
@@ -455,10 +385,10 @@
             </div>
 
             <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
-                <button id="btn-tab1" onclick="switchTab(1)" class="px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 bg-blue-600 text-white shadow-sm">KPI MATRIX</button>
-                <button id="btn-tab2" onclick="switchTab(2)" class="px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors ml-1">PK LIMIT</button>
-                <button id="btn-tab3" onclick="switchTab(3)" class="px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors ml-1">🏆 STANDINGS</button>
-                <button id="btn-tab4" onclick="switchTab(4)" class="px-4 py-1.5 text-xs font-bold rounded flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors ml-1">🏁 DIM RANK</button>
+                <button id="btn-tab1" onclick="switchTab(1)" class="px-3 py-1 text-[12px] font-bold rounded bg-blue-600 text-white transition-colors shadow-sm">KPI MATRIX</button>
+                <button id="btn-tab2" onclick="switchTab(2)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">PK LIMIT</button>
+                <button id="btn-tab3" onclick="switchTab(3)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏆 STANDINGS</button>
+                <button id="btn-tab4" onclick="switchTab(4)" class="px-3 py-1 text-[10px] font-bold rounded text-slate-500 hover:text-slate-300 transition-colors ml-px">🏁 DIM RANK</button>
             </div>
 
             <div class="flex bg-[#0f172a] p-[3px] rounded border border-slate-800/70">
@@ -502,7 +432,7 @@
                 <div class="panel-card p-1.5 flex-1 flex flex-col relative overflow-visible">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center mb-1 pl-2">
-                        <h2 class="title-h3 text-[11px]">improvement rate RANK</h2>
+                        <h2 class="title-h3 text-[11px]">Overall ACH% Analysis</h2>
                         <div class="flex items-center gap-1.5" id="p1-chart-filters">
                             <!-- WS filter (admin only) -->
                             <select id="p1-ws-filter" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer hover:border-slate-500" onchange="updateUI()">
@@ -536,9 +466,9 @@
                             <span class="text-[8px] text-slate-600">~</span>
                             <input type="date" id="comp-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <span class="text-[9px] text-slate-500 font-bold">vs</span>
-                            <input type="date" id="prev-start" class="hidden text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <input type="date" id="prev-start" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <span class="text-[8px] text-slate-600">~</span>
-                            <input type="date" id="prev-end" class="hidden text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
+                            <input type="date" id="prev-end" class="text-[9px] bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-slate-300 w-[100px]">
                             <button onclick="renderPeriodComparison()" class="text-[9px] bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded font-bold transition">⏎</button>
                         </div>
                         <div id="comp-chart-grid" class="flex-1 grid grid-cols-4 gap-2 content-start overflow-hidden min-h-0">
@@ -547,136 +477,123 @@
                     </div>
                 </div>
 
-                
+                <div class="panel-card champion-card p-1.5 w-[25%] flex flex-col items-center text-center relative overflow-visible">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-yellow-500 to-amber-600"></div>
+
+                    <!-- ★ Champion visual: trophy + name + score -->
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <div class="trophy-float text-[1.6rem]">🏆</div>
+                        <div class="flex flex-col items-start">
+                            <span class="title-h3 text-amber-400/80 text-[8px] tracking-[0.15em]">CHAMPION</span>
+                            <div id="p1-winner-text" class="text-xl title-h2 champion-glow text-amber-300" style="line-height:1.1">--</div>
+                        </div>
+                    </div>
+
+                    <!-- ★ Ranking list: all workshops with champion highlighted -->
+                    <div class="w-full flex-1 flex flex-col justify-center space-y-0.5 px-0.5 mt-0.5" id="p1-rank-list"></div>
+
+                    <!-- ★ Badge at bottom -->
+                    <div class="mt-auto mb-0.5 flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-2 py-0.5">
+                        <span class="text-[8px]">🏆</span>
+                        <span class="text-[7px] font-bold tracking-widest text-amber-400">FLOW FLAG AWARD</span>
+                        <span id="p1-header-date" class="text-[7px] text-amber-500/60 font-mono ml-1"></span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- PAGE 2: PK LIMIT — Refined UI -->
+        <!-- PAGE 2 -->
         <div id="page2" class="w-full h-full hidden flex gap-3 fade-enter">
 
-            <!-- PRO1 Card -->
-            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col overflow-hidden relative">
-                <!-- Top accent bar -->
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-400 to-blue-600 z-10"></div>
-                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                    <!-- Header row -->
-                    <div class="flex justify-between items-start shrink-0">
-                        <div>
-                            <h2 id="t2-p1-title" class="text-2xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2 leading-none">PRO1 <span id="t2-p1-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
-                            <span class="text-[10px] text-slate-500 font-medium block mt-1">PIC: MS. PIYA 钱大为</span>
+            <!-- 加入 ID:t2-p1-card,用于胜利红框绑定 -->
+            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-blue-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
+                    <div>
+                        <h2 id="t2-p1-title" class="text-3xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2">PRO1 <span id="t2-p1-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MS. PIYA 钱大为</span>
+                    </div>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p1-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
                         </div>
-                        <div class="flex gap-3 bg-[#0b1120]/70 px-2.5 py-1.5 rounded-lg border border-slate-800/60">
-                            <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
-                                <p id="t2-p1-target-sum" class="num-hl text-lg text-slate-200 num-light leading-none">0</p>
-                            </div>
-                            <div class="w-px bg-slate-800"></div>
-                            <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Actual</p>
-                                <p id="t2-p1-actual-sum" class="num-hl text-lg text-blue-400 leading-none">0</p>
-                            </div>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p1-actual-sum" class="num-hl text-xl text-blue-400">0</p>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Progress section -->
-                    <div class="bg-[#0b1120]/60 p-2 rounded-lg border border-slate-800/50 shrink-0">
-                        <div class="flex justify-between items-center mb-1.5">
-                            <span class="text-[9px] font-bold text-blue-300/80 uppercase tracking-wider"><span class="text-[10px]">⚡</span> ACH%</span>
-                            <span id="t2-p1-rate-text" class="num-hl text-[22px] font-black text-white leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">0.0%</span>
-                        </div>
-                        <div class="w-full bg-slate-800/60 h-2.5 rounded-full overflow-hidden border border-slate-700/50 relative">
-                            <div id="t2-p1-progress" class="h-full transition-all duration-700 ease-out rounded-full progress-glow-blue" style="width: 0%"></div>
-                        </div>
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-blue-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p1-rate-text" class="num-hl text-lg text-white">0.0%</span>
                     </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
+                        <div id="t2-p1-progress" class="bg-blue-500 h-full transition-all duration-500 progress-glow-blue" style="width: 0%"></div>
+                    </div>
+                </div>
 
-                    <!-- Lines table -->
-                    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <table class="data-table-pk">
-                            <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
-                            <tbody id="t2-p1-lines"></tbody>
-                        </table>
+                <div class="flex-1 min-w-0 overflow-y-auto">
+                    <table class="data-table">
+                        <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                        <tbody id="t2-p1-lines"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 中央裁判区 -- 加大WIN视觉效果 -->
+            <div class="w-[200px] flex flex-col justify-center items-center p-1">
+                <div class="relative flex flex-col items-center justify-center w-full">
+                    <p class="text-[10px] font-black text-slate-600 tracking-[0.2em] mb-2 uppercase">Battle</p>
+                    <div class="text-5xl font-black italic text-slate-700 mb-4 font-serif">VS</div>
+
+                    <div class="w-full panel-card border-slate-600 bg-slate-800/80 rounded-xl p-4 text-center backdrop-blur-sm shadow-xl">
+                        <span id="t2-center-date" class="text-base font-bold text-white border-b border-slate-700 pb-2 mb-2 block tracking-wider">YYYY-MM-DD</span>
+                        <span class="text-xs text-slate-400 font-mono block mb-3 bg-slate-900 py-1.5 rounded">Limit: ≥ 90.0%</span>
+
+                        <div id="t2-referee-result" class="text-lg font-black text-white mb-1 uppercase tracking-wide min-h-[60px] flex items-center justify-center text-center leading-tight">
+                            AWAITING
+                        </div>
+                        <div id="t2-referee-prize" class="text-[9px] text-slate-400 font-medium mt-1 leading-tight">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Center VS Panel -->
-            <div class="w-[180px] flex flex-col justify-center items-center shrink-0">
-                <div class="relative flex flex-col items-center justify-center w-full gap-2">
-                    <!-- VS Badge -->
-                    <div class="flex items-center gap-3 mb-1">
-                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
-                        <span class="text-[11px] font-black text-slate-500 tracking-[0.25em] uppercase">Battle</span>
-                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
+            <!-- 加入 ID:t2-p2-card,用于胜利红框绑定 -->
+            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col p-4 border-t-4 border-t-indigo-500 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+                <div class="flex justify-between items-start border-b border-slate-700 pb-2 mb-3">
+                    <div>
+                        <h2 id="t2-p2-title" class="text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2">PRO2 <span id="t2-p2-trophy" class="text-2xl hidden animate-pulse">🏆</span></h2>
+                        <span class="text-xs text-slate-400 font-medium block mt-0.5">PIC: MR. SUDTHIPAN 潘文星</span>
                     </div>
-
-                    <div class="relative">
-                        <!-- Glow behind VS -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-indigo-500/10 to-indigo-500/5 blur-xl rounded-full"></div>
-                        <div class="text-6xl font-black italic text-slate-700 font-serif leading-none select-none drop-shadow-[0_0_20px_rgba(99,102,241,0.15)]">VS</div>
-                    </div>
-
-                    <div class="w-full panel-card bg-slate-800/60 rounded-xl p-3 text-center backdrop-blur-sm border border-slate-700/50 shadow-lg">
-                        <!-- Date badge -->
-                        <div class="flex items-center justify-center gap-1.5 mb-2">
-                            <span class="w-1 h-1 rounded-full bg-blue-400 animate-pulse"></span>
-                            <span id="t2-center-date" class="text-[10px] font-bold text-slate-300 tracking-wider">YYYY-MM-DD</span>
-                            <span class="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>
+                    <div class="flex gap-4 bg-[#0b1120] px-3 py-1.5 rounded border border-slate-800">
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Target</p>
+                            <p id="t2-p2-target-sum" class="num-hl text-xl text-slate-200 num-light">0</p>
                         </div>
-                        
-                        <!-- Limit badge -->
-                        <div class="inline-flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-full border border-slate-700/50 mb-2.5">
-                            <span class="text-[9px] text-slate-500 font-mono font-bold">≥ 90.0%</span>
+                        <div class="text-right">
+                            <p class="title-h3 text-[10px] mb-0.5">Actual</p>
+                            <p id="t2-p2-actual-sum" class="num-hl text-xl text-indigo-400">0</p>
                         </div>
-
-                        <!-- Result area -->
-                        <div id="t2-referee-result" class="min-h-[55px] flex items-center justify-center text-center leading-tight mb-1">
-                            <span class="text-xs text-slate-600 font-bold tracking-wider">AWAITING</span>
-                        </div>
-                        
-                        <!-- Prize text -->
-                        <div id="t2-referee-prize" class="text-[8px] text-slate-600 font-medium leading-tight border-t border-slate-700/30 pt-2 mt-1">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- PRO2 Card -->
-            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col overflow-hidden relative">
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-400 to-indigo-600 z-10"></div>
-                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
-                    <div class="flex justify-between items-start shrink-0">
-                        <div>
-                            <h2 id="t2-p2-title" class="text-2xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2 leading-none">PRO2 <span id="t2-p2-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
-                            <span class="text-[10px] text-slate-500 font-medium block mt-1">PIC: MR. SUDTHIPAN 潘文星</span>
-                        </div>
-                        <div class="flex gap-3 bg-[#0b1120]/70 px-2.5 py-1.5 rounded-lg border border-slate-800/60">
-                            <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
-                                <p id="t2-p2-target-sum" class="num-hl text-lg text-slate-200 num-light leading-none">0</p>
-                            </div>
-                            <div class="w-px bg-slate-800"></div>
-                            <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Actual</p>
-                                <p id="t2-p2-actual-sum" class="num-hl text-lg text-indigo-400 leading-none">0</p>
-                            </div>
-                        </div>
+                <div class="mb-2 flex flex-col bg-[#0b1120]/50 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between mb-1 items-center">
+                        <span class="title-h3 text-indigo-300 text-[10px]">Total ACH%</span>
+                        <span id="t2-p2-rate-text" class="num-hl text-lg text-white">0.0%</span>
                     </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1 border border-slate-700">
+                        <div id="t2-p2-progress" class="bg-indigo-500 h-full transition-all duration-500 progress-glow-indigo" style="width: 0%"></div>
+                    </div>
+                </div>
 
-                    <div class="bg-[#0b1120]/60 p-2 rounded-lg border border-slate-800/50 shrink-0">
-                        <div class="flex justify-between items-center mb-1.5">
-                            <span class="text-[9px] font-bold text-indigo-300/80 uppercase tracking-wider"><span class="text-[10px]">⚡</span> ACH%</span>
-                            <span id="t2-p2-rate-text" class="num-hl text-[22px] font-black text-white leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">0.0%</span>
-                        </div>
-                        <div class="w-full bg-slate-800/60 h-2.5 rounded-full overflow-hidden border border-slate-700/50 relative">
-                            <div id="t2-p2-progress" class="h-full transition-all duration-700 ease-out rounded-full progress-glow-indigo" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <table class="data-table-pk">
-                            <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
-                            <tbody id="t2-p2-lines"></tbody>
-                        </table>
-                    </div>
+                <div class="flex-1 min-w-0 overflow-y-auto">
+                    <table class="data-table">
+                        <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                        <tbody id="t2-p2-lines"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1696,7 +1613,6 @@
         let saveTimer;
         /* ★ 纯前端截图用: 编辑月的目标/达成, 不存任何后端/admin/数据库, 刷新即失 */
         var _cardOverrides = {};
-        var _rateOverrides = {};
         window.onCellEdit = function(el) {
             if (!el || !el.dataset) return;
             var wsId = el.dataset.ws, dimId = el.dataset.dim, field = el.dataset.field;
@@ -1715,19 +1631,8 @@
             updateUI();
         };
         /* ★ 一键清除所有临时覆盖, 恢复原始数据 */
-        window.onPeriodRateEdit = function(el){
-            const wsId=el.dataset.ws, dimId=el.dataset.dim, field=el.dataset.field;
-            const raw=el.textContent.trim();
-            const val=parseFloat(raw);
-            if(isNaN(val)){ renderPeriodComparison(); return; }
-            if(!_rateOverrides[wsId]) _rateOverrides[wsId]={};
-            if(!_rateOverrides[wsId][dimId]) _rateOverrides[wsId][dimId]={};
-            _rateOverrides[wsId][dimId][field]=val;
-            renderPeriodComparison();
-        };
         window.clearCardOverrides = function() {
             _cardOverrides = {};
-            _rateOverrides = {};
             updateUI();
         };
 
@@ -2041,7 +1946,7 @@
                 `;
             }).join('');
 
-            var _p1w=document.getElementById('p1-winner-text');if(_p1w)_p1w.innerHTML=champLabel;
+            document.getElementById('p1-winner-text').innerHTML = champLabel;
             /* ★ Build ranking list: all workshops with champion highlighted */
             const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
             const rankColors = [
@@ -2053,7 +1958,7 @@
             ];
             const nameColors = ['text-amber-200','text-slate-200','text-amber-100/70','text-slate-400','text-slate-500'];
             const scoreColors = ['text-amber-300','text-slate-200','text-amber-100/60','text-slate-400','text-slate-500'];
-            var _p1r=document.getElementById('p1-rank-list');if(_p1r)_p1r.innerHTML=wsScores.map(function(s,i){
+            document.getElementById('p1-rank-list').innerHTML = wsScores.map(function(s, i) {
                 return `<div class="flex items-center py-0.5 px-1 rounded-sm ${rankColors[i]} ${i===0 ? 'shadow-[inset_0_0_8px_rgba(234,179,8,0.08)]' : ''}">
                     <span class="text-[10px] mr-0.5">${medals[i]}</span>
                     <span class="text-[10px] font-bold flex-1 text-left ${nameColors[i]}">${s.ws.label}</span>
@@ -2062,10 +1967,10 @@
             }).join('');
             /* ★ Update date in header */
             if (pkPeriod === 'day') {
-                var _p1h=document.getElementById('p1-header-date');if(_p1h)_p1h.innerText=currentDate;
+                document.getElementById('p1-header-date').innerText = currentDate;
             } else {
                 const range = getDateRange(pkPeriod, currentDate);
-                if(_p1h)_p1h.innerText=range.length===1?currentDate:`${range[0]}~${range[range.length-1]}`;
+                document.getElementById('p1-header-date').innerText = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
             }
 
             /* ★ 显示/隐藏 WS 选择器 (仅管理员可见) */
@@ -2268,12 +2173,13 @@
                 }
                 renderPeriodComparison();
             }
-            const calcP2 = (wsName, domPrefix, bgClass, subColor) => {
+            const calcP2 = (wsName, domPrefix, bgClass) => {
                 let sumT = 0, sumA = 0, html = '';
                 const wsData = displayT2All[wsName] || {};
                 for(let l in wsData) {
                     let d = wsData[l];
                     if (d.day !== undefined) {
+                        // ★ Daily mode: show Day/Night split
                         const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
                         const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
                         const lineT = dayT + nightT, lineA = dayA + nightA;
@@ -2283,37 +2189,43 @@
                         const nightRate = nightT === 0 ? 0 : (nightA/nightT)*100;
                         const lineRate = lineT === 0 ? 0 : (lineA/lineT)*100;
 
-                        const lineDot = lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴');
+                        const daySt  = '<span class="status-emoji">' + (dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const nightSt = '<span class="status-emoji">' + (nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')) + '</span>';
+                        const lineSt = '<span class="status-emoji">' + (lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴')) + '</span>';
 
-                        html += `<tr class="pk-line-row">
-                            <td><span>${lineDot} ${l}</span></td>
-                            <td class="num-font text-slate-400">${lineT}</td>
-                            <td class="num-font text-white/90">${lineA}</td>
-                            <td><span class="num-hl ${lineRate >= 100 ? 'text-emerald-400' : (lineRate >= 90 ? 'text-amber-400' : 'text-red-400')}">${lineRate.toFixed(1)}%</span></td>
+                        // Line total row
+                        html += `<tr class="border-b border-slate-700/20">
+                            <td class="font-bold text-slate-200 text-[12px] py-[5px]">${l} LINE</td>
+                            <td class="num-font num-muted text-[12px] py-[5px]">${lineT}</td>
+                            <td class="num-font num-light text-[12px] py-[5px]">${lineA}</td>
+                            <td class="py-[5px] status-cell">${lineSt}<span class="num-font num-hl text-[9px] text-slate-300 ml-1">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
-                        html += `<tr class="pk-sub-row">
-                            <td>☀ Day</td>
-                            <td class="num-font">${dayT}</td>
-                            <td class="num-font text-slate-400">${dayA}</td>
-                            <td class="text-right">${dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')} <span class="num-hl text-[9px]">${dayRate.toFixed(1)}%</span></td>
+                        // Day shift sub-row
+                        html += `<tr class="text-[9px]">
+                            <td class="pl-4 text-slate-500 py-[1px] leading-[18px]">☀ Day</td>
+                            <td class="num-font text-slate-500 py-[1px] leading-[18px]">${dayT}</td>
+                            <td class="num-font text-slate-300 py-[1px] leading-[18px]">${dayA}</td>
+                            <td class="py-[1px] leading-[18px] status-cell">${daySt}<span class="num-font text-[8px] text-slate-500 ml-1">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
+                        // Night shift sub-row (skip if both target and actual are 0, e.g. D Line)
                         if (l !== 'D' && (nightT > 0 || nightA > 0)) {
-                        html += `<tr class="pk-sub-row">
-                            <td>🌙 Night</td>
-                            <td class="num-font">${nightT}</td>
-                            <td class="num-font text-slate-400">${nightA}</td>
-                            <td class="text-right">${nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')} <span class="num-hl text-[9px]">${nightRate.toFixed(1)}%</span></td>
+                        html += `<tr class="text-[9px] border-b border-slate-800/30">
+                            <td class="pl-4 text-slate-500 pb-[3px] leading-[18px]">🌙 Night</td>
+                            <td class="num-font text-slate-500 pb-[3px] leading-[18px]">${nightT}</td>
+                            <td class="num-font text-slate-300 pb-[3px] leading-[18px]">${nightA}</td>
+                            <td class="pb-[3px] leading-[18px] status-cell">${nightSt}<span class="num-font text-[8px] text-slate-500 ml-1">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                         }
                     } else {
+                        // ★ Cumulative mode: flat total (no shift split)
                         sumT += d.t; sumA += d.a;
                         let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
-                        let dot = rate >= 100 ? '🟢' : (rate >= 90 ? '🟡' : '🔴');
-                        html += `<tr class="pk-line-row">
-                            <td><span>${dot} ${l}</span></td>
-                            <td class="num-font text-slate-400">${d.t}</td>
-                            <td class="num-font text-white/90">${d.a}</td>
-                            <td><span class="num-hl ${rate >= 100 ? 'text-emerald-400' : (rate >= 90 ? 'text-amber-400' : 'text-red-400')}">${rate.toFixed(1)}%</span></td>
+                        let st = rate >= 100 ? '<span class="status-emoji text-emerald-400">🟢</span>' : (rate >= 90 ? '<span class="status-emoji text-amber-400">🟡</span>' : '<span class="status-emoji text-red-500">🔴</span>');
+                        html += `<tr class="border-b border-slate-700/20">
+                            <td class="font-bold text-slate-300 text-[14px] py-[5px]">${l} Line</td>
+                            <td class="num-font num-muted text-[14px] py-[5px]">${d.t}</td>
+                            <td class="num-font num-light text-[14px] py-[5px]">${d.a}</td>
+                            <td class="status-cell">${st} <span class="num-font num-hl text-[.7rem] ml-1 text-slate-400">${rate.toFixed(1)}%</span></td>
                         </tr>`;
                     }
                 }
@@ -2326,7 +2238,7 @@
                 document.getElementById(`${domPrefix}-progress`).style.width = Math.min(rate, 100) + '%';
 
                 const pBar = document.getElementById(`${domPrefix}-progress`);
-                pBar.className = rate < 90 ? "h-full transition-all duration-700 ease-out rounded-full bg-red-500 progress-glow-red" : `h-full transition-all duration-700 ease-out rounded-full ${bgClass}`;
+                pBar.className = rate < 90 ? "h-full transition-all duration-500 bg-red-500 progress-glow-red" : `h-full transition-all duration-500 ${bgClass}`;
                 return rate;
             };
 
@@ -2340,20 +2252,20 @@
             const p1Card = document.getElementById('t2-p1-card');
             const p2Card = document.getElementById('t2-p2-card');
 
-            // Reset to refined style
-            p1Title.className = "text-2xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2 leading-none";
-            p2Title.className = "text-2xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2 leading-none";
+            // ★ 核心修改:移除透明度变化,增加胜方红色边框
+            p1Title.className = "text-4xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300";
+            p2Title.className = "text-4xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300";
             trophy1.classList.add('hidden'); trophy2.classList.add('hidden');
             p1Card.classList.remove('winner-card');
             p2Card.classList.remove('winner-card');
 
             const setWinner = (side) => {
                 if(side === 1) {
-                    p1Title.className = "title-h2 is-winner-title transition-all duration-500 flex items-center gap-1";
+                    p1Title.className = "title-h2 is-winner-title transition-all duration-500";
                     p1Card.classList.add('winner-card');
                     trophy1.classList.remove('hidden');
                 } else if (side === 2) {
-                    p2Title.className = "title-h2 is-winner-title transition-all duration-500 flex items-center gap-1";
+                    p2Title.className = "title-h2 is-winner-title transition-all duration-500";
                     p2Card.classList.add('winner-card');
                     trophy2.classList.remove('hidden');
                 }
@@ -2362,20 +2274,20 @@
             const resBox = document.getElementById('t2-referee-result');
             const prizeBox = document.getElementById('t2-referee-prize');
             if (p1Rate < 90 && p2Rate < 90) {
-                resBox.innerHTML = "<div class='flex flex-col items-center gap-0.5'><span class='text-lg font-black text-red-400'>BOTH</span><span class='text-base font-black text-red-400/70 tracking-widest'>FAILED</span></div>";
+                resBox.innerHTML = "<span class='text-red-500 text-xl font-black drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]'>BOTH<br>FAILED</span>";
                 prizeBox.style.display = 'none';
             } else if (p1Rate >= 90 && p2Rate < 90) {
-                resBox.innerHTML = "<div class='flex flex-col items-center gap-0.5 pk-win-anim'><span class='text-2xl font-black text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]'>PRO1</span><span class='text-xs font-bold text-emerald-400 tracking-widest'>WINS!</span></div>";
+                resBox.innerHTML = "<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO1<br>WINS!</span>";
                 prizeBox.style.display = 'block';
                 setWinner(1);
             } else if (p1Rate < 90 && p2Rate >= 90) {
-                resBox.innerHTML = "<div class='flex flex-col items-center gap-0.5 pk-win-anim'><span class='text-2xl font-black text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]'>PRO2</span><span class='text-xs font-bold text-emerald-400 tracking-widest'>WINS!</span></div>";
+                resBox.innerHTML = "<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO2<br>WINS!</span>";
                 prizeBox.style.display = 'block';
                 setWinner(2);
             } else {
-                if(p1Rate > p2Rate) { resBox.innerHTML = `<div class='flex flex-col items-center gap-0.5 pk-win-anim'><span class='text-2xl font-black text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]'>PRO1</span><span class='text-sm font-bold text-slate-300'>${p1Rate.toFixed(1)}%</span></div>`; setWinner(1); }
-                else if(p2Rate > p1Rate) { resBox.innerHTML = `<div class='flex flex-col items-center gap-0.5 pk-win-anim'><span class='text-2xl font-black text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]'>PRO2</span><span class='text-sm font-bold text-slate-300'>${p2Rate.toFixed(1)}%</span></div>`; setWinner(2); }
-                else { resBox.innerHTML = "<span class='text-slate-400 text-base font-black tracking-widest'>DRAW</span>"; }
+                if(p1Rate > p2Rate) { resBox.innerHTML = `<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO1 WIN<br><span class="text-base">${p1Rate.toFixed(1)}%</span></span>`; setWinner(1); }
+                else if(p2Rate > p1Rate) { resBox.innerHTML = `<span class='text-red-400 text-3xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] animate-pulse'>PRO2 WIN<br><span class="text-base">${p2Rate.toFixed(1)}%</span></span>`; setWinner(2); }
+                else { resBox.innerHTML = "<span class='text-slate-300 text-xl font-black'>DRAW</span>"; }
                 prizeBox.style.display = 'block';
             }
             // If Page 3 is visible, refresh standings with the current period
@@ -2397,7 +2309,7 @@
 
             const range = getDateRange(pkPeriod, currentDate);
             const periodLabel = range.length === 1 ? currentDate : `${range[0]} ~ ${range[range.length-1]}`;
-            var _p4t=document.getElementById('p4-period-tag');if(_p4t)_p4t.innerText=periodLabel;
+            document.getElementById('p4-period-tag').innerText = periodLabel;
 
             /* ★ Flag images (base64-embedded, resized from originals) */
 
@@ -3347,7 +3259,7 @@
             for(let c=new Date(s); c<=e; c.setDate(c.getDate()+1)) r.push(_dateStr(c));
             return r;
         }
-        function _accumRange(dates,useLive) {
+        function _accumRange(dates) {
             const acc={}; let hasData=false;
             function _liveT1(){
                 const l={};
@@ -3367,22 +3279,7 @@
                 return l;
             }
             dates.forEach(function(ds){
-                /* ★ Every date gets _cardOverrides merged in — not just currentDate */
-                const saved=loadDayData(ds);
-                if(saved&&saved.t1){
-                    workshops.forEach(function(ws){
-                        dims.forEach(function(dim){
-                            const ov=_cardOverrides[ws.id]&&_cardOverrides[ws.id][dim.id];
-                            if(ov&&(ov.t!==undefined||ov.a!==undefined)){
-                                if(!saved.t1[ws.id]) saved.t1[ws.id]={};
-                                if(!saved.t1[ws.id][dim.id]) saved.t1[ws.id][dim.id]={t:0,a:0};
-                                if(ov.t!==undefined) saved.t1[ws.id][dim.id].t=ov.t;
-                                if(ov.a!==undefined) saved.t1[ws.id][dim.id].a=ov.a;
-                            }
-                        });
-                    });
-                }
-                const d=ds===currentDate&&useLive!==false?saved||{t1:_liveT1()}:saved;
+                const d=ds===currentDate?{t1:_liveT1()}:loadDayData(ds);
                 if(!d||!d.t1) return;
                 workshops.forEach(function(ws){
                     if(!d.t1[ws.id]) return;
@@ -3411,116 +3308,68 @@
             });
             return acc;
         }
-        function _lastMonthDates(){ var n=new Date(),y=n.getFullYear(),m=n.getMonth(); if(m===0){m=12;y--} var d=new Date(y,m,0).getDate(),r=[]; for(var i=1;i<=d;i++){var ds=y+"-"+String(m).padStart(2,"0")+"-"+String(i).padStart(2,"0");r.push(ds)} return r; }
         window.renderPeriodComparison = function(){
             const cs=document.getElementById('comp-start').value;
             const ce=document.getElementById('comp-end').value;
-            const lmDates=_lastMonthDates();
-            
+            const ps=document.getElementById('prev-start').value;
+            const pe=document.getElementById('prev-end').value;
             const grid=document.getElementById('comp-chart-grid');
-            if(!cs||!ce){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
+            if(!cs||!ce||!ps||!pe){ grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-600 text-[10px]">Set date ranges and press GO</div>'; return; }
             const currAcc=_accumRange(_getDatesBetween(cs,ce));
-            const prevAcc=_accumRange(lmDates,false);
-            
+            const prevAcc=_accumRange(_getDatesBetween(ps,pe));
             if(window._compCharts) window._compCharts.forEach(function(c){ try{c.dispose();}catch(e){} });
             window._compCharts=[];
             grid.innerHTML='';
-            grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0 text-nowrap whitespace-nowrap';
+            grid.className='grid grid-cols-4 gap-3 auto-rows-1fr overflow-hidden min-h-0';
             const dimInfo={safety:{n:'Safety'},ss:{n:'5S'},pro:{n:'UPPH'},qua:{n:'Quality'},los:{n:'Loss'}};
-            const wsColorMap={'PRO1':'text-blue-400','PRO2':'text-indigo-400','PRO3':'text-emerald-400','PRO4_5':'text-amber-400'};
             /* ★ Build per-workshop data */
             const wsData=workshops.map(function(ws){
                 const items=dims.map(function(d){
                     const co=currAcc&&currAcc[ws.id]&&currAcc[ws.id][d.id];
                     const po=prevAcc&&prevAcc[ws.id]&&prevAcc[ws.id][d.id];
-                    /* ★ Actual values instead of achievement rates */
-                    const prevActual=po?po.a:null;
-                    const currActual=co?co.a:null;
-                    /* ★ Improvement rate: positive=improvement, negative=decline */
-                    var delta=null;
-                    if(prevActual!==null&&currActual!==null&&prevActual!==0){
-                        const change=d.id==='safety'||d.id==='los'||d.id==='qua'?prevActual-currActual:currActual-prevActual;
-                        delta=parseFloat((change/Math.abs(prevActual)*100).toFixed(1));
-                    }else if(prevActual!==null&&currActual!==null&&prevActual===0){
-                        delta=currActual>0?(d.id==='safety'||d.id==='los'||d.id==='qua'?-100:100):0;
-                    }
-                    return {id:d.id,curr:currActual,prev:prevActual,delta};
+                    const curr=co?calcDimRate(d,co.t,co.a,ws.id):null;
+                    const prev=po?calcDimRate(d,po.t,po.a,ws.id):null;
+                    const delta=curr!==null&&prev!==null?parseFloat((curr-prev).toFixed(1)):null;
+                    return {id:d.id,curr,prev,delta};
                 });
                 const valid=items.filter(function(i){return i.delta!==null;});
                 const overall=valid.length?valid.reduce(function(s,i){return s+i.delta;},0)/valid.length:0;
                 return {id:ws.id,label:ws.label,items,overall:parseFloat(overall.toFixed(1))};
             }).filter(function(w){return w.items.some(function(i){return i.delta!==null;});});
             if(!wsData.length){grid.innerHTML='<div class="flex items-center justify-center w-full h-full text-slate-500 text-[10px]">No data for these ranges</div>';return;}
-            /* ★ Merge _rateOverrides into calculated rates */
-            if(Object.keys(_rateOverrides).length){
-                wsData.forEach(function(wd){
-                    dims.forEach(function(d){
-                        var ro=_rateOverrides[wd.id]&&_rateOverrides[wd.id][d.id];
-                        if(ro){
-                            var ridx=dims.indexOf(d);
-                            if(ridx>=0&&wd.items[ridx]){
-                                if(ro.prev!==undefined) wd.items[ridx].prev=ro.prev;
-                                if(ro.curr!==undefined) wd.items[ridx].curr=ro.curr;
-                            }
-                        }
-                    });
-                });
-            }
-            /* ★ Recalculate overall deltas as improvement rates after overrides */
-            wsData.forEach(function(wd){
-                var valid=wd.items.filter(function(i){return i.curr!==null&&i.prev!==null;});
-                valid.forEach(function(item){
-                    if(item.prev===0){
-                        item.delta=item.curr>0?(item.id==='safety'||item.id==='los'||item.id==='qua'?-100:100):0;
-                    }else{
-                        const change=item.id==='safety'||item.id==='los'||item.id==='qua'?item.prev-item.curr:item.curr-item.prev;
-                        item.delta=parseFloat((change/Math.abs(item.prev)*100).toFixed(1));
-                    }
-                });
-                var tot=valid.reduce(function(s,i){return s+i.delta;},0);
-                wd.overall=parseFloat((valid.length?tot/valid.length:0).toFixed(1));
-            });
             wsData.sort(function(a,b){return b.overall-a.overall;});
-                        wsData.forEach(function(wd,i){wd.rank=i+1;});
-            /* ★ Rank-specific styling */
-            var rankStyles={
-                1:{bg:'bg-gradient-to-r from-yellow-900/40 via-yellow-800/15 to-transparent',border:'border-l-[2px] border-yellow-500/50',label:'text-[10px]',prefix:'🏆'},
-                2:{bg:'bg-gradient-to-r from-sky-800/20 to-transparent',border:'',label:'',prefix:'#2'},
-                3:{bg:'bg-gradient-to-r from-amber-800/15 to-transparent',border:'',label:'',prefix:'#3'},
-                4:{bg:'bg-slate-800/25',border:'',label:'',prefix:'#4'}
-            };
+            /* ★ Max absolute delta for bar scaling */
+            var maxAbs=1;
+            wsData.forEach(function(wd){wd.items.forEach(function(i){if(i.delta!==null)maxAbs=Math.max(maxAbs,Math.abs(i.delta));});});
+            /* ★ Render cards */
             wsData.forEach(function(wd){
                 var card=document.createElement('div');
-                card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden text-nowrap';
-                var rs=rankStyles[wd.rank]||rankStyles[4];
-                var wsCls=wsColorMap[wd.id]||'text-white';
+                card.className='flex flex-col bg-slate-900/50 rounded border border-slate-700/25 overflow-hidden';
                 var hdr=document.createElement('div');
-                hdr.className='flex items-center px-2 py-1 '+rs.bg+' '+rs.border+' border-b border-slate-700/15';
-                hdr.innerHTML='<span class="text-[9px] font-bold '+rs.label+' '+wsCls+' whitespace-nowrap">'+rs.prefix+' '+wd.label+'</span>';
-                var maxAbs=0;
-                wsData.forEach(function(w){w.items.forEach(function(i){if(i.delta!==null)maxAbs=Math.max(maxAbs,Math.abs(i.delta));});});
+                hdr.className='flex items-center px-2 py-1 bg-slate-800/25 border-b border-slate-700/15';
+                hdr.innerHTML='<span class="text-[9px] font-bold text-white">'+wd.label+'</span>';
                 var opSpan=document.createElement('span');
-                opSpan.className='ml-auto text-[9px] font-black '+(wd.overall>=0?'text-emerald-400':'text-red-400');
-                opSpan.textContent=(wd.overall>=0?'+':'')+wd.overall.toFixed(1)+'%';
+                opSpan.className='text-[8px] ml-auto font-bold '+(wd.overall>=0?'text-emerald-400':'text-red-400');
+                opSpan.textContent=(wd.overall>=0?'+':'')+wd.overall.toFixed(1)+'pp';
                 hdr.appendChild(opSpan);
                 card.appendChild(hdr);
                 /* ★ Per-dim rows */
                 wd.items.forEach(function(item,idx){
                     if(item.delta===null) return;
                     var row=document.createElement('div');
-                    row.className='flex items-center px-2 py-[6px] text-[8px] text-nowrap '+(idx%2?'bg-slate-800/10':'');
+                    row.className='flex items-center px-2 py-[6px] text-[8px] '+(idx%2?'bg-slate-800/10':'');
                     var di=dimInfo[item.id]||{e:'?',n:item.id};
                     var nameEl=document.createElement('span');
                     nameEl.className='w-[48px] text-slate-400 font-medium text-[9px]';
                     nameEl.textContent=di.n;
                     row.appendChild(nameEl);
                     var valEl=document.createElement('span');
-                    valEl.className='w-[52px] text-right text-slate-400 leading-none';
-                    valEl.innerHTML='<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="prev" onblur="onPeriodRateEdit(this)">'+(item.prev!==null?item.prev.toFixed(1):'--')+'</span>→<span contenteditable class="editable-num" data-ws="'+wd.id+'" data-dim="'+item.id+'" data-field="curr" onblur="onPeriodRateEdit(this)">'+(item.curr!==null?item.curr.toFixed(1):'--')+'</span>';
+                    valEl.className='w-[52px] text-right text-slate-400';
+                    valEl.textContent=(item.prev!==null?item.prev.toFixed(1)+'%':'--')+'→'+(item.curr!==null?item.curr.toFixed(1)+'%':'--');
                     row.appendChild(valEl);
                     var deltaEl=document.createElement('span');
                     deltaEl.className='w-8 text-right font-bold '+(item.delta>0?'text-emerald-400':item.delta<0?'text-red-400':'text-slate-500');
-                    deltaEl.textContent=item.delta>0?"+"+item.delta.toFixed(1)+"%":item.delta<0?item.delta.toFixed(1)+"%":"0.0%";
+                    deltaEl.textContent=(item.delta>0?'+':'')+item.delta.toFixed(1);
                     row.appendChild(deltaEl);
                     var barWrap=document.createElement('div');
                     barWrap.className='flex-1 ml-1 h-[5px] bg-slate-800 rounded-full overflow-hidden';
