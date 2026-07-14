@@ -140,8 +140,8 @@
         .data-table-pk th:nth-child(2), .data-table-pk th:nth-child(3) { text-align: right; width: 24%; }
         .data-table-pk th:nth-child(4) { text-align: right; width: 24%; }
         .data-table-pk td {
-            padding: 0.15rem 0.2rem;
-            font-size: 0.6rem;
+            padding: 0.18rem 0.25rem;
+            font-size: 0.7rem;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             transition: background-color 0.2s ease;
             white-space: nowrap;
@@ -152,10 +152,29 @@
         .data-table-pk td:nth-child(2), .data-table-pk td:nth-child(3), .data-table-pk td:nth-child(4) { text-align: right; }
         .data-table-pk tbody tr:hover td { background-color: rgba(255,255,255,0.02); }
         .data-table-pk tbody tr:last-child td { border-bottom: none; }
-        .data-table-pk .pk-sub-row td { font-size: 0.55rem; color: #64748b; border-bottom: none; }
+        .data-table-pk .pk-sub-row td { font-size: 0.6rem; color: #64748b; border-bottom: none; }
         .data-table-pk .pk-sub-row td:first-child { padding-left: 0.6rem; }
-        .data-table-pk .pk-line-row td { padding-top: 0.25rem; font-weight: 600; color: #e2e8f0; font-size: 0.65rem; }
-        .data-table-pk .pk-line-row td:first-child span { display: inline-flex; align-items: center; gap: 0.2rem; }
+        .data-table-pk .pk-line-row td { padding-top: 0.3rem; font-weight: 700; color: #e2e8f0; font-size: 0.75rem; }
+        .data-table-pk .pk-line-row td:first-child span { display: inline-flex; align-items: center; gap: 0.3rem; }
+        .data-table-pk .pk-line-row td:first-child { display: flex; align-items: center; gap: 0.25rem; }
+        .data-table-pk .line-badge { font-size: 0.65rem; line-height: 1; }
+        .data-table-pk .line-name { font-weight: 700; letter-spacing: 0.02em; }
+        .data-table-pk .pk-sub-row .sub-icon { font-size: 0.6rem; opacity: 0.8; }
+        .data-table-pk .num-muted { color: #64748b !important; font-weight: 500; }
+        .data-table-pk .num-light { color: #e2e8f0 !important; font-weight: 600; }
+        .data-table-pk .num-sub { color: #94a3b8 !important; }
+        .data-table-pk .sub-pct { font-size: 0.55rem !important; }
+        .status-pill {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        .pill-green { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .pill-amber { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+        .pill-red   { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
 
         /* ★ Custom scrollbar for PK tables */
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
@@ -206,8 +225,8 @@
         }
         .is-winner-title {
             color: #ef4444 !important;
-            text-shadow: 0 0 15px rgba(239,68,68,0.7) !important;
-            font-size: 1.8rem !important;
+            text-shadow: 0 0 20px rgba(239,68,68,0.8), 0 0 40px rgba(239,68,68,0.3) !important;
+            font-size: 2rem !important;
             animation: pulse-winner 2s infinite;
         }
         .winner-card-pk {
@@ -563,37 +582,37 @@
         <!-- PAGE 2: PK LIMIT — Refined UI -->
         <div id="page2" class="w-full h-full hidden flex gap-3 fade-enter">
 
-            <!-- PRO1 Card -->
-            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col overflow-hidden relative">
-                <!-- Top accent bar -->
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-400 to-blue-600 z-10"></div>
-                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+            <!-- PRO1 Card — Refined -->
+            <div id="t2-p1-card" class="panel-card flex-1 flex flex-col overflow-hidden relative shadow-[0_0_30px_rgba(59,130,246,0.06)]">
+                <div class="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 z-10"></div>
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/3 blur-[60px] rounded-full pointer-events-none"></div>
+                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] via-[#1a2438] to-[#0f172a]">
                     <!-- Header row -->
                     <div class="flex justify-between items-start shrink-0">
                         <div>
-                            <h2 id="t2-p1-title" class="text-2xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2 leading-none">PRO1 <span id="t2-p1-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
-                            <span class="text-[10px] text-slate-500 font-medium block mt-1">PIC: MS. PIYA 钱大为</span>
+                            <h2 id="t2-p1-title" class="text-3xl title-h2 text-blue-400 drop-shadow-[0_0_12px_rgba(59,130,246,0.5)] flex items-center gap-2 leading-none font-black tracking-tight">PRO1 <span id="t2-p1-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
+                            <span class="text-[11px] text-slate-500 font-medium block mt-0.5 tracking-wide">PIC: MS. PIYA 钱大为</span>
                         </div>
-                        <div class="flex gap-3 bg-[#0b1120]/70 px-2.5 py-1.5 rounded-lg border border-slate-800/60">
+                        <div class="flex gap-3 bg-[#0b1120]/80 px-3 py-2 rounded-xl border border-slate-700/40 shadow-inner">
                             <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
-                                <p id="t2-p1-target-sum" class="num-hl text-lg text-slate-200 num-light leading-none">0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">TARGET</p>
+                                <p id="t2-p1-target-sum" class="num-hl text-2xl font-black text-slate-100 leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.05)]">0</p>
                             </div>
-                            <div class="w-px bg-slate-800"></div>
+                            <div class="w-px bg-gradient-to-b from-transparent via-slate-600 to-transparent"></div>
                             <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Actual</p>
-                                <p id="t2-p1-actual-sum" class="num-hl text-lg text-blue-400 leading-none">0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">ACTUAL</p>
+                                <p id="t2-p1-actual-sum" class="num-hl text-2xl font-black text-blue-400 leading-none drop-shadow-[0_0_6px_rgba(59,130,246,0.3)]">0</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Progress section -->
-                    <div class="bg-[#0b1120]/60 p-2 rounded-lg border border-slate-800/50 shrink-0">
+                    <div class="bg-[#0b1120]/70 px-3 py-2.5 rounded-xl border border-slate-700/30 shrink-0">
                         <div class="flex justify-between items-center mb-1.5">
-                            <span class="text-[9px] font-bold text-blue-300/80 uppercase tracking-wider"><span class="text-[10px]">⚡</span> ACH%</span>
-                            <span id="t2-p1-rate-text" class="num-hl text-[22px] font-black text-white leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">0.0%</span>
+                            <span class="text-[10px] font-extrabold text-blue-300/70 uppercase tracking-[0.15em] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> ACHIEVEMENT</span>
+                            <span id="t2-p1-rate-text" class="num-hl text-[26px] font-black text-white leading-none drop-shadow-[0_0_12px_rgba(255,255,255,0.12)]">0.0%</span>
                         </div>
-                        <div class="w-full bg-slate-800/60 h-2.5 rounded-full overflow-hidden border border-slate-700/50 relative">
+                        <div class="w-full bg-slate-800/50 h-3 rounded-full overflow-hidden border border-slate-700/30 relative">
                             <div id="t2-p1-progress" class="h-full transition-all duration-700 ease-out rounded-full progress-glow-blue" style="width: 0%"></div>
                         </div>
                     </div>
@@ -601,88 +620,96 @@
                     <!-- Lines table -->
                     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                         <table class="data-table-pk">
-                            <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                            <thead><tr><th>LINE</th><th>TARGET</th><th>ACTUAL</th><th>ACH%</th></tr></thead>
                             <tbody id="t2-p1-lines"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Center VS Panel -->
-            <div class="w-[180px] flex flex-col justify-center items-center shrink-0">
-                <div class="relative flex flex-col items-center justify-center w-full gap-2">
-                    <!-- VS Badge -->
-                    <div class="flex items-center gap-3 mb-1">
-                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
-                        <span class="text-[11px] font-black text-slate-500 tracking-[0.25em] uppercase">Battle</span>
-                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
+            <!-- Center VS Panel — Refined -->
+            <div class="w-[190px] flex flex-col justify-center items-center shrink-0">
+                <div class="relative flex flex-col items-center justify-center w-full gap-2.5">
+                    <!-- Battle badge -->
+                    <div class="flex items-center gap-3">
+                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600/50 to-transparent"></div>
+                        <span class="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase flex items-center gap-1.5">
+                            <svg class="w-3 h-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            BATTLE
+                        </span>
+                        <div class="h-px w-6 bg-gradient-to-r from-transparent via-slate-600/50 to-transparent"></div>
                     </div>
 
                     <div class="relative">
-                        <!-- Glow behind VS -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-indigo-500/10 to-indigo-500/5 blur-xl rounded-full"></div>
-                        <div class="text-6xl font-black italic text-slate-700 font-serif leading-none select-none drop-shadow-[0_0_20px_rgba(99,102,241,0.15)]">VS</div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/8 via-indigo-500/15 to-indigo-500/8 blur-2xl rounded-full"></div>
+                        <div class="relative text-7xl font-black italic text-slate-700 font-serif leading-none select-none drop-shadow-[0_0_30px_rgba(99,102,241,0.2)] tracking-tight">VS</div>
                     </div>
 
-                    <div class="w-full panel-card bg-slate-800/60 rounded-xl p-3 text-center backdrop-blur-sm border border-slate-700/50 shadow-lg">
-                        <!-- Date badge -->
-                        <div class="flex items-center justify-center gap-1.5 mb-2">
-                            <span class="w-1 h-1 rounded-full bg-blue-400 animate-pulse"></span>
-                            <span id="t2-center-date" class="text-[10px] font-bold text-slate-300 tracking-wider">YYYY-MM-DD</span>
-                            <span class="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>
-                        </div>
+                    <div class="w-full panel-card bg-slate-800/70 rounded-2xl p-3.5 text-center backdrop-blur-md border border-slate-700/40 shadow-xl shadow-black/20">
+                        <!-- Divider glow -->
+                        <div class="h-px bg-gradient-to-r from-transparent via-slate-600/50 to-transparent mb-3"></div>
                         
-                        <!-- Limit badge -->
-                        <div class="inline-flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-full border border-slate-700/50 mb-2.5">
-                            <span class="text-[9px] text-slate-500 font-mono font-bold">≥ 90.0%</span>
+                        <!-- Date with icon -->
+                        <div class="flex items-center justify-center gap-2 mb-2">
+                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span id="t2-center-date" class="text-[11px] font-bold text-slate-300 tracking-wider">YYYY-MM-DD</span>
+                        </div>
+
+                        <div class="flex items-center justify-center gap-2 mb-2.5">
+                            <span class="h-px w-4 bg-slate-700/50"></span>
+                            <span class="text-[9px] text-slate-600 font-mono font-bold tracking-widest bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-700/30">LIMIT ≥ 90%</span>
+                            <span class="h-px w-4 bg-slate-700/50"></span>
                         </div>
 
                         <!-- Result area -->
-                        <div id="t2-referee-result" class="min-h-[55px] flex items-center justify-center text-center leading-tight mb-1">
-                            <span class="text-xs text-slate-600 font-bold tracking-wider">AWAITING</span>
+                        <div id="t2-referee-result" class="min-h-[60px] flex items-center justify-center text-center leading-snug mb-1">
+                            <span class="text-[10px] text-slate-600 font-bold tracking-widest">AWAITING</span>
                         </div>
+
+                        <div class="h-px bg-gradient-to-r from-transparent via-slate-600/30 to-transparent mt-2 mb-2"></div>
                         
                         <!-- Prize text -->
-                        <div id="t2-referee-prize" class="text-[8px] text-slate-600 font-medium leading-tight border-t border-slate-700/30 pt-2 mt-1">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
+                        <div id="t2-referee-prize" class="text-[7px] text-slate-600 font-medium leading-relaxed opacity-70">🏆 Winner receives Monthly Tour Flag & Incentive Bonus</div>
                     </div>
                 </div>
             </div>
 
-            <!-- PRO2 Card -->
-            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col overflow-hidden relative">
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-400 to-indigo-600 z-10"></div>
-                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] to-[#0f172a]">
+            <!-- PRO2 Card — Refined -->
+            <div id="t2-p2-card" class="panel-card flex-1 flex flex-col overflow-hidden relative shadow-[0_0_30px_rgba(99,102,241,0.06)]">
+                <div class="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-indigo-400 via-indigo-500 to-violet-400 z-10"></div>
+                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/3 blur-[60px] rounded-full pointer-events-none"></div>
+                <div class="flex-1 flex flex-col p-3 gap-2 bg-gradient-to-br from-[#1e293b] via-[#1a1d38] to-[#0f172a]">
                     <div class="flex justify-between items-start shrink-0">
                         <div>
-                            <h2 id="t2-p2-title" class="text-2xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2 leading-none">PRO2 <span id="t2-p2-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
-                            <span class="text-[10px] text-slate-500 font-medium block mt-1">PIC: MR. SUDTHIPAN 潘文星</span>
+                            <h2 id="t2-p2-title" class="text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_12px_rgba(99,102,241,0.5)] flex items-center gap-2 leading-none font-black tracking-tight">PRO2 <span id="t2-p2-trophy" class="text-xl hidden animate-pulse">🏆</span></h2>
+                            <span class="text-[11px] text-slate-500 font-medium block mt-0.5 tracking-wide">PIC: MR. SUDTHIPAN 潘文星</span>
                         </div>
-                        <div class="flex gap-3 bg-[#0b1120]/70 px-2.5 py-1.5 rounded-lg border border-slate-800/60">
+                        <div class="flex gap-3 bg-[#0b1120]/80 px-3 py-2 rounded-xl border border-slate-700/40 shadow-inner">
                             <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Target</p>
-                                <p id="t2-p2-target-sum" class="num-hl text-lg text-slate-200 num-light leading-none">0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">TARGET</p>
+                                <p id="t2-p2-target-sum" class="num-hl text-2xl font-black text-slate-100 leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.05)]">0</p>
                             </div>
-                            <div class="w-px bg-slate-800"></div>
+                            <div class="w-px bg-gradient-to-b from-transparent via-slate-600 to-transparent"></div>
                             <div class="text-right">
-                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Actual</p>
-                                <p id="t2-p2-actual-sum" class="num-hl text-lg text-indigo-400 leading-none">0</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">ACTUAL</p>
+                                <p id="t2-p2-actual-sum" class="num-hl text-2xl font-black text-indigo-400 leading-none drop-shadow-[0_0_6px_rgba(99,102,241,0.3)]">0</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-[#0b1120]/60 p-2 rounded-lg border border-slate-800/50 shrink-0">
+                    <div class="bg-[#0b1120]/70 px-3 py-2.5 rounded-xl border border-slate-700/30 shrink-0">
                         <div class="flex justify-between items-center mb-1.5">
-                            <span class="text-[9px] font-bold text-indigo-300/80 uppercase tracking-wider"><span class="text-[10px]">⚡</span> ACH%</span>
-                            <span id="t2-p2-rate-text" class="num-hl text-[22px] font-black text-white leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">0.0%</span>
+                            <span class="text-[10px] font-extrabold text-indigo-300/70 uppercase tracking-[0.15em] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> ACHIEVEMENT</span>
+                            <span id="t2-p2-rate-text" class="num-hl text-[26px] font-black text-white leading-none drop-shadow-[0_0_12px_rgba(255,255,255,0.12)]">0.0%</span>
                         </div>
-                        <div class="w-full bg-slate-800/60 h-2.5 rounded-full overflow-hidden border border-slate-700/50 relative">
+                        <div class="w-full bg-slate-800/50 h-3 rounded-full overflow-hidden border border-slate-700/30 relative">
                             <div id="t2-p2-progress" class="h-full transition-all duration-700 ease-out rounded-full progress-glow-indigo" style="width: 0%"></div>
                         </div>
                     </div>
 
                     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                         <table class="data-table-pk">
-                            <thead><tr><th>Line</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+                            <thead><tr><th>LINE</th><th>TARGET</th><th>ACTUAL</th><th>ACH%</th></tr></thead>
                             <tbody id="t2-p2-lines"></tbody>
                         </table>
                     </div>
@@ -2280,8 +2307,14 @@
             const calcP2 = (wsName, domPrefix, bgClass, subColor) => {
                 let sumT = 0, sumA = 0, html = '';
                 const wsData = displayT2All[wsName] || {};
+                // Format line names: PRO1=H series/S series, PRO2=A LINE/B LINE etc
+                const fmtLine = (name) => {
+                    if (wsName === 'PRO1') return name === 'H' ? 'H series' : name === 'S' ? 'S series' : name + ' series';
+                    return name + ' LINE';
+                };
                 for(let l in wsData) {
                     let d = wsData[l];
+                    const label = fmtLine(l);
                     if (d.day !== undefined) {
                         const dayT = Number(d.day.t) || 0, dayA = Number(d.day.a) || 0;
                         const nightT = Number(d.night.t) || 0, nightA = Number(d.night.a) || 0;
@@ -2295,23 +2328,23 @@
                         const lineDot = lineRate >= 100 ? '🟢' : (lineRate >= 90 ? '🟡' : '🔴');
 
                         html += `<tr class="pk-line-row">
-                            <td><span>${lineDot} ${l}</span></td>
-                            <td class="num-font text-slate-400">${lineT}</td>
-                            <td class="num-font text-white/90">${lineA}</td>
-                            <td><span class="num-hl ${lineRate >= 100 ? 'text-emerald-400' : (lineRate >= 90 ? 'text-amber-400' : 'text-red-400')}">${lineRate.toFixed(1)}%</span></td>
+                            <td><span class="line-badge">${lineDot}</span><span class="line-name">${label}</span></td>
+                            <td class="num-font num-muted">${lineT}</td>
+                            <td class="num-font num-light">${lineA}</td>
+                            <td><span class="status-pill ${lineRate >= 100 ? 'pill-green' : (lineRate >= 90 ? 'pill-amber' : 'pill-red')}">${lineRate.toFixed(1)}%</span></td>
                         </tr>`;
                         html += `<tr class="pk-sub-row">
-                            <td>☀ Day</td>
+                            <td><span class="sub-icon">☀</span> Day</td>
                             <td class="num-font">${dayT}</td>
-                            <td class="num-font text-slate-400">${dayA}</td>
-                            <td class="text-right">${dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')} <span class="num-hl text-[9px]">${dayRate.toFixed(1)}%</span></td>
+                            <td class="num-font num-sub">${dayA}</td>
+                            <td class="text-right">${dayRate >= 100 ? '🟢' : (dayRate >= 90 ? '🟡' : '🔴')} <span class="num-hl sub-pct">${dayRate.toFixed(1)}%</span></td>
                         </tr>`;
                         if (l !== 'D' && (nightT > 0 || nightA > 0)) {
                         html += `<tr class="pk-sub-row">
-                            <td>🌙 Night</td>
+                            <td><span class="sub-icon">🌙</span> Night</td>
                             <td class="num-font">${nightT}</td>
-                            <td class="num-font text-slate-400">${nightA}</td>
-                            <td class="text-right">${nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')} <span class="num-hl text-[9px]">${nightRate.toFixed(1)}%</span></td>
+                            <td class="num-font num-sub">${nightA}</td>
+                            <td class="text-right">${nightRate >= 100 ? '🟢' : (nightRate >= 90 ? '🟡' : '🔴')} <span class="num-hl sub-pct">${nightRate.toFixed(1)}%</span></td>
                         </tr>`;
                         }
                     } else {
@@ -2319,10 +2352,10 @@
                         let rate = d.t === 0 ? 0 : (d.a/d.t)*100;
                         let dot = rate >= 100 ? '🟢' : (rate >= 90 ? '🟡' : '🔴');
                         html += `<tr class="pk-line-row">
-                            <td><span>${dot} ${l}</span></td>
-                            <td class="num-font text-slate-400">${d.t}</td>
-                            <td class="num-font text-white/90">${d.a}</td>
-                            <td><span class="num-hl ${rate >= 100 ? 'text-emerald-400' : (rate >= 90 ? 'text-amber-400' : 'text-red-400')}">${rate.toFixed(1)}%</span></td>
+                            <td><span class="line-badge">${dot}</span><span class="line-name">${label}</span></td>
+                            <td class="num-font num-muted">${d.t}</td>
+                            <td class="num-font num-light">${d.a}</td>
+                            <td><span class="status-pill ${rate >= 100 ? 'pill-green' : (rate >= 90 ? 'pill-amber' : 'pill-red')}">${rate.toFixed(1)}%</span></td>
                         </tr>`;
                     }
                 }
@@ -2335,7 +2368,7 @@
                 document.getElementById(`${domPrefix}-progress`).style.width = Math.min(rate, 100) + '%';
 
                 const pBar = document.getElementById(`${domPrefix}-progress`);
-                pBar.className = rate < 90 ? "h-full transition-all duration-700 ease-out rounded-full bg-red-500 progress-glow-red" : `h-full transition-all duration-700 ease-out rounded-full ${bgClass}`;
+                pBar.className = rate < 90 ? "h-full transition-all duration-700 ease-out rounded-full bg-gradient-to-r from-red-500 to-red-600 progress-glow-red" : `h-full transition-all duration-700 ease-out rounded-full ${bgClass}`;
                 return rate;
             };
 
@@ -2350,19 +2383,19 @@
             const p2Card = document.getElementById('t2-p2-card');
 
             // Reset to refined style
-            p1Title.className = "text-2xl title-h2 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] transition-all duration-300 flex items-center gap-2 leading-none";
-            p2Title.className = "text-2xl title-h2 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.4)] transition-all duration-300 flex items-center gap-2 leading-none";
+            p1Title.className = "text-3xl title-h2 text-blue-400 drop-shadow-[0_0_12px_rgba(59,130,246,0.5)] flex items-center gap-2 leading-none font-black tracking-tight";
+            p2Title.className = "text-3xl title-h2 text-indigo-400 drop-shadow-[0_0_12px_rgba(99,102,241,0.5)] flex items-center gap-2 leading-none font-black tracking-tight";
             trophy1.classList.add('hidden'); trophy2.classList.add('hidden');
             p1Card.classList.remove('winner-card');
             p2Card.classList.remove('winner-card');
 
             const setWinner = (side) => {
                 if(side === 1) {
-                    p1Title.className = "title-h2 is-winner-title transition-all duration-500 flex items-center gap-1";
+                    p1Title.className = "title-h2 is-winner-title flex items-center gap-1.5 leading-none font-black";
                     p1Card.classList.add('winner-card');
                     trophy1.classList.remove('hidden');
                 } else if (side === 2) {
-                    p2Title.className = "title-h2 is-winner-title transition-all duration-500 flex items-center gap-1";
+                    p2Title.className = "title-h2 is-winner-title flex items-center gap-1.5 leading-none font-black";
                     p2Card.classList.add('winner-card');
                     trophy2.classList.remove('hidden');
                 }
