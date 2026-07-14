@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MBS Monthly DM Board v6.5 (Final Polish)</title>
 
+    <script>/* suppress Tailwind CDN production warning */const __twOrig=console.warn;console.warn=function(){if(arguments[0]&&typeof arguments[0]==='string'&&arguments[0].includes('cdn.tailwindcss.com'))return;return __twOrig.apply(console,arguments)};</script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.1.6/dist/dom-to-image-more.min.js"></script>
@@ -391,10 +396,12 @@
                         <option value="admin">⚙️ ADMIN</option>
                     </select>
                 </div>
+                <form onsubmit="window.login();return false">
                 <div class="mb-4">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">密码 / Password</label>
                     <input type="password" id="login-pass" placeholder="输入密码" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
                 </div>
+                </form>
                 <div class="flex items-center gap-2 mb-4">
                     <input type="checkbox" id="login-remember" class="accent-blue-500 w-3.5 h-3.5" checked>
                     <label for="login-remember" class="text-[10px] text-slate-500 cursor-pointer">记住登录 / Remember me</label>
@@ -420,6 +427,7 @@
                     <p class="text-sm text-slate-300 font-bold">首次设置管理员密码</p>
                     <p class="text-[10px] text-slate-500 mt-1">设置完成后可添加车间账号</p>
                 </div>
+                <form onsubmit="window.setupAdmin();return false">
                 <div class="mb-4">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">管理员密码</label>
                     <input type="password" id="setup-pass" placeholder="至少6位" class="w-full bg-[#1e293b] border border-slate-700 rounded px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 placeholder:text-slate-600">
@@ -432,6 +440,7 @@
                 <button id="btn-setup" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-emerald-900/30">
                     ✅ 完成设置
                 </button>
+                </form>
             </div>
         </div>
     </div>
